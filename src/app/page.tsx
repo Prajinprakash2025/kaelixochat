@@ -1,20 +1,22 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { Sidebar } from "@/components/layout/sidebar";
 import { DepartmentToolbar } from "@/components/chat/department-toolbar";
 import { MessageFeed } from "@/components/chat/message-feed";
 import { ChatInput } from "@/components/chat/chat-input";
 import { NewChannelModal } from "@/components/modals/new-channel-modal";
-import { AuthModal } from "@/components/modals/auth-modal";
+import { NewCompanyModal } from "@/components/modals/new-company-modal";
+import { NewDepartmentModal } from "@/components/modals/new-department-modal";
+import { SlackAuthModal } from "@/components/modals/slack-auth-modal";
 import {
-  DEPARTMENTS,
+  DEPARTMENTS as INITIAL_DEPTS,
   CURRENT_USER as DEFAULT_USER,
   TEAM_MEMBERS,
   INITIAL_CHANNELS,
   INITIAL_MESSAGES,
 } from "@/lib/mock-data";
-import { DepartmentCode, Channel, Message, WorkspaceMember } from "@/types";
+import { DepartmentCode, Channel, Message, WorkspaceMember, Department, Organization } from "@/types";
 import {
   Hash,
   Lock,
@@ -22,67 +24,75 @@ import {
   PanelRight,
   Radio,
   UserCheck,
+  User,
+  Plus,
+  Building2,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
-const DEPT_ID_TO_CODE: Record<string, DepartmentCode> = {
-  "22222222-2222-2222-2222-222222222221": "dev",
-  "22222222-2222-2222-2222-222222222222": "teaching",
-  "22222222-2222-2222-2222-222222222223": "telecalling",
-  "22222222-2222-2222-2222-222222222224": "management",
-};
-
-const CODE_TO_DEPT_ID: Record<string, string> = {
-  dev: "22222222-2222-2222-2222-222222222221",
-  teaching: "22222222-2222-2222-2222-222222222222",
-  telecalling: "22222222-2222-2222-2222-222222222223",
-  management: "22222222-2222-2222-2222-222222222224",
-};
+const DEFAULT_ORGS: Organization[] = [
+  {
+    id: "11111111-1111-1111-1111-111111111111",
+    name: "Kaelixo HQ",
+    slug: "kaelixo-hq",
+    invite_code: "KAELIXO-938c7e",
+    plan: "pro",
+  },
+];
 
 export default function KaelixoApp() {
-  const [currentUser, setCurrentUser] = useState<WorkspaceMember>(DEFAULT_USER);
+  const [organizations, setOrganizations] = useState<Organization[]>(DEFAULT_ORGS);
+  const [activeOrg, setActiveOrg] = useState<Organization>(DEFAULT_ORGS[0]);
+  const [departments, setDepartments] = useState<Department[]>(INITIAL_DEPTS);
   const [selectedDepartment, setSelectedDepartment] = useState<DepartmentCode>("all");
   const [channels, setChannels] = useState<Channel[]>(INITIAL_CHANNELS);
   const [activeChannelId, setActiveChannelId] = useState<string>("chan-announcements");
+  const [activeDmRecipient, setActiveDmRecipient] = useState<WorkspaceMember | null>(null);
   const [messagesByChannel, setMessagesByChannel] = useState<Record<string, Message[]>>(INITIAL_MESSAGES);
+  const [currentUser, setCurrentUser] = useState<WorkspaceMember>(DEFAULT_USER);
+
+  // Modals state
   const [isNewChannelModalOpen, setIsNewChannelModalOpen] = useState(false);
+  const [isNewCompanyModalOpen, setIsNewCompanyModalOpen] = useState(false);
+  const [isNewDepartmentModalOpen, setIsNewDepartmentModalOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+
   const [externalTemplateText, setExternalTemplateText] = useState("");
   const [showRightDrawer, setShowRightDrawer] = useState(false);
   const [isLiveConnected, setIsLiveConnected] = useState(false);
 
   const supabase = createClient();
 
-  // Load user profile from localStorage if exists
+  // Load user from localStorage
   useEffect(() => {
     try {
       const savedUser = localStorage.getItem("kaelixo_user");
       if (savedUser) {
         setCurrentUser(JSON.parse(savedUser));
       }
-    } catch (e) {
-      console.warn("Storage not available");
+    } catch {
+      // ignore
     }
   }, []);
 
-  const handleSaveProfile = (profile: WorkspaceMember) => {
-    setCurrentUser(profile);
+  const handleLoginSuccess = (user: WorkspaceMember) => {
+    setCurrentUser(user);
     try {
-      localStorage.setItem("kaelixo_user", JSON.stringify(profile));
-    } catch (e) {
-      console.warn("Storage error");
+      localStorage.setItem("kaelixo_user", JSON.stringify(user));
+    } catch {
+      // ignore
     }
   };
 
-  // Play a soft notification chime using Web Audio API
+  // Play audio chime
   const playChime = () => {
     try {
       const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
       const osc = audioCtx.createOscillator();
       const gain = audioCtx.createGain();
       osc.type = "sine";
-      osc.frequency.setValueAtTime(587.33, audioCtx.currentTime); // D5
-      osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.15); // A5
+      osc.frequency.setValueAtTime(587.33, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.15);
       gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
       gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
       osc.connect(gain);
@@ -90,60 +100,94 @@ export default function KaelixoApp() {
       osc.start();
       osc.stop(audioCtx.currentTime + 0.3);
     } catch {
-      // Audio autoplay policy fallback
+      // ignore
     }
   };
 
-  // 1. Fetch live channels from Supabase
+  // 1. Fetch live organizations, departments & channels from Supabase
   useEffect(() => {
-    async function loadChannels() {
+    async function loadWorkspaceData() {
       try {
-        const { data: dbChannels, error } = await supabase
+        // Fetch Organizations
+        const { data: dbOrgs } = await supabase.from("organizations").select("*");
+        if (dbOrgs && dbOrgs.length > 0) {
+          setOrganizations(dbOrgs);
+          setActiveOrg(dbOrgs[0]);
+        }
+
+        // Fetch Departments
+        const { data: dbDepts } = await supabase.from("departments").select("*");
+        if (dbDepts && dbDepts.length > 0) {
+          const deptsWithAll: Department[] = [
+            INITIAL_DEPTS[0], // All Departments
+            ...dbDepts.map((d: any) => ({
+              id: d.id,
+              name: d.name,
+              code: d.code,
+              description: d.description || "",
+              icon: d.icon || "Briefcase",
+              color: "bg-indigo-500",
+            })),
+          ];
+          setDepartments(deptsWithAll);
+        }
+
+        // Fetch Channels
+        const { data: dbChannels } = await supabase
           .from("channels")
           .select("*")
           .order("created_at", { ascending: true });
 
-        if (!error && dbChannels && dbChannels.length > 0) {
-          const formattedChannels: Channel[] = dbChannels.map((ch: any) => ({
+        if (dbChannels && dbChannels.length > 0) {
+          const formatted: Channel[] = dbChannels.map((ch: any) => ({
             id: ch.id,
             name: ch.name,
             topic: ch.topic || "",
             departmentId: ch.department_id,
-            departmentCode: ch.department_id ? DEPT_ID_TO_CODE[ch.department_id] || "all" : "all",
+            departmentCode: ch.department_id ? "dev" : "all",
             isPrivate: ch.is_private || false,
+            isDm: ch.is_dm || false,
+            recipientId: ch.recipient_id,
+            recipientName: ch.recipient_name,
+            recipientAvatar: ch.recipient_avatar,
           }));
 
-          setChannels(formattedChannels);
-          setActiveChannelId(formattedChannels[0].id);
+          setChannels(formatted);
+          const firstNonDm = formatted.find((c) => !c.isDm) || formatted[0];
+          setActiveChannelId(firstNonDm.id);
           setIsLiveConnected(true);
         }
       } catch (err) {
-        console.warn("Using fallback channels data:", err);
+        console.warn("Using local cache:", err);
       }
     }
 
-    loadChannels();
+    loadWorkspaceData();
   }, []);
 
-  // 2. Fetch live messages for active channel
+  // 2. Fetch live messages for active channel or DM
   useEffect(() => {
     async function loadMessages() {
       try {
-        const { data: dbMessages, error } = await supabase
+        const { data: dbMessages } = await supabase
           .from("messages")
           .select("*")
           .eq("channel_id", activeChannelId)
           .order("created_at", { ascending: true });
 
-        if (!error && dbMessages && dbMessages.length > 0) {
+        if (dbMessages && dbMessages.length > 0) {
           const mapped: Message[] = dbMessages.map((m: any) => ({
             id: m.id,
             channelId: m.channel_id,
             sender: {
               id: m.sender_id || `user-anon`,
-              name: m.sender_name || "Team Member",
+              name: m.sender_name || "Colleague",
               email: "member@kaelixo.com",
-              avatar: m.sender_avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(m.sender_name || "member")}`,
+              avatar:
+                m.sender_avatar ||
+                `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(
+                  m.sender_name || "member"
+                )}`,
               role: (m.sender_role as any) || "member",
               department: (m.sender_department as any) || "dev",
               status: "online",
@@ -164,7 +208,7 @@ export default function KaelixoApp() {
           setIsLiveConnected(true);
         }
       } catch (err) {
-        console.warn("Could not load remote messages:", err);
+        console.warn("Load messages error:", err);
       }
     }
 
@@ -174,7 +218,7 @@ export default function KaelixoApp() {
   // 3. Supabase Realtime Subscription
   useEffect(() => {
     const channel = supabase
-      .channel("realtime-messages-stream")
+      .channel("realtime-messages-stream-v2")
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "messages" },
@@ -188,7 +232,11 @@ export default function KaelixoApp() {
                 id: newMsg.sender_id || `user-anon`,
                 name: newMsg.sender_name || "Colleague",
                 email: "colleague@kaelixo.com",
-                avatar: newMsg.sender_avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(newMsg.sender_name || "team")}`,
+                avatar:
+                  newMsg.sender_avatar ||
+                  `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(
+                    newMsg.sender_name || "team"
+                  )}`,
                 role: (newMsg.sender_role as any) || "member",
                 department: (newMsg.sender_department as any) || "dev",
                 status: "online",
@@ -205,7 +253,6 @@ export default function KaelixoApp() {
               const currentList = prev[newMsg.channel_id] || [];
               if (currentList.some((m) => m.id === newMsg.id)) return prev;
 
-              // Play chime for incoming messages from others
               if (newMsg.sender_name !== currentUser.name) {
                 playChime();
               }
@@ -229,10 +276,49 @@ export default function KaelixoApp() {
     };
   }, [currentUser.name]);
 
+  // Handle switching to a Direct Message with a team member
+  const handleSelectDirectMessage = (member: WorkspaceMember) => {
+    const dmId = `dm-${[currentUser.id, member.id].sort().join("-")}`;
+    setActiveDmRecipient(member);
+    setActiveChannelId(dmId);
+
+    // If channel doesn't exist locally, register it
+    if (!channels.some((c) => c.id === dmId)) {
+      const dmChannel: Channel = {
+        id: dmId,
+        name: `@${member.name}`,
+        topic: `Direct 1-on-1 message with ${member.name} (${member.role} • ${member.department})`,
+        isPrivate: true,
+        isDm: true,
+        recipientId: member.id,
+        recipientName: member.name,
+        recipientAvatar: member.avatar,
+      };
+      setChannels((prev) => [...prev, dmChannel]);
+    }
+  };
+
+  const handleSelectRegularChannel = (channelId: string) => {
+    setActiveDmRecipient(null);
+    setActiveChannelId(channelId);
+  };
+
+  // Active channel
   const activeChannel =
-    channels.find((c) => c.id === activeChannelId) || channels[0] || INITIAL_CHANNELS[0];
+    channels.find((c) => c.id === activeChannelId) ||
+    (activeDmRecipient
+      ? {
+          id: activeChannelId,
+          name: `@${activeDmRecipient.name}`,
+          topic: `1-on-1 Chat with ${activeDmRecipient.name}`,
+          isPrivate: true,
+          isDm: true,
+        }
+      : channels[0] || INITIAL_CHANNELS[0]);
+
   const activeMessages = messagesByChannel[activeChannelId] || [];
 
+  // Send message
   const handleSendMessage = async (content: string) => {
     const now = new Date();
     const timeString = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
@@ -247,13 +333,11 @@ export default function KaelixoApp() {
       reactions: [],
     };
 
-    // Optimistic UI update
     setMessagesByChannel((prev) => ({
       ...prev,
       [activeChannelId]: [...(prev[activeChannelId] || []), newMessage],
     }));
 
-    // Insert into Supabase
     try {
       await supabase.from("messages").insert({
         channel_id: activeChannelId,
@@ -265,10 +349,11 @@ export default function KaelixoApp() {
       });
       setIsLiveConnected(true);
     } catch (e) {
-      console.warn("Message stored in local session:", e);
+      console.warn("Saved to local state:", e);
     }
   };
 
+  // Reactions
   const handleAddReaction = (messageId: string, emoji: string) => {
     setMessagesByChannel((prev) => {
       const currentList = prev[activeChannelId] || [];
@@ -315,6 +400,7 @@ export default function KaelixoApp() {
     });
   };
 
+  // Create Channel
   const handleCreateChannel = async (data: {
     name: string;
     topic: string;
@@ -332,6 +418,8 @@ export default function KaelixoApp() {
 
     setChannels((prev) => [...prev, newChannel]);
     setActiveChannelId(newChannel.id);
+    setActiveDmRecipient(null);
+
     setMessagesByChannel((prev) => ({
       ...prev,
       [newChannel.id]: [
@@ -339,79 +427,159 @@ export default function KaelixoApp() {
           id: `msg-init-${Date.now()}`,
           channelId: newChannel.id,
           sender: currentUser,
-          content: `🎉 #${data.name} ചാനൽ ആരംഭിച്ചു! ${data.topic ? `**ഉദ്ദേശ്യം:** ${data.topic}` : ""}`,
+          content: `🎉 #${data.name} ചാനൽ ആരംഭിച്ചു! ${
+            data.topic ? `**ഉദ്ദേശ്യം:** ${data.topic}` : ""
+          }`,
           createdAt: "Just now",
           reactions: [{ emoji: "🎉", count: 1, users: [currentUser.id] }],
         },
       ],
     }));
 
-    // Save to Supabase
     try {
-      const deptId = data.departmentCode !== "all" ? CODE_TO_DEPT_ID[data.departmentCode] : null;
       await supabase.from("channels").insert({
-        organization_id: "11111111-1111-1111-1111-111111111111",
-        department_id: deptId,
+        organization_id: activeOrg.id,
         name: data.name,
         topic: data.topic,
         is_private: data.isPrivate,
       });
       setIsLiveConnected(true);
-    } catch (err) {
-      console.warn("Saved channel locally:", err);
+    } catch {
+      // ignore
+    }
+  };
+
+  // Create Company (Workspace)
+  const handleCreateCompany = async (company: { name: string; slug: string }) => {
+    const inviteCode = `KAELIXO-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+    const newOrg: Organization = {
+      id: `org-${Date.now()}`,
+      name: company.name,
+      slug: company.slug,
+      invite_code: inviteCode,
+      plan: "pro",
+    };
+
+    setOrganizations((prev) => [...prev, newOrg]);
+    setActiveOrg(newOrg);
+
+    try {
+      await supabase.from("organizations").insert({
+        name: company.name,
+        slug: company.slug,
+        invite_code: inviteCode,
+      });
+    } catch {
+      // ignore
+    }
+  };
+
+  // Create Department
+  const handleCreateDepartment = async (dept: {
+    name: string;
+    code: string;
+    description: string;
+    icon: string;
+  }) => {
+    const newDept: Department = {
+      id: `dept-${Date.now()}`,
+      organization_id: activeOrg.id,
+      name: dept.name,
+      code: dept.code,
+      description: dept.description,
+      icon: dept.icon,
+      color: "bg-indigo-500",
+    };
+
+    setDepartments((prev) => [...prev, newDept]);
+    setSelectedDepartment(dept.code);
+
+    try {
+      await supabase.from("departments").insert({
+        organization_id: activeOrg.id,
+        name: dept.name,
+        code: dept.code,
+        description: dept.description,
+        icon: dept.icon,
+      });
+    } catch {
+      // ignore
     }
   };
 
   return (
     <div className="flex h-screen bg-white dark:bg-neutral-950 overflow-hidden font-sans antialiased text-neutral-900 dark:text-neutral-100">
-      {/* Sidebar */}
+      {/* Sidebar with Company Switcher & DMs */}
       <Sidebar
-        departments={DEPARTMENTS}
+        organizations={organizations}
+        activeOrg={activeOrg}
+        onSelectOrg={setActiveOrg}
+        onOpenNewCompanyModal={() => setIsNewCompanyModalOpen(true)}
+        departments={departments}
         selectedDepartment={selectedDepartment}
         onSelectDepartment={setSelectedDepartment}
+        onOpenNewDepartmentModal={() => setIsNewDepartmentModalOpen(true)}
         channels={channels}
         activeChannelId={activeChannelId}
-        onSelectChannel={setActiveChannelId}
+        onSelectChannel={handleSelectRegularChannel}
         teamMembers={TEAM_MEMBERS}
         currentUser={currentUser}
         onOpenNewChannelModal={() => setIsNewChannelModalOpen(true)}
         onOpenAuthModal={() => setIsAuthModalOpen(true)}
+        onSelectDirectMessage={handleSelectDirectMessage}
       />
 
       {/* Main Chat Stage */}
       <main className="flex-1 flex flex-col h-screen min-w-0 bg-white dark:bg-neutral-950">
-        {/* Top Channel Header */}
+        {/* Top Header */}
         <header className="h-16 px-6 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between flex-shrink-0 bg-white/80 dark:bg-neutral-950/80 backdrop-blur-md">
           <div className="flex items-center space-x-3 min-w-0">
-            <div className="flex items-center space-x-2">
-              {activeChannel.isPrivate ? (
-                <Lock className="w-4 h-4 text-neutral-400" />
-              ) : (
-                <Hash className="w-5 h-5 text-neutral-400" />
-              )}
-              <h2 className="font-bold text-base text-neutral-900 dark:text-white tracking-tight truncate">
-                {activeChannel.name}
-              </h2>
-            </div>
-
-            {/* Department Badge */}
-            {activeChannel.departmentCode && activeChannel.departmentCode !== "all" && (
-              <span className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/40">
-                {activeChannel.departmentCode}
-              </span>
-            )}
-
-            {/* Topic preview */}
-            {activeChannel.topic && (
-              <span className="text-xs text-neutral-400 border-l border-neutral-200 dark:border-neutral-800 pl-3 truncate max-w-md hidden md:inline">
-                {activeChannel.topic}
-              </span>
+            {activeDmRecipient ? (
+              <div className="flex items-center space-x-2.5">
+                <div className="relative">
+                  <img
+                    src={activeDmRecipient.avatar}
+                    alt={activeDmRecipient.name}
+                    className="w-8 h-8 rounded-xl bg-neutral-200 dark:bg-neutral-800"
+                  />
+                  <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-neutral-900" />
+                </div>
+                <div>
+                  <h2 className="font-bold text-base text-neutral-900 dark:text-white tracking-tight">
+                    {activeDmRecipient.name}
+                  </h2>
+                  <p className="text-[11px] text-neutral-400 capitalize">
+                    {activeDmRecipient.role} • {activeDmRecipient.department} Department
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center space-x-2">
+                {activeChannel.isPrivate ? (
+                  <Lock className="w-4 h-4 text-neutral-400" />
+                ) : (
+                  <Hash className="w-5 h-5 text-neutral-400" />
+                )}
+                <h2 className="font-bold text-base text-neutral-900 dark:text-white tracking-tight truncate">
+                  {activeChannel.name}
+                </h2>
+                {activeChannel.departmentCode && activeChannel.departmentCode !== "all" && (
+                  <span className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/40">
+                    {activeChannel.departmentCode}
+                  </span>
+                )}
+                {activeChannel.topic && (
+                  <span className="text-xs text-neutral-400 border-l border-neutral-200 dark:border-neutral-800 pl-3 truncate max-w-md hidden md:inline">
+                    {activeChannel.topic}
+                  </span>
+                )}
+              </div>
             )}
           </div>
 
-          {/* Header Action Tools */}
+          {/* Action Tools */}
           <div className="flex items-center space-x-2 flex-shrink-0">
-            {/* Live Supabase Connection Badge */}
+            {/* Supabase Status */}
             <div
               className={`flex items-center space-x-1.5 text-[11px] font-medium px-2.5 py-1 rounded-full border ${
                 isLiveConnected
@@ -430,11 +598,11 @@ export default function KaelixoApp() {
             {/* User Profile Switch Button */}
             <button
               onClick={() => setIsAuthModalOpen(true)}
-              className="flex items-center space-x-1 text-xs font-medium text-neutral-600 dark:text-neutral-300 hover:text-indigo-600 dark:hover:text-indigo-400 bg-neutral-100 dark:bg-neutral-900 hover:bg-neutral-200/80 px-2.5 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-800 transition"
-              title="Change your display name or department"
+              className="flex items-center space-x-1.5 text-xs font-semibold text-neutral-700 dark:text-neutral-200 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 px-3 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-700 transition"
+              title="Slack Auth & Profile Setup"
             >
-              <UserCheck className="w-3.5 h-3.5 text-indigo-500" />
-              <span className="hidden sm:inline">{currentUser.name.split(" ")[0]}</span>
+              <User className="w-3.5 h-3.5 text-indigo-500" />
+              <span>{currentUser.name.split(" ")[0]}</span>
             </button>
 
             <button
@@ -451,13 +619,15 @@ export default function KaelixoApp() {
           </div>
         </header>
 
-        {/* Specialized Department Quick Actions Bar */}
-        <DepartmentToolbar
-          departmentCode={activeChannel.departmentCode}
-          onApplyTemplate={(text) => setExternalTemplateText(text)}
-        />
+        {/* Specialized Department Toolbar (only for channels, not in DMs) */}
+        {!activeDmRecipient && (
+          <DepartmentToolbar
+            departmentCode={activeChannel.departmentCode}
+            onApplyTemplate={(text) => setExternalTemplateText(text)}
+          />
+        )}
 
-        {/* Scrollable Message List */}
+        {/* Message Feed */}
         <MessageFeed
           messages={activeMessages}
           currentUser={currentUser}
@@ -473,12 +643,12 @@ export default function KaelixoApp() {
         />
       </main>
 
-      {/* Right Drawer (Channel Details & Members) */}
+      {/* Right Drawer */}
       {showRightDrawer && (
         <aside className="w-80 border-l border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/40 p-5 flex flex-col h-screen overflow-y-auto">
           <div className="flex items-center justify-between pb-4 border-b border-neutral-200 dark:border-neutral-800">
             <h3 className="font-bold text-sm text-neutral-900 dark:text-white">
-              ചാനൽ വിവരങ്ങൾ (About)
+              {activeDmRecipient ? "അംഗത്തിന്റെ വിവരങ്ങൾ" : "ചാനൽ വിവരങ്ങൾ"}
             </h3>
             <button
               onClick={() => setShowRightDrawer(false)}
@@ -489,34 +659,56 @@ export default function KaelixoApp() {
           </div>
 
           <div className="py-4 space-y-4">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-1">
-                ഉദ്ദേശ്യം (Topic)
-              </p>
-              <p className="text-xs text-neutral-700 dark:text-neutral-300 leading-relaxed">
-                {activeChannel.topic || "No topic set for this channel"}
-              </p>
-            </div>
+            {activeDmRecipient ? (
+              <div className="space-y-4">
+                <div className="flex flex-col items-center text-center p-4 rounded-2xl bg-white dark:bg-neutral-800/60 border border-neutral-200 dark:border-neutral-700">
+                  <img
+                    src={activeDmRecipient.avatar}
+                    alt={activeDmRecipient.name}
+                    className="w-16 h-16 rounded-2xl mb-2"
+                  />
+                  <h4 className="font-bold text-sm text-neutral-900 dark:text-white">
+                    {activeDmRecipient.name}
+                  </h4>
+                  <p className="text-xs text-neutral-500">{activeDmRecipient.email}</p>
+                  <span className="mt-2 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800">
+                    {activeDmRecipient.role} • {activeDmRecipient.department}
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-1">
+                    ഉദ്ദേശ്യം (Topic)
+                  </p>
+                  <p className="text-xs text-neutral-700 dark:text-neutral-300 leading-relaxed">
+                    {activeChannel.topic || "No topic set for this channel"}
+                  </p>
+                </div>
 
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-1">
-                ഡിപ്പാർട്ട്മെന്റ് (Department)
-              </p>
-              <p className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 capitalize">
-                {activeChannel.departmentCode || "Company Wide"}
-              </p>
-            </div>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-1">
+                    ഡിപ്പാർട്ട്മെന്റ് (Department)
+                  </p>
+                  <p className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 capitalize">
+                    {activeChannel.departmentCode || "Company Wide"}
+                  </p>
+                </div>
+              </>
+            )}
 
             <div className="pt-2 border-t border-neutral-200 dark:border-neutral-800">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-semibold uppercase tracking-wider text-neutral-400">
-                  അംഗങ്ങൾ (Members - {TEAM_MEMBERS.length})
-                </span>
-              </div>
-
+              <span className="text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-3 block">
+                കമ്പനി അംഗങ്ങൾ ({TEAM_MEMBERS.length})
+              </span>
               <div className="space-y-2">
                 {TEAM_MEMBERS.map((m) => (
-                  <div key={m.id} className="flex items-center space-x-2.5">
+                  <div
+                    key={m.id}
+                    onClick={() => handleSelectDirectMessage(m)}
+                    className="flex items-center space-x-2.5 p-1.5 rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-800 cursor-pointer transition"
+                  >
                     <img
                       src={m.avatar}
                       alt={m.name}
@@ -538,21 +730,32 @@ export default function KaelixoApp() {
         </aside>
       )}
 
-      {/* New Channel Modal */}
+      {/* Modals */}
       <NewChannelModal
         isOpen={isNewChannelModalOpen}
         onClose={() => setIsNewChannelModalOpen(false)}
-        departments={DEPARTMENTS}
+        departments={departments}
         onCreateChannel={handleCreateChannel}
       />
 
-      {/* Auth & Profile Modal */}
-      <AuthModal
+      <NewCompanyModal
+        isOpen={isNewCompanyModalOpen}
+        onClose={() => setIsNewCompanyModalOpen(false)}
+        onCreateCompany={handleCreateCompany}
+      />
+
+      <NewDepartmentModal
+        isOpen={isNewDepartmentModalOpen}
+        onClose={() => setIsNewDepartmentModalOpen(false)}
+        onCreateDepartment={handleCreateDepartment}
+      />
+
+      <SlackAuthModal
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
-        departments={DEPARTMENTS}
+        departments={departments}
         currentUser={currentUser}
-        onSaveProfile={handleSaveProfile}
+        onLoginSuccess={handleLoginSuccess}
       />
     </div>
   );

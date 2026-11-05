@@ -1,12 +1,22 @@
-export type DepartmentCode = "dev" | "teaching" | "telecalling" | "management" | "all";
+export type DepartmentCode = string;
 
 export interface Department {
   id: string;
+  organization_id?: string;
   name: string;
   code: DepartmentCode;
   description: string;
   icon: string;
   color: string;
+}
+
+export interface Organization {
+  id: string;
+  name: string;
+  slug: string;
+  logo_url?: string | null;
+  plan?: string;
+  invite_code?: string;
 }
 
 export interface WorkspaceMember {
@@ -28,6 +38,10 @@ export interface Channel {
   departmentCode?: DepartmentCode;
   isPrivate: boolean;
   unreadCount?: number;
+  isDm?: boolean;
+  recipientId?: string;
+  recipientName?: string;
+  recipientAvatar?: string;
 }
 
 export interface MessageReaction {
