@@ -27,6 +27,7 @@ interface SidebarProps {
   teamMembers: WorkspaceMember[];
   currentUser: WorkspaceMember;
   onOpenNewChannelModal: () => void;
+  onOpenAuthModal?: () => void;
 }
 
 export function Sidebar({
@@ -39,6 +40,7 @@ export function Sidebar({
   teamMembers,
   currentUser,
   onOpenNewChannelModal,
+  onOpenAuthModal,
 }: SidebarProps) {
   // Filter channels based on selected department tab
   const filteredChannels = channels.filter((ch) => {
@@ -219,26 +221,36 @@ export function Sidebar({
       </div>
 
       {/* User Footer Profile */}
-      <div className="p-3 border-t border-neutral-800 bg-neutral-900/90 flex items-center justify-between">
+      <div 
+        onClick={onOpenAuthModal}
+        className="p-3 border-t border-neutral-800 bg-neutral-900/90 flex items-center justify-between cursor-pointer hover:bg-neutral-800/80 transition group"
+        title="Click to edit profile & department"
+      >
         <div className="flex items-center space-x-2.5 min-w-0">
           <div className="relative">
             <img
               src={currentUser.avatar}
               alt={currentUser.name}
-              className="w-8 h-8 rounded-xl bg-neutral-800 ring-1 ring-neutral-700"
+              className="w-8 h-8 rounded-xl bg-neutral-800 ring-1 ring-neutral-700 group-hover:ring-indigo-500 transition"
             />
             <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-neutral-900" />
           </div>
           <div className="truncate">
-            <p className="text-xs font-semibold text-neutral-100 truncate">{currentUser.name}</p>
+            <p className="text-xs font-semibold text-neutral-100 group-hover:text-indigo-300 transition truncate">
+              {currentUser.name}
+            </p>
             <p className="text-[11px] text-emerald-400 truncate flex items-center space-x-1">
               <span>●</span>
-              <span>{currentUser.statusText}</span>
+              <span>{currentUser.statusText || currentUser.department.toUpperCase()}</span>
             </p>
           </div>
         </div>
         <button
-          title="Set status"
+          onClick={(e) => {
+            e.stopPropagation();
+            if (onOpenAuthModal) onOpenAuthModal();
+          }}
+          title="Change Profile"
           className="text-neutral-400 hover:text-white p-1 rounded-lg hover:bg-neutral-800 transition"
         >
           <Smile className="w-4 h-4" />

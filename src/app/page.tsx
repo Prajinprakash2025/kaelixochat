@@ -1,26 +1,27 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Sidebar } from "@/components/layout/sidebar";
 import { DepartmentToolbar } from "@/components/chat/department-toolbar";
 import { MessageFeed } from "@/components/chat/message-feed";
 import { ChatInput } from "@/components/chat/chat-input";
 import { NewChannelModal } from "@/components/modals/new-channel-modal";
+import { AuthModal } from "@/components/modals/auth-modal";
 import {
   DEPARTMENTS,
-  CURRENT_USER,
+  CURRENT_USER as DEFAULT_USER,
   TEAM_MEMBERS,
   INITIAL_CHANNELS,
   INITIAL_MESSAGES,
 } from "@/lib/mock-data";
-import { DepartmentCode, Channel, Message } from "@/types";
+import { DepartmentCode, Channel, Message, WorkspaceMember } from "@/types";
 import {
   Hash,
   Lock,
   Search,
   PanelRight,
-  Database,
   Radio,
+  UserCheck,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
@@ -39,20 +40,63 @@ const CODE_TO_DEPT_ID: Record<string, string> = {
 };
 
 export default function KaelixoApp() {
+  const [currentUser, setCurrentUser] = useState<WorkspaceMember>(DEFAULT_USER);
   const [selectedDepartment, setSelectedDepartment] = useState<DepartmentCode>("all");
   const [channels, setChannels] = useState<Channel[]>(INITIAL_CHANNELS);
   const [activeChannelId, setActiveChannelId] = useState<string>("chan-announcements");
   const [messagesByChannel, setMessagesByChannel] = useState<Record<string, Message[]>>(INITIAL_MESSAGES);
   const [isNewChannelModalOpen, setIsNewChannelModalOpen] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [externalTemplateText, setExternalTemplateText] = useState("");
   const [showRightDrawer, setShowRightDrawer] = useState(false);
   const [isLiveConnected, setIsLiveConnected] = useState(false);
 
   const supabase = createClient();
 
-  // 1. Fetch live channels from Supabase on mount
+  // Load user profile from localStorage if exists
   useEffect(() => {
-    async function loadData() {
+    try {
+      const savedUser = localStorage.getItem("kaelixo_user");
+      if (savedUser) {
+        setCurrentUser(JSON.parse(savedUser));
+      }
+    } catch (e) {
+      console.warn("Storage not available");
+    }
+  }, []);
+
+  const handleSaveProfile = (profile: WorkspaceMember) => {
+    setCurrentUser(profile);
+    try {
+      localStorage.setItem("kaelixo_user", JSON.stringify(profile));
+    } catch (e) {
+      console.warn("Storage error");
+    }
+  };
+
+  // Play a soft notification chime using Web Audio API
+  const playChime = () => {
+    try {
+      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(587.33, audioCtx.currentTime); // D5
+      osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.15); // A5
+      gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.3);
+    } catch {
+      // Audio autoplay policy fallback
+    }
+  };
+
+  // 1. Fetch live channels from Supabase
+  useEffect(() => {
+    async function loadChannels() {
       try {
         const { data: dbChannels, error } = await supabase
           .from("channels")
@@ -74,18 +118,16 @@ export default function KaelixoApp() {
           setIsLiveConnected(true);
         }
       } catch (err) {
-        console.warn("Using local channels data:", err);
+        console.warn("Using fallback channels data:", err);
       }
     }
 
-    loadData();
+    loadChannels();
   }, []);
 
   // 2. Fetch live messages for active channel
   useEffect(() => {
     async function loadMessages() {
-      if (!isLiveConnected) return;
-
       try {
         const { data: dbMessages, error } = await supabase
           .from("messages")
@@ -97,7 +139,15 @@ export default function KaelixoApp() {
           const mapped: Message[] = dbMessages.map((m: any) => ({
             id: m.id,
             channelId: m.channel_id,
-            sender: CURRENT_USER,
+            sender: {
+              id: m.sender_id || `user-anon`,
+              name: m.sender_name || "Team Member",
+              email: "member@kaelixo.com",
+              avatar: m.sender_avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(m.sender_name || "member")}`,
+              role: (m.sender_role as any) || "member",
+              department: (m.sender_department as any) || "dev",
+              status: "online",
+            },
             content: m.content,
             createdAt: new Date(m.created_at).toLocaleTimeString([], {
               hour: "2-digit",
@@ -111,6 +161,7 @@ export default function KaelixoApp() {
             ...prev,
             [activeChannelId]: mapped,
           }));
+          setIsLiveConnected(true);
         }
       } catch (err) {
         console.warn("Could not load remote messages:", err);
@@ -118,9 +169,9 @@ export default function KaelixoApp() {
     }
 
     loadMessages();
-  }, [activeChannelId, isLiveConnected]);
+  }, [activeChannelId]);
 
-  // 3. Supabase Realtime Subscription for instant live messaging
+  // 3. Supabase Realtime Subscription
   useEffect(() => {
     const channel = supabase
       .channel("realtime-messages-stream")
@@ -133,7 +184,15 @@ export default function KaelixoApp() {
             const formatted: Message = {
               id: newMsg.id,
               channelId: newMsg.channel_id,
-              sender: CURRENT_USER,
+              sender: {
+                id: newMsg.sender_id || `user-anon`,
+                name: newMsg.sender_name || "Colleague",
+                email: "colleague@kaelixo.com",
+                avatar: newMsg.sender_avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(newMsg.sender_name || "team")}`,
+                role: (newMsg.sender_role as any) || "member",
+                department: (newMsg.sender_department as any) || "dev",
+                status: "online",
+              },
               content: newMsg.content,
               createdAt: new Date(newMsg.created_at).toLocaleTimeString([], {
                 hour: "2-digit",
@@ -145,6 +204,12 @@ export default function KaelixoApp() {
             setMessagesByChannel((prev) => {
               const currentList = prev[newMsg.channel_id] || [];
               if (currentList.some((m) => m.id === newMsg.id)) return prev;
+
+              // Play chime for incoming messages from others
+              if (newMsg.sender_name !== currentUser.name) {
+                playChime();
+              }
+
               return {
                 ...prev,
                 [newMsg.channel_id]: [...currentList, formatted],
@@ -162,7 +227,7 @@ export default function KaelixoApp() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [currentUser.name]);
 
   const activeChannel =
     channels.find((c) => c.id === activeChannelId) || channels[0] || INITIAL_CHANNELS[0];
@@ -176,7 +241,7 @@ export default function KaelixoApp() {
     const newMessage: Message = {
       id: localId,
       channelId: activeChannelId,
-      sender: CURRENT_USER,
+      sender: currentUser,
       content,
       createdAt: timeString,
       reactions: [],
@@ -188,16 +253,19 @@ export default function KaelixoApp() {
       [activeChannelId]: [...(prev[activeChannelId] || []), newMessage],
     }));
 
-    // If Supabase is connected, persist to live database
-    if (isLiveConnected) {
-      try {
-        await supabase.from("messages").insert({
-          channel_id: activeChannelId,
-          content,
-        });
-      } catch (e) {
-        console.warn("Message stored in local session:", e);
-      }
+    // Insert into Supabase
+    try {
+      await supabase.from("messages").insert({
+        channel_id: activeChannelId,
+        content,
+        sender_name: currentUser.name,
+        sender_avatar: currentUser.avatar,
+        sender_role: currentUser.role,
+        sender_department: currentUser.department,
+      });
+      setIsLiveConnected(true);
+    } catch (e) {
+      console.warn("Message stored in local session:", e);
     }
   };
 
@@ -212,10 +280,10 @@ export default function KaelixoApp() {
 
         if (existingReactionIndex > -1) {
           const reaction = updatedReactions[existingReactionIndex];
-          const hasUser = reaction.users.includes(CURRENT_USER.id);
+          const hasUser = reaction.users.includes(currentUser.id);
 
           if (hasUser) {
-            const newUsers = reaction.users.filter((id) => id !== CURRENT_USER.id);
+            const newUsers = reaction.users.filter((id) => id !== currentUser.id);
             if (newUsers.length === 0) {
               updatedReactions = updatedReactions.filter((r) => r.emoji !== emoji);
             } else {
@@ -229,14 +297,14 @@ export default function KaelixoApp() {
             updatedReactions[existingReactionIndex] = {
               ...reaction,
               count: reaction.count + 1,
-              users: [...reaction.users, CURRENT_USER.id],
+              users: [...reaction.users, currentUser.id],
             };
           }
         } else {
           updatedReactions.push({
             emoji,
             count: 1,
-            users: [CURRENT_USER.id],
+            users: [currentUser.id],
           });
         }
 
@@ -270,28 +338,27 @@ export default function KaelixoApp() {
         {
           id: `msg-init-${Date.now()}`,
           channelId: newChannel.id,
-          sender: CURRENT_USER,
+          sender: currentUser,
           content: `🎉 #${data.name} ചാനൽ ആരംഭിച്ചു! ${data.topic ? `**ഉദ്ദേശ്യം:** ${data.topic}` : ""}`,
           createdAt: "Just now",
-          reactions: [{ emoji: "🎉", count: 1, users: [CURRENT_USER.id] }],
+          reactions: [{ emoji: "🎉", count: 1, users: [currentUser.id] }],
         },
       ],
     }));
 
-    // Save to Supabase if connected
-    if (isLiveConnected) {
-      try {
-        const deptId = data.departmentCode !== "all" ? CODE_TO_DEPT_ID[data.departmentCode] : null;
-        await supabase.from("channels").insert({
-          organization_id: "11111111-1111-1111-1111-111111111111",
-          department_id: deptId,
-          name: data.name,
-          topic: data.topic,
-          is_private: data.isPrivate,
-        });
-      } catch (err) {
-        console.warn("Saved channel locally:", err);
-      }
+    // Save to Supabase
+    try {
+      const deptId = data.departmentCode !== "all" ? CODE_TO_DEPT_ID[data.departmentCode] : null;
+      await supabase.from("channels").insert({
+        organization_id: "11111111-1111-1111-1111-111111111111",
+        department_id: deptId,
+        name: data.name,
+        topic: data.topic,
+        is_private: data.isPrivate,
+      });
+      setIsLiveConnected(true);
+    } catch (err) {
+      console.warn("Saved channel locally:", err);
     }
   };
 
@@ -306,8 +373,9 @@ export default function KaelixoApp() {
         activeChannelId={activeChannelId}
         onSelectChannel={setActiveChannelId}
         teamMembers={TEAM_MEMBERS}
-        currentUser={CURRENT_USER}
+        currentUser={currentUser}
         onOpenNewChannelModal={() => setIsNewChannelModalOpen(true)}
+        onOpenAuthModal={() => setIsAuthModalOpen(true)}
       />
 
       {/* Main Chat Stage */}
@@ -359,14 +427,15 @@ export default function KaelixoApp() {
               <span>{isLiveConnected ? "Supabase Live" : "Connected"}</span>
             </div>
 
-            <div className="hidden sm:flex items-center text-xs text-neutral-500 bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-1.5 space-x-2">
-              <Search className="w-3.5 h-3.5 text-neutral-400" />
-              <input
-                type="text"
-                placeholder="Search..."
-                className="bg-transparent focus:outline-none w-24 text-xs"
-              />
-            </div>
+            {/* User Profile Switch Button */}
+            <button
+              onClick={() => setIsAuthModalOpen(true)}
+              className="flex items-center space-x-1 text-xs font-medium text-neutral-600 dark:text-neutral-300 hover:text-indigo-600 dark:hover:text-indigo-400 bg-neutral-100 dark:bg-neutral-900 hover:bg-neutral-200/80 px-2.5 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-800 transition"
+              title="Change your display name or department"
+            >
+              <UserCheck className="w-3.5 h-3.5 text-indigo-500" />
+              <span className="hidden sm:inline">{currentUser.name.split(" ")[0]}</span>
+            </button>
 
             <button
               onClick={() => setShowRightDrawer(!showRightDrawer)}
@@ -391,7 +460,7 @@ export default function KaelixoApp() {
         {/* Scrollable Message List */}
         <MessageFeed
           messages={activeMessages}
-          currentUser={CURRENT_USER}
+          currentUser={currentUser}
           onAddReaction={handleAddReaction}
         />
 
@@ -475,6 +544,15 @@ export default function KaelixoApp() {
         onClose={() => setIsNewChannelModalOpen(false)}
         departments={DEPARTMENTS}
         onCreateChannel={handleCreateChannel}
+      />
+
+      {/* Auth & Profile Modal */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        departments={DEPARTMENTS}
+        currentUser={currentUser}
+        onSaveProfile={handleSaveProfile}
       />
     </div>
   );
