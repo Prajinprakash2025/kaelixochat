@@ -186,7 +186,7 @@ export function DepartmentToolbar({
   };
 
   return (
-    <div className="px-6 py-2 bg-neutral-50 dark:bg-neutral-900/40 border-b border-neutral-200 dark:border-neutral-800/60 flex items-center space-x-2 overflow-x-auto">
+    <div className="px-4 md:px-6 py-2 bg-neutral-50 dark:bg-neutral-900/40 border-b border-neutral-200 dark:border-neutral-800/60 flex items-center space-x-2 overflow-x-auto no-scrollbar">
       <span className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider flex-shrink-0">
         Quick Tools:
       </span>

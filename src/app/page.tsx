@@ -27,6 +27,7 @@ import {
   User,
   Plus,
   Building2,
+  Menu,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
@@ -60,6 +61,7 @@ export default function KaelixoApp() {
   const [externalTemplateText, setExternalTemplateText] = useState("");
   const [showRightDrawer, setShowRightDrawer] = useState(false);
   const [isLiveConnected, setIsLiveConnected] = useState(false);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   const supabase = createClient();
 
@@ -527,13 +529,23 @@ export default function KaelixoApp() {
         onOpenNewChannelModal={() => setIsNewChannelModalOpen(true)}
         onOpenAuthModal={() => setIsAuthModalOpen(true)}
         onSelectDirectMessage={handleSelectDirectMessage}
+        isMobileOpen={isMobileSidebarOpen}
+        onCloseMobile={() => setIsMobileSidebarOpen(false)}
       />
 
       {/* Main Chat Stage */}
       <main className="flex-1 flex flex-col h-screen min-w-0 bg-white dark:bg-neutral-950">
         {/* Top Header */}
-        <header className="h-16 px-6 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between flex-shrink-0 bg-white/80 dark:bg-neutral-950/80 backdrop-blur-md">
-          <div className="flex items-center space-x-3 min-w-0">
+        <header className="h-16 px-4 md:px-6 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between flex-shrink-0 bg-white/80 dark:bg-neutral-950/80 backdrop-blur-md">
+          <div className="flex items-center space-x-2 md:space-x-3 min-w-0">
+            {/* Mobile Hamburger Toggle */}
+            <button
+              onClick={() => setIsMobileSidebarOpen(true)}
+              className="p-2 -ml-2 rounded-xl text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-900 md:hidden transition flex-shrink-0"
+              title="Open Navigation"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
             {activeDmRecipient ? (
               <div className="flex items-center space-x-2.5">
                 <div className="relative">

@@ -18,6 +18,7 @@ import {
   Check,
   FolderPlus,
   MessageCircle,
+  X,
 } from "lucide-react";
 import { DepartmentCode, Channel, WorkspaceMember, Department, Organization } from "@/types";
 
@@ -38,6 +39,8 @@ interface SidebarProps {
   onOpenNewChannelModal: () => void;
   onOpenAuthModal: () => void;
   onSelectDirectMessage: (member: WorkspaceMember) => void;
+  isMobileOpen?: boolean;
+  onCloseMobile?: () => void;
 }
 
 export function Sidebar({
@@ -57,6 +60,8 @@ export function Sidebar({
   onOpenNewChannelModal,
   onOpenAuthModal,
   onSelectDirectMessage,
+  isMobileOpen = false,
+  onCloseMobile,
 }: SidebarProps) {
   const [showOrgDropdown, setShowOrgDropdown] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
@@ -106,30 +111,55 @@ export function Sidebar({
   };
 
   return (
-    <aside className="w-72 bg-neutral-900 text-neutral-100 flex flex-col h-screen border-r border-neutral-800 select-none">
-      {/* Workspace / Company Switcher Header */}
-      <div className="relative p-3.5 border-b border-neutral-800">
-        <button
-          onClick={() => setShowOrgDropdown(!showOrgDropdown)}
-          className="w-full flex items-center justify-between p-1.5 rounded-xl hover:bg-neutral-800/80 transition text-left group"
-        >
-          <div className="flex items-center space-x-2.5 min-w-0">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center shadow-md shadow-purple-500/20 flex-shrink-0">
-              <Sparkles className="w-4 h-4 text-white" />
-            </div>
-            <div className="truncate">
-              <div className="flex items-center space-x-1.5">
-                <h1 className="font-bold text-sm tracking-tight text-white truncate">
-                  {activeOrg.name}
-                </h1>
-                <ChevronDown className="w-3.5 h-3.5 text-neutral-400 group-hover:text-white transition flex-shrink-0" />
+    <>
+      {/* Mobile Backdrop Overlay */}
+      {isMobileOpen && (
+        <div
+          onClick={onCloseMobile}
+          className="fixed inset-0 bg-black/70 backdrop-blur-sm z-40 md:hidden animate-in fade-in duration-200"
+        />
+      )}
+
+      {/* Main Sidebar Element */}
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 w-72 bg-neutral-900 text-neutral-100 flex flex-col h-screen border-r border-neutral-800 select-none transition-transform duration-300 ease-in-out md:static md:translate-x-0 ${
+          isMobileOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full"
+        }`}
+      >
+        {/* Workspace / Company Switcher Header */}
+        <div className="relative p-3.5 border-b border-neutral-800">
+          <div className="flex items-center justify-between">
+            <button
+              onClick={() => setShowOrgDropdown(!showOrgDropdown)}
+              className="flex-1 flex items-center justify-between p-1.5 rounded-xl hover:bg-neutral-800/80 transition text-left group min-w-0"
+            >
+              <div className="flex items-center space-x-2.5 min-w-0">
+                <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center shadow-md shadow-purple-500/20 flex-shrink-0">
+                  <Sparkles className="w-4 h-4 text-white" />
+                </div>
+                <div className="truncate">
+                  <div className="flex items-center space-x-1.5">
+                    <h1 className="font-bold text-sm tracking-tight text-white truncate">
+                      {activeOrg.name}
+                    </h1>
+                    <ChevronDown className="w-3.5 h-3.5 text-neutral-400 group-hover:text-white transition flex-shrink-0" />
+                  </div>
+                  <p className="text-[11px] text-neutral-400 truncate">
+                    Slack SaaS Workspace
+                  </p>
+                </div>
               </div>
-              <p className="text-[11px] text-neutral-400 truncate">
-                Slack SaaS Workspace
-              </p>
-            </div>
+            </button>
+
+            {/* Mobile close button */}
+            <button
+              onClick={onCloseMobile}
+              className="p-1.5 rounded-xl text-neutral-400 hover:text-white md:hidden hover:bg-neutral-800 transition ml-1"
+              title="Close sidebar"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
-        </button>
 
         {/* Invite Code Bar */}
         {activeOrg.invite_code && (
@@ -251,7 +281,10 @@ export function Sidebar({
               return (
                 <button
                   key={ch.id}
-                  onClick={() => onSelectChannel(ch.id)}
+                  onClick={() => {
+                    onSelectChannel(ch.id);
+                    if (onCloseMobile) onCloseMobile();
+                  }}
                   className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-sm font-medium transition-colors ${
                     isActive
                       ? "bg-indigo-600 text-white shadow-sm"
@@ -295,7 +328,10 @@ export function Sidebar({
                 return (
                   <button
                     key={member.id}
-                    onClick={() => onSelectDirectMessage(member)}
+                    onClick={() => {
+                      onSelectDirectMessage(member);
+                      if (onCloseMobile) onCloseMobile();
+                    }}
                     className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-sm transition text-left ${
                       isDmActive
                         ? "bg-indigo-600 text-white font-medium"
@@ -367,5 +403,6 @@ export function Sidebar({
         </button>
       </div>
     </aside>
+    </>
   );
 }

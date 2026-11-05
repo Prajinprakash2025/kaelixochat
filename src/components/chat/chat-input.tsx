@@ -76,10 +76,10 @@ export function ChatInput({
   const emojis = ["❤️", "👍", "🚀", "🔥", "👏", "🎯", "😊", "🎉", "💼", "📚"];
 
   return (
-    <div className="p-4 border-t border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900/70">
+    <div className="p-2.5 md:p-4 border-t border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900/70">
       <div className="relative rounded-2xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50/50 dark:bg-neutral-800/50 focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-transparent transition shadow-sm">
         {/* Formatting Bar */}
-        <div className="flex items-center justify-between px-3.5 py-1.5 border-b border-neutral-200 dark:border-neutral-700/60 text-neutral-500 dark:text-neutral-400">
+        <div className="flex items-center justify-between px-3 py-1.5 border-b border-neutral-200 dark:border-neutral-700/60 text-neutral-500 dark:text-neutral-400 overflow-x-auto">
           <div className="flex items-center space-x-1">
             <button
               onClick={() => insertFormatting("**")}
