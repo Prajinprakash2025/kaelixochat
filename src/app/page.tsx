@@ -16,7 +16,20 @@ import {
   INITIAL_CHANNELS,
   INITIAL_MESSAGES,
 } from "@/lib/mock-data";
-import { DepartmentCode, Channel, Message, WorkspaceMember, Department, Organization } from "@/types";
+import {
+  DepartmentCode,
+  Channel,
+  Message,
+  WorkspaceMember,
+  Department,
+  Organization,
+  Attachment,
+  MessageReaction,
+  MessageReactionsArray,
+  reactionsMapToArray,
+} from "@/types";
+import { formatFileSize } from "@/utils/storage";
+import { getOrCreateDmChannel } from "@/utils/channels";
 import {
   Hash,
   Lock,
@@ -40,6 +53,16 @@ const DEFAULT_ORGS: Organization[] = [
     plan: "pro",
   },
 ];
+
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function createReactionsArray(items: MessageReaction[] = []): MessageReactionsArray {
+  const arr = [...items] as MessageReactionsArray;
+  for (const item of items) {
+    (arr as any)[item.emoji] = { count: item.count, users: item.users };
+  }
+  return arr;
+}
 
 export default function KaelixoApp() {
   const [organizations, setOrganizations] = useState<Organization[]>(DEFAULT_ORGS);
@@ -167,6 +190,74 @@ export default function KaelixoApp() {
     loadWorkspaceData();
   }, []);
 
+  const applyReactionChange = (
+    messageId: string,
+    emoji: string,
+    userId: string,
+    action: "add" | "remove"
+  ) => {
+    setMessagesByChannel((prev) => {
+      let changed = false;
+      const nextState: Record<string, Message[]> = {};
+
+      for (const [chId, msgList] of Object.entries(prev)) {
+        if (!msgList.some((m) => m.id === messageId)) {
+          nextState[chId] = msgList;
+          continue;
+        }
+
+        changed = true;
+        nextState[chId] = msgList.map((msg) => {
+          if (msg.id !== messageId) return msg;
+
+          const currentReactions = reactionsMapToArray(msg.reactions);
+          const existingIdx = currentReactions.findIndex((r) => r.emoji === emoji);
+
+          let updatedReactions = [...currentReactions];
+          if (action === "add") {
+            if (existingIdx > -1) {
+              const r = updatedReactions[existingIdx];
+              if (!r.users.includes(userId)) {
+                updatedReactions[existingIdx] = {
+                  ...r,
+                  count: r.count + 1,
+                  users: [...r.users, userId],
+                };
+              }
+            } else {
+              updatedReactions.push({
+                emoji,
+                count: 1,
+                users: [userId],
+              });
+            }
+          } else if (action === "remove") {
+            if (existingIdx > -1) {
+              const r = updatedReactions[existingIdx];
+              const nextUsers = r.users.filter((id) => id !== userId);
+              if (nextUsers.length === 0) {
+                updatedReactions.splice(existingIdx, 1);
+              } else {
+                updatedReactions[existingIdx] = {
+                  ...r,
+                  count: Math.max(0, r.count - 1),
+                  users: nextUsers,
+                };
+              }
+            }
+          }
+
+          return {
+            ...msg,
+            reactions: createReactionsArray(updatedReactions),
+          };
+        });
+      }
+
+      return changed ? nextState : prev;
+    });
+  };
+
   // 2. Fetch live messages for active channel or DM
   useEffect(() => {
     async function loadMessages() {
@@ -178,30 +269,77 @@ export default function KaelixoApp() {
           .order("created_at", { ascending: true });
 
         if (dbMessages && dbMessages.length > 0) {
-          const mapped: Message[] = dbMessages.map((m: any) => ({
-            id: m.id,
-            channelId: m.channel_id,
-            sender: {
-              id: m.sender_id || `user-anon`,
-              name: m.sender_name || "Colleague",
-              email: "member@kaelixo.com",
-              avatar:
-                m.sender_avatar ||
-                `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(
-                  m.sender_name || "member"
-                )}`,
-              role: (m.sender_role as any) || "member",
-              department: (m.sender_department as any) || "dev",
-              status: "online",
-            },
-            content: m.content,
-            createdAt: new Date(m.created_at).toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-            }),
-            reactions: [],
-            isPinned: m.is_pinned || false,
-          }));
+          const messageIds = dbMessages.map((m: any) => m.id);
+          const reactionsByMessage: Record<string, { emoji: string; count: number; users: string[] }[]> = {};
+
+          if (messageIds.length > 0) {
+            try {
+              const { data: dbReactions } = await supabase
+                .from("reactions")
+                .select("*")
+                .in("message_id", messageIds);
+
+              if (dbReactions) {
+                for (const r of dbReactions) {
+                  const mId = r.message_id;
+                  if (!reactionsByMessage[mId]) reactionsByMessage[mId] = [];
+                  const existing = reactionsByMessage[mId].find((x) => x.emoji === r.emoji);
+                  const uId = r.user_id || r.member_id || "";
+                  if (existing) {
+                    existing.count += 1;
+                    if (!existing.users.includes(uId)) existing.users.push(uId);
+                  } else {
+                    reactionsByMessage[mId].push({
+                      emoji: r.emoji,
+                      count: 1,
+                      users: [uId],
+                    });
+                  }
+                }
+              }
+            } catch (rErr) {
+              console.warn("Error fetching reactions:", rErr);
+            }
+          }
+
+          const mapped: Message[] = dbMessages.map((m: any) => {
+            let parsedAttachments: Attachment[] = [];
+            if (Array.isArray(m.attachments)) {
+              parsedAttachments = m.attachments;
+            } else if (typeof m.attachments === "string") {
+              try {
+                parsedAttachments = JSON.parse(m.attachments);
+              } catch {
+                parsedAttachments = [];
+              }
+            }
+
+            return {
+              id: m.id,
+              channelId: m.channel_id,
+              sender: {
+                id: m.sender_id || `user-anon`,
+                name: m.sender_name || "Colleague",
+                email: "member@kaelixo.com",
+                avatar:
+                  m.sender_avatar ||
+                  `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(
+                    m.sender_name || "member"
+                  )}`,
+                role: (m.sender_role as any) || "member",
+                department: (m.sender_department as any) || "dev",
+                status: "online",
+              },
+              content: m.content || "",
+              createdAt: new Date(m.created_at).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              }),
+              attachments: parsedAttachments,
+              reactions: createReactionsArray(reactionsByMessage[m.id] || []),
+              isPinned: m.is_pinned || false,
+            };
+          });
 
           setMessagesByChannel((prev) => ({
             ...prev,
@@ -227,6 +365,17 @@ export default function KaelixoApp() {
         (payload) => {
           const newMsg = payload.new as any;
           if (newMsg && newMsg.channel_id) {
+            let parsedAttachments: Attachment[] = [];
+            if (Array.isArray(newMsg.attachments)) {
+              parsedAttachments = newMsg.attachments;
+            } else if (typeof newMsg.attachments === "string") {
+              try {
+                parsedAttachments = JSON.parse(newMsg.attachments);
+              } catch {
+                parsedAttachments = [];
+              }
+            }
+
             const formatted: Message = {
               id: newMsg.id,
               channelId: newMsg.channel_id,
@@ -243,12 +392,13 @@ export default function KaelixoApp() {
                 department: (newMsg.sender_department as any) || "dev",
                 status: "online",
               },
-              content: newMsg.content,
+              content: newMsg.content || "",
               createdAt: new Date(newMsg.created_at).toLocaleTimeString([], {
                 hour: "2-digit",
                 minute: "2-digit",
               }),
-              reactions: [],
+              attachments: parsedAttachments,
+              reactions: createReactionsArray([]),
             };
 
             setMessagesByChannel((prev) => {
@@ -267,6 +417,36 @@ export default function KaelixoApp() {
           }
         }
       )
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "reactions" },
+        (payload) => {
+          const row = payload.new as any;
+          if (row && row.message_id && row.emoji) {
+            applyReactionChange(
+              row.message_id,
+              row.emoji,
+              row.user_id || row.member_id || "",
+              "add"
+            );
+          }
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "DELETE", schema: "public", table: "reactions" },
+        (payload) => {
+          const oldRow = payload.old as any;
+          if (oldRow && oldRow.message_id && oldRow.emoji) {
+            applyReactionChange(
+              oldRow.message_id,
+              oldRow.emoji,
+              oldRow.user_id || oldRow.member_id || "",
+              "remove"
+            );
+          }
+        }
+      )
       .subscribe((status) => {
         if (status === "SUBSCRIBED") {
           setIsLiveConnected(true);
@@ -279,24 +459,37 @@ export default function KaelixoApp() {
   }, [currentUser.name]);
 
   // Handle switching to a Direct Message with a team member
-  const handleSelectDirectMessage = (member: WorkspaceMember) => {
-    const dmId = `dm-${[currentUser.id, member.id].sort().join("-")}`;
-    setActiveDmRecipient(member);
-    setActiveChannelId(dmId);
+  const handleSelectDirectMessage = async (member: WorkspaceMember) => {
+    try {
+      const dmId = await getOrCreateDmChannel(
+        currentUser.id,
+        member.id,
+        member.name,
+        member.avatar
+      );
 
-    // If channel doesn't exist locally, register it
-    if (!channels.some((c) => c.id === dmId)) {
-      const dmChannel: Channel = {
-        id: dmId,
-        name: `@${member.name}`,
-        topic: `Direct 1-on-1 message with ${member.name} (${member.role} • ${member.department})`,
-        isPrivate: true,
-        isDm: true,
-        recipientId: member.id,
-        recipientName: member.name,
-        recipientAvatar: member.avatar,
-      };
-      setChannels((prev) => [...prev, dmChannel]);
+      setActiveDmRecipient(member);
+      setActiveChannelId(dmId);
+
+      // If channel doesn't exist locally, register it
+      if (!channels.some((c) => c.id === dmId)) {
+        const dmChannel: Channel = {
+          id: dmId,
+          name: `@${member.name}`,
+          topic: `Direct 1-on-1 message with ${member.name} (${member.role} • ${member.department})`,
+          isPrivate: true,
+          isDm: true,
+          recipientId: member.id,
+          recipientName: member.name,
+          recipientAvatar: member.avatar,
+        };
+        setChannels((prev) => [...prev, dmChannel]);
+      }
+    } catch (err) {
+      console.warn("Error getting DM channel UUID:", err);
+      const fallbackId = `dm-${[currentUser.id, member.id].sort().join("-")}`;
+      setActiveDmRecipient(member);
+      setActiveChannelId(fallbackId);
     }
   };
 
@@ -321,7 +514,7 @@ export default function KaelixoApp() {
   const activeMessages = messagesByChannel[activeChannelId] || [];
 
   // Send message
-  const handleSendMessage = async (content: string) => {
+  const handleSendMessage = async (content: string, attachments?: Attachment[]) => {
     const now = new Date();
     const timeString = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
     const localId = `msg-${Date.now()}`;
@@ -331,8 +524,9 @@ export default function KaelixoApp() {
       channelId: activeChannelId,
       sender: currentUser,
       content,
+      attachments: attachments || [],
       createdAt: timeString,
-      reactions: [],
+      reactions: createReactionsArray([]),
     };
 
     setMessagesByChannel((prev) => ({
@@ -341,14 +535,39 @@ export default function KaelixoApp() {
     }));
 
     try {
-      await supabase.from("messages").insert({
-        channel_id: activeChannelId,
-        content,
-        sender_name: currentUser.name,
-        sender_avatar: currentUser.avatar,
-        sender_role: currentUser.role,
-        sender_department: currentUser.department,
-      });
+      const { data: insertedMsg, error: insertError } = await supabase
+        .from("messages")
+        .insert({
+          channel_id: activeChannelId,
+          content: content || "",
+          sender_name: currentUser.name,
+          sender_avatar: currentUser.avatar,
+          sender_role: currentUser.role,
+          sender_department: currentUser.department,
+          attachments: attachments || [],
+        })
+        .select("id")
+        .single();
+
+      if (insertError) throw insertError;
+
+      // If attachments exist, also register in public.attachments table
+      if (attachments && attachments.length > 0 && insertedMsg?.id) {
+        for (const att of attachments) {
+          await supabase.from("attachments").insert({
+            message_id: insertedMsg.id,
+            channel_id: activeChannelId,
+            file_name: att.name,
+            file_size: formatFileSize(att.size),
+            file_type: att.type,
+            mime_type: att.type,
+            storage_path: att.storagePath,
+            url: att.url,
+            uploader_name: currentUser.name,
+          });
+        }
+      }
+
       setIsLiveConnected(true);
     } catch (e) {
       console.warn("Saved to local state:", e);
@@ -356,31 +575,37 @@ export default function KaelixoApp() {
   };
 
   // Reactions
-  const handleAddReaction = (messageId: string, emoji: string) => {
+  const handleAddReaction = async (messageId: string, emoji: string) => {
+    let willRemove = false;
+
+    // 1. Optimistic toggle in local state
     setMessagesByChannel((prev) => {
       const currentList = prev[activeChannelId] || [];
       const updatedList = currentList.map((msg) => {
         if (msg.id !== messageId) return msg;
 
-        const existingReactionIndex = msg.reactions.findIndex((r) => r.emoji === emoji);
-        let updatedReactions = [...msg.reactions];
+        const currentReactions = reactionsMapToArray(msg.reactions);
+        const existingReactionIndex = currentReactions.findIndex((r) => r.emoji === emoji);
+        let updatedReactions = [...currentReactions];
 
         if (existingReactionIndex > -1) {
           const reaction = updatedReactions[existingReactionIndex];
           const hasUser = reaction.users.includes(currentUser.id);
 
           if (hasUser) {
+            willRemove = true;
             const newUsers = reaction.users.filter((id) => id !== currentUser.id);
             if (newUsers.length === 0) {
               updatedReactions = updatedReactions.filter((r) => r.emoji !== emoji);
             } else {
               updatedReactions[existingReactionIndex] = {
                 ...reaction,
-                count: reaction.count - 1,
+                count: Math.max(0, reaction.count - 1),
                 users: newUsers,
               };
             }
           } else {
+            willRemove = false;
             updatedReactions[existingReactionIndex] = {
               ...reaction,
               count: reaction.count + 1,
@@ -388,6 +613,7 @@ export default function KaelixoApp() {
             };
           }
         } else {
+          willRemove = false;
           updatedReactions.push({
             emoji,
             count: 1,
@@ -395,11 +621,38 @@ export default function KaelixoApp() {
           });
         }
 
-        return { ...msg, reactions: updatedReactions };
+        return { ...msg, reactions: createReactionsArray(updatedReactions) };
       });
 
       return { ...prev, [activeChannelId]: updatedList };
     });
+
+    // 2. Persist to Supabase if valid UUID
+    if (UUID_REGEX.test(messageId)) {
+      try {
+        if (willRemove) {
+          await supabase
+            .from("reactions")
+            .delete()
+            .match({
+              message_id: messageId,
+              emoji: emoji,
+              user_id: currentUser.id,
+            });
+        } else {
+          await supabase
+            .from("reactions")
+            .insert({
+              message_id: messageId,
+              emoji: emoji,
+              user_id: currentUser.id,
+              user_name: currentUser.name,
+            });
+        }
+      } catch (err) {
+        console.warn("Reaction persistence error:", err);
+      }
+    }
   };
 
   // Create Channel
@@ -644,10 +897,12 @@ export default function KaelixoApp() {
           messages={activeMessages}
           currentUser={currentUser}
           onAddReaction={handleAddReaction}
+          members={TEAM_MEMBERS}
         />
 
         {/* Input Composer */}
         <ChatInput
+          channelId={activeChannelId}
           channelName={activeChannel.name}
           onSendMessage={handleSendMessage}
           externalText={externalTemplateText}
