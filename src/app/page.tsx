@@ -13,18 +13,30 @@ import {
   INITIAL_CHANNELS,
   INITIAL_MESSAGES,
 } from "@/lib/mock-data";
-import { DepartmentCode, Channel, Message, WorkspaceMember } from "@/types";
+import { DepartmentCode, Channel, Message } from "@/types";
 import {
   Hash,
   Lock,
-  Users,
   Search,
-  Bell,
   PanelRight,
-  Sparkles,
-  Info,
+  Database,
+  Radio,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+
+const DEPT_ID_TO_CODE: Record<string, DepartmentCode> = {
+  "22222222-2222-2222-2222-222222222221": "dev",
+  "22222222-2222-2222-2222-222222222222": "teaching",
+  "22222222-2222-2222-2222-222222222223": "telecalling",
+  "22222222-2222-2222-2222-222222222224": "management",
+};
+
+const CODE_TO_DEPT_ID: Record<string, string> = {
+  dev: "22222222-2222-2222-2222-222222222221",
+  teaching: "22222222-2222-2222-2222-222222222222",
+  telecalling: "22222222-2222-2222-2222-222222222223",
+  management: "22222222-2222-2222-2222-222222222224",
+};
 
 export default function KaelixoApp() {
   const [selectedDepartment, setSelectedDepartment] = useState<DepartmentCode>("all");
@@ -34,42 +46,135 @@ export default function KaelixoApp() {
   const [isNewChannelModalOpen, setIsNewChannelModalOpen] = useState(false);
   const [externalTemplateText, setExternalTemplateText] = useState("");
   const [showRightDrawer, setShowRightDrawer] = useState(false);
+  const [isLiveConnected, setIsLiveConnected] = useState(false);
 
-  const activeChannel = channels.find((c) => c.id === activeChannelId) || channels[0];
-  const activeMessages = messagesByChannel[activeChannelId] || [];
+  const supabase = createClient();
 
-  // Listen to Supabase Realtime if keys are provided in .env.local
+  // 1. Fetch live channels from Supabase on mount
   useEffect(() => {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    if (!supabaseUrl || supabaseUrl.includes("placeholder")) return;
+    async function loadData() {
+      try {
+        const { data: dbChannels, error } = await supabase
+          .from("channels")
+          .select("*")
+          .order("created_at", { ascending: true });
 
-    try {
-      const supabase = createClient();
-      const channel = supabase
-        .channel("realtime-messages")
-        .on(
-          "postgres_changes",
-          { event: "INSERT", schema: "public", table: "messages" },
-          (payload) => {
-            console.log("New realtime message received:", payload);
-          }
-        )
-        .subscribe();
+        if (!error && dbChannels && dbChannels.length > 0) {
+          const formattedChannels: Channel[] = dbChannels.map((ch: any) => ({
+            id: ch.id,
+            name: ch.name,
+            topic: ch.topic || "",
+            departmentId: ch.department_id,
+            departmentCode: ch.department_id ? DEPT_ID_TO_CODE[ch.department_id] || "all" : "all",
+            isPrivate: ch.is_private || false,
+          }));
 
-      return () => {
-        supabase.removeChannel(channel);
-      };
-    } catch (err) {
-      console.error("Supabase Realtime subscription error:", err);
+          setChannels(formattedChannels);
+          setActiveChannelId(formattedChannels[0].id);
+          setIsLiveConnected(true);
+        }
+      } catch (err) {
+        console.warn("Using local channels data:", err);
+      }
     }
+
+    loadData();
   }, []);
 
-  const handleSendMessage = (content: string) => {
+  // 2. Fetch live messages for active channel
+  useEffect(() => {
+    async function loadMessages() {
+      if (!isLiveConnected) return;
+
+      try {
+        const { data: dbMessages, error } = await supabase
+          .from("messages")
+          .select("*")
+          .eq("channel_id", activeChannelId)
+          .order("created_at", { ascending: true });
+
+        if (!error && dbMessages && dbMessages.length > 0) {
+          const mapped: Message[] = dbMessages.map((m: any) => ({
+            id: m.id,
+            channelId: m.channel_id,
+            sender: CURRENT_USER,
+            content: m.content,
+            createdAt: new Date(m.created_at).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            }),
+            reactions: [],
+            isPinned: m.is_pinned || false,
+          }));
+
+          setMessagesByChannel((prev) => ({
+            ...prev,
+            [activeChannelId]: mapped,
+          }));
+        }
+      } catch (err) {
+        console.warn("Could not load remote messages:", err);
+      }
+    }
+
+    loadMessages();
+  }, [activeChannelId, isLiveConnected]);
+
+  // 3. Supabase Realtime Subscription for instant live messaging
+  useEffect(() => {
+    const channel = supabase
+      .channel("realtime-messages-stream")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "messages" },
+        (payload) => {
+          const newMsg = payload.new as any;
+          if (newMsg && newMsg.channel_id) {
+            const formatted: Message = {
+              id: newMsg.id,
+              channelId: newMsg.channel_id,
+              sender: CURRENT_USER,
+              content: newMsg.content,
+              createdAt: new Date(newMsg.created_at).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              }),
+              reactions: [],
+            };
+
+            setMessagesByChannel((prev) => {
+              const currentList = prev[newMsg.channel_id] || [];
+              if (currentList.some((m) => m.id === newMsg.id)) return prev;
+              return {
+                ...prev,
+                [newMsg.channel_id]: [...currentList, formatted],
+              };
+            });
+          }
+        }
+      )
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") {
+          setIsLiveConnected(true);
+        }
+      });
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const activeChannel =
+    channels.find((c) => c.id === activeChannelId) || channels[0] || INITIAL_CHANNELS[0];
+  const activeMessages = messagesByChannel[activeChannelId] || [];
+
+  const handleSendMessage = async (content: string) => {
     const now = new Date();
     const timeString = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    const localId = `msg-${Date.now()}`;
 
     const newMessage: Message = {
-      id: `msg-${Date.now()}`,
+      id: localId,
       channelId: activeChannelId,
       sender: CURRENT_USER,
       content,
@@ -77,10 +182,23 @@ export default function KaelixoApp() {
       reactions: [],
     };
 
+    // Optimistic UI update
     setMessagesByChannel((prev) => ({
       ...prev,
       [activeChannelId]: [...(prev[activeChannelId] || []), newMessage],
     }));
+
+    // If Supabase is connected, persist to live database
+    if (isLiveConnected) {
+      try {
+        await supabase.from("messages").insert({
+          channel_id: activeChannelId,
+          content,
+        });
+      } catch (e) {
+        console.warn("Message stored in local session:", e);
+      }
+    }
   };
 
   const handleAddReaction = (messageId: string, emoji: string) => {
@@ -97,7 +215,6 @@ export default function KaelixoApp() {
           const hasUser = reaction.users.includes(CURRENT_USER.id);
 
           if (hasUser) {
-            // Remove user reaction
             const newUsers = reaction.users.filter((id) => id !== CURRENT_USER.id);
             if (newUsers.length === 0) {
               updatedReactions = updatedReactions.filter((r) => r.emoji !== emoji);
@@ -109,7 +226,6 @@ export default function KaelixoApp() {
               };
             }
           } else {
-            // Add user reaction
             updatedReactions[existingReactionIndex] = {
               ...reaction,
               count: reaction.count + 1,
@@ -117,7 +233,6 @@ export default function KaelixoApp() {
             };
           }
         } else {
-          // New reaction emoji
           updatedReactions.push({
             emoji,
             count: 1,
@@ -132,14 +247,15 @@ export default function KaelixoApp() {
     });
   };
 
-  const handleCreateChannel = (data: {
+  const handleCreateChannel = async (data: {
     name: string;
     topic: string;
     departmentCode: DepartmentCode;
     isPrivate: boolean;
   }) => {
+    const localId = `chan-${Date.now()}`;
     const newChannel: Channel = {
-      id: `chan-${Date.now()}`,
+      id: localId,
       name: data.name,
       topic: data.topic || "Discussion channel",
       departmentCode: data.departmentCode,
@@ -161,6 +277,22 @@ export default function KaelixoApp() {
         },
       ],
     }));
+
+    // Save to Supabase if connected
+    if (isLiveConnected) {
+      try {
+        const deptId = data.departmentCode !== "all" ? CODE_TO_DEPT_ID[data.departmentCode] : null;
+        await supabase.from("channels").insert({
+          organization_id: "11111111-1111-1111-1111-111111111111",
+          department_id: deptId,
+          name: data.name,
+          topic: data.topic,
+          is_private: data.isPrivate,
+        });
+      } catch (err) {
+        console.warn("Saved channel locally:", err);
+      }
+    }
   };
 
   return (
@@ -211,12 +343,28 @@ export default function KaelixoApp() {
 
           {/* Header Action Tools */}
           <div className="flex items-center space-x-2 flex-shrink-0">
+            {/* Live Supabase Connection Badge */}
+            <div
+              className={`flex items-center space-x-1.5 text-[11px] font-medium px-2.5 py-1 rounded-full border ${
+                isLiveConnected
+                  ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/50"
+                  : "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800/50"
+              }`}
+            >
+              <Radio
+                className={`w-3 h-3 ${
+                  isLiveConnected ? "text-emerald-500 animate-pulse" : "text-indigo-500"
+                }`}
+              />
+              <span>{isLiveConnected ? "Supabase Live" : "Connected"}</span>
+            </div>
+
             <div className="hidden sm:flex items-center text-xs text-neutral-500 bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-1.5 space-x-2">
               <Search className="w-3.5 h-3.5 text-neutral-400" />
               <input
                 type="text"
-                placeholder="Search messages..."
-                className="bg-transparent focus:outline-none w-32 text-xs"
+                placeholder="Search..."
+                className="bg-transparent focus:outline-none w-24 text-xs"
               />
             </div>
 
