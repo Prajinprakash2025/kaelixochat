@@ -24,6 +24,7 @@ interface SlackAuthModalProps {
   organizations?: Organization[];
   initialInviteCode?: string;
   onLoginSuccess: (user: WorkspaceMember, org?: Organization) => void;
+  isDismissible?: boolean;
 }
 
 export function SlackAuthModal({
@@ -34,6 +35,7 @@ export function SlackAuthModal({
   organizations = [],
   initialInviteCode = "",
   onLoginSuccess,
+  isDismissible = true,
 }: SlackAuthModalProps) {
   const [step, setStep] = useState<"email" | "otp" | "company" | "profile">("email");
   const [email, setEmail] = useState(currentUser.email || "");
@@ -308,7 +310,14 @@ export function SlackAuthModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+    <div
+      onClick={(e) => {
+        if (e.target === e.currentTarget && isDismissible) {
+          onClose();
+        }
+      }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-md p-4 animate-in fade-in duration-200"
+    >
       <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl">
         {/* Header */}
         <div className="p-5 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between">
@@ -317,9 +326,16 @@ export function SlackAuthModal({
               <Building2 className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="font-bold text-base text-neutral-900 dark:text-white">
-                Sign in to Kaelixo
-              </h2>
+              <div className="flex items-center space-x-2">
+                <h2 className="font-bold text-base text-neutral-900 dark:text-white">
+                  Sign in to Kaelixo
+                </h2>
+                {!isDismissible && (
+                  <span className="text-[10px] uppercase font-semibold px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                    Required
+                  </span>
+                )}
+              </div>
               <p className="text-xs text-neutral-500">
                 {step === "email" && "Enter your work email to continue"}
                 {step === "otp" && "Enter the 6-digit verification code"}
@@ -328,12 +344,14 @@ export function SlackAuthModal({
               </p>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-lg text-neutral-400 hover:text-neutral-700 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition"
-          >
-            <X className="w-4 h-4" />
-          </button>
+          {isDismissible && (
+            <button
+              onClick={onClose}
+              className="p-1.5 rounded-lg text-neutral-400 hover:text-neutral-700 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
         </div>
 
         {/* Content Body */}

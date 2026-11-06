@@ -21,6 +21,7 @@ import {
   X,
   Share2,
   UserPlus,
+  LogOut,
 } from "lucide-react";
 import { DepartmentCode, Channel, WorkspaceMember, Department, Organization } from "@/types";
 
@@ -42,6 +43,7 @@ interface SidebarProps {
   onOpenAuthModal: () => void;
   onOpenInviteModal?: () => void;
   onSelectDirectMessage: (member: WorkspaceMember) => void;
+  onLogout?: () => void;
   isMobileOpen?: boolean;
   onCloseMobile?: () => void;
 }
@@ -64,6 +66,7 @@ export function Sidebar({
   onOpenAuthModal,
   onOpenInviteModal,
   onSelectDirectMessage,
+  onLogout,
   isMobileOpen = false,
   onCloseMobile,
 }: SidebarProps) {
@@ -386,13 +389,13 @@ export function Sidebar({
       </div>
 
       {/* User Footer Profile & Slack Auth Trigger */}
-      <div
-        onClick={onOpenAuthModal}
-        className="p-3 border-t border-neutral-800 bg-neutral-900/90 flex items-center justify-between cursor-pointer hover:bg-neutral-800/80 transition group"
-        title="Click to sign in, change profile, or switch account"
-      >
-        <div className="flex items-center space-x-2.5 min-w-0">
-          <div className="relative">
+      <div className="p-3 border-t border-neutral-800 bg-neutral-900/95 flex items-center justify-between">
+        <div
+          onClick={onOpenAuthModal}
+          className="flex items-center space-x-2.5 min-w-0 cursor-pointer flex-1 group"
+          title="Switch profile or edit status"
+        >
+          <div className="relative flex-shrink-0">
             <img
               src={currentUser.avatar}
               alt={currentUser.name}
@@ -410,16 +413,25 @@ export function Sidebar({
             </p>
           </div>
         </div>
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onOpenAuthModal();
-          }}
-          title="Sign in / Switch account"
-          className="text-neutral-400 hover:text-white p-1 rounded-lg hover:bg-neutral-800 transition"
-        >
-          <Smile className="w-4 h-4" />
-        </button>
+
+        <div className="flex items-center space-x-1 flex-shrink-0">
+          <button
+            onClick={onOpenAuthModal}
+            title="Switch Account / Edit Profile"
+            className="text-neutral-400 hover:text-white p-1.5 rounded-lg hover:bg-neutral-800 transition"
+          >
+            <Smile className="w-4 h-4" />
+          </button>
+          {onLogout && (
+            <button
+              onClick={onLogout}
+              title="Sign Out"
+              className="text-neutral-400 hover:text-rose-400 p-1.5 rounded-lg hover:bg-rose-500/10 transition"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          )}
+        </div>
       </div>
     </aside>
     </>

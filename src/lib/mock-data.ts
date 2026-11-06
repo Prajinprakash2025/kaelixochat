@@ -2,7 +2,7 @@ import { Department, WorkspaceMember, Channel, Message, createReactionsArray } f
 
 export const DEPARTMENTS: Department[] = [
   {
-    id: "dept-all",
+    id: "22222222-2222-2222-2222-222222222220",
     name: "All Departments",
     code: "all",
     description: "Company-wide general channels",
@@ -10,7 +10,7 @@ export const DEPARTMENTS: Department[] = [
     color: "bg-indigo-500",
   },
   {
-    id: "dept-dev",
+    id: "22222222-2222-2222-2222-222222222221",
     name: "Development",
     code: "dev",
     description: "Code, bug fixes, Next.js, and Supabase",
@@ -18,7 +18,7 @@ export const DEPARTMENTS: Department[] = [
     color: "bg-emerald-500",
   },
   {
-    id: "dept-teaching",
+    id: "22222222-2222-2222-2222-222222222222",
     name: "Teaching & Training",
     code: "teaching",
     description: "Batches, study materials & student doubt clearance",
@@ -26,7 +26,7 @@ export const DEPARTMENTS: Department[] = [
     color: "bg-amber-500",
   },
   {
-    id: "dept-telecalling",
+    id: "22222222-2222-2222-2222-222222222223",
     name: "Telecalling & Leads",
     code: "telecalling",
     description: "Daily call logs, conversions & customer follow-ups",
@@ -34,7 +34,7 @@ export const DEPARTMENTS: Department[] = [
     color: "bg-rose-500",
   },
   {
-    id: "dept-management",
+    id: "22222222-2222-2222-2222-222222222224",
     name: "Management",
     code: "management",
     description: "Company announcements & strategic planning",
@@ -44,7 +44,7 @@ export const DEPARTMENTS: Department[] = [
 ];
 
 export const CURRENT_USER: WorkspaceMember = {
-  id: "user-1",
+  id: "user-prajin-prakash",
   name: "Prajin Prakash",
   email: "prajin@kaelixo.com",
   avatar: "https://api.dicebear.com/7.x/bottts/svg?seed=Prajin",
@@ -57,8 +57,8 @@ export const CURRENT_USER: WorkspaceMember = {
 export const TEAM_MEMBERS: WorkspaceMember[] = [
   CURRENT_USER,
   {
-    id: "user-2",
-    name: "Arjun (Tech Lead)",
+    id: "user-arjun-dev",
+    name: "Arjun Dev",
     email: "arjun@kaelixo.com",
     avatar: "https://api.dicebear.com/7.x/bottts/svg?seed=Arjun",
     role: "manager",
@@ -67,8 +67,8 @@ export const TEAM_MEMBERS: WorkspaceMember[] = [
     statusText: "👨‍💻 Reviewing Next.js PR",
   },
   {
-    id: "user-3",
-    name: "Aparna (Instructor)",
+    id: "user-aparna-sharma",
+    name: "Aparna Sharma",
     email: "aparna@kaelixo.com",
     avatar: "https://api.dicebear.com/7.x/bottts/svg?seed=Aparna",
     role: "member",
@@ -77,8 +77,8 @@ export const TEAM_MEMBERS: WorkspaceMember[] = [
     statusText: "📚 Taking Batch 4 Class",
   },
   {
-    id: "user-4",
-    name: "Rahul (Sales Lead)",
+    id: "user-rahul-nair",
+    name: "Rahul Nair",
     email: "rahul@kaelixo.com",
     avatar: "https://api.dicebear.com/7.x/bottts/svg?seed=Rahul",
     role: "manager",
@@ -87,8 +87,8 @@ export const TEAM_MEMBERS: WorkspaceMember[] = [
     statusText: "📞 On a customer call",
   },
   {
-    id: "user-5",
-    name: "Sneha (Telecaller)",
+    id: "user-sneha-patel",
+    name: "Sneha Patel",
     email: "sneha@kaelixo.com",
     avatar: "https://api.dicebear.com/7.x/bottts/svg?seed=Sneha",
     role: "member",
@@ -100,45 +100,44 @@ export const TEAM_MEMBERS: WorkspaceMember[] = [
 
 export const INITIAL_CHANNELS: Channel[] = [
   {
-    id: "chan-announcements",
+    id: "33333333-3333-3333-3333-333333333331",
     name: "announcements",
     topic: "📢 Company-wide important announcements and milestones",
     departmentCode: "all",
     isPrivate: false,
-    unreadCount: 1,
+    unreadCount: 0,
   },
   {
-    id: "chan-general",
+    id: "33333333-3333-3333-3333-333333333332",
     name: "general",
     topic: "💬 Casual chat, tea break talks, and celebrations",
     departmentCode: "all",
     isPrivate: false,
   },
   {
-    id: "chan-dev-sprint",
+    id: "33333333-3333-3333-3333-333333333333",
     name: "dev-sprint",
     topic: "⚡ Tech updates, Next.js architecture, and Supabase migrations",
     departmentCode: "dev",
     isPrivate: false,
-    unreadCount: 2,
+    unreadCount: 0,
   },
   {
-    id: "chan-teaching-hub",
+    id: "33333333-3333-3333-3333-333333333334",
     name: "teaching-hub",
     topic: "📚 Daily class schedules, slide decks, and student doubts",
     departmentCode: "teaching",
     isPrivate: false,
   },
   {
-    id: "chan-telecalling-leads",
+    id: "33333333-3333-3333-3333-333333333335",
     name: "telecalling-leads",
     topic: "🎯 Lead conversion logs, daily calling reports, and targets",
     departmentCode: "telecalling",
     isPrivate: false,
-    unreadCount: 3,
   },
   {
-    id: "chan-management-sync",
+    id: "33333333-3333-3333-3333-333333333336",
     name: "management-sync",
     topic: "🔒 Executive team weekly sync and business operations",
     departmentCode: "management",
@@ -147,78 +146,78 @@ export const INITIAL_CHANNELS: Channel[] = [
 ];
 
 export const INITIAL_MESSAGES: Record<string, Message[]> = {
-  "chan-announcements": [
+  "33333333-3333-3333-3333-333333333331": [
     {
-      id: "msg-1",
-      channelId: "chan-announcements",
+      id: "66075f43-db3d-4e7d-8e0c-163892051143",
+      channelId: "33333333-3333-3333-3333-333333333331",
       sender: CURRENT_USER,
       content: "👋 Welcome to **Kaelixo**! Our enterprise team workspace is live. Channels are configured for Engineering, Product, Operations, and Sales teams. Feel free to explore threads, attach files, and collaborate in real-time! 🎉",
       createdAt: "10:00 AM",
       reactions: createReactionsArray([
-        { emoji: "🚀", count: 4, users: ["user-2", "user-3", "user-4", "user-5"] },
-        { emoji: "❤️", count: 3, users: ["user-2", "user-5", "user-3"] },
+        { emoji: "🚀", count: 4, users: ["user-arjun-dev", "user-aparna-sharma", "user-rahul-nair", "user-sneha-patel"] },
+        { emoji: "❤️", count: 3, users: ["user-arjun-dev", "user-sneha-patel", "user-aparna-sharma"] },
       ]),
       threadCount: 2,
       isPinned: true,
     },
   ],
-  "chan-general": [
+  "33333333-3333-3333-3333-333333333332": [
     {
-      id: "msg-2",
-      channelId: "chan-general",
-      sender: TEAM_MEMBERS[2], // Aparna
+      id: "msg-gen-1",
+      channelId: "33333333-3333-3333-3333-333333333332",
+      sender: TEAM_MEMBERS[2],
       content: "Good morning team! Have a great productive day everyone ☕✨",
       createdAt: "10:05 AM",
-      reactions: createReactionsArray([{ emoji: "☕", count: 5, users: ["user-1", "user-2", "user-4"] }]),
+      reactions: createReactionsArray([{ emoji: "☕", count: 5, users: ["user-prajin-prakash", "user-arjun-dev", "user-rahul-nair"] }]),
     },
     {
-      id: "msg-3",
-      channelId: "chan-general",
-      sender: TEAM_MEMBERS[1], // Arjun
-      content: "Morning! Kaelixo UI is looking super clean and cute! ❤️",
+      id: "msg-gen-2",
+      channelId: "33333333-3333-3333-3333-333333333332",
+      sender: TEAM_MEMBERS[1],
+      content: "Morning! The Kaelixo UI is looking super clean and fast! ❤️",
       createdAt: "10:08 AM",
-      reactions: createReactionsArray([{ emoji: "🙌", count: 3, users: ["user-1", "user-3"] }]),
+      reactions: createReactionsArray([{ emoji: "🙌", count: 3, users: ["user-prajin-prakash", "user-aparna-sharma"] }]),
     },
   ],
-  "chan-dev-sprint": [
+  "33333333-3333-3333-3333-333333333333": [
     {
-      id: "msg-4",
-      channelId: "chan-dev-sprint",
-      sender: TEAM_MEMBERS[1], // Arjun
-      content: "Next.js 15 App router + Supabase Realtime setup is rock solid. Check the migration script in `supabase/schema.sql` if you need to run RLS policies.",
+      id: "0a4f29b0-a070-4f46-bc4d-d881fb7aa643",
+      channelId: "33333333-3333-3333-3333-333333333333",
+      sender: TEAM_MEMBERS[1],
+      content: "Next.js 16 + Supabase Realtime setup is live and connected. All messages sync instantly across workspaces.",
       createdAt: "10:12 AM",
-      reactions: createReactionsArray([{ emoji: "🔥", count: 2, users: ["user-1"] }]),
-      threadCount: 1,
+      reactions: createReactionsArray([{ emoji: "🔥", count: 2, users: ["user-prajin-prakash"] }]),
+      threadCount: 0,
     },
   ],
-  "chan-teaching-hub": [
+  "33333333-3333-3333-3333-333333333334": [
     {
-      id: "msg-5",
-      channelId: "chan-teaching-hub",
-      sender: TEAM_MEMBERS[2], // Aparna
+      id: "msg-teach-1",
+      channelId: "33333333-3333-3333-3333-333333333334",
+      sender: TEAM_MEMBERS[2],
       content: "Session notes and slide deck for Q4 Onboarding are uploaded. Please drop any questions or feedback in this thread 📖",
       createdAt: "09:45 AM",
-      reactions: createReactionsArray([{ emoji: "👍", count: 4, users: ["user-1", "user-4"] }]),
+      reactions: createReactionsArray([{ emoji: "👍", count: 4, users: ["user-prajin-prakash", "user-rahul-nair"] }]),
     },
   ],
-  "chan-telecalling-leads": [
+  "33333333-3333-3333-3333-333333333335": [
     {
-      id: "msg-6",
-      channelId: "chan-telecalling-leads",
-      sender: TEAM_MEMBERS[4], // Sneha
-      content: "📞 **Morning Lead Update:**\n- Calls made: 28\n- Interested leads: 7\n- Scheduled demo calls: 3\nFollow-up sheet updated!",
+      id: "msg-sales-1",
+      channelId: "33333333-3333-3333-3333-333333333335",
+      sender: TEAM_MEMBERS[4],
+      content: "📞 **Morning Outreach Update:**\n- Calls made: 28\n- Interested leads: 7\n- Scheduled demo calls: 3\nFollow-up sheet updated!",
       createdAt: "10:15 AM",
-      reactions: createReactionsArray([{ emoji: "🎯", count: 4, users: ["user-1", "user-4"] }]),
+      reactions: createReactionsArray([{ emoji: "🎯", count: 4, users: ["user-prajin-prakash", "user-rahul-nair"] }]),
     },
   ],
-  "chan-management-sync": [
+  "33333333-3333-3333-3333-333333333336": [
     {
-      id: "msg-7",
-      channelId: "chan-management-sync",
+      id: "msg-mgmt-1",
+      channelId: "33333333-3333-3333-3333-333333333336",
       sender: CURRENT_USER,
-      content: "Internal testing phase starts today. Once our teams approve the daily workflow, we will launch Kaelixo as a SaaS offering for other companies! 💼",
+      content: "Internal testing phase is live. All teams please test real-time messaging, threads, attachments, and invite codes! 💼",
       createdAt: "09:30 AM",
-      reactions: createReactionsArray([{ emoji: "💼", count: 2, users: ["user-4"] }]),
+      reactions: createReactionsArray([{ emoji: "💼", count: 2, users: ["user-rahul-nair"] }]),
       isPinned: true,
     },
   ],

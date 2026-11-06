@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Sidebar } from "@/components/layout/sidebar";
 import { DepartmentToolbar } from "@/components/chat/department-toolbar";
 import { MessageFeed } from "@/components/chat/message-feed";
@@ -68,10 +68,11 @@ export default function KaelixoApp() {
   const [departments, setDepartments] = useState<Department[]>(INITIAL_DEPTS);
   const [selectedDepartment, setSelectedDepartment] = useState<DepartmentCode>("all");
   const [channels, setChannels] = useState<Channel[]>(INITIAL_CHANNELS);
-  const [activeChannelId, setActiveChannelId] = useState<string>("chan-announcements");
+  const [activeChannelId, setActiveChannelId] = useState<string>("33333333-3333-3333-3333-333333333331");
   const [activeDmRecipient, setActiveDmRecipient] = useState<WorkspaceMember | null>(null);
   const [messagesByChannel, setMessagesByChannel] = useState<Record<string, Message[]>>(INITIAL_MESSAGES);
   const [currentUser, setCurrentUser] = useState<WorkspaceMember>(DEFAULT_USER);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
 
   // Modals state
   const [isNewChannelModalOpen, setIsNewChannelModalOpen] = useState(false);
@@ -87,6 +88,8 @@ export default function KaelixoApp() {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [activeThreadParent, setActiveThreadParent] = useState<Message | null>(null);
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+
+  const realtimeChannelRef = useRef<any>(null);
 
   // URL query parameter invite detection (?invite=...)
   useEffect(() => {
@@ -114,12 +117,16 @@ export default function KaelixoApp() {
 
   const supabase = createClient();
 
-  // Load user & org from localStorage
+  // Load user & org from localStorage; require auth if no user saved
   useEffect(() => {
     try {
       const savedUser = localStorage.getItem("kaelixo_user");
       if (savedUser) {
         setCurrentUser(JSON.parse(savedUser));
+        setIsAuthenticated(true);
+      } else {
+        setIsAuthenticated(false);
+        setIsAuthModalOpen(true);
       }
       const savedOrg = localStorage.getItem("kaelixo_org");
       if (savedOrg) {
@@ -127,12 +134,15 @@ export default function KaelixoApp() {
         setActiveOrg(parsedOrg);
       }
     } catch {
-      // ignore
+      setIsAuthenticated(false);
+      setIsAuthModalOpen(true);
     }
   }, []);
 
   const handleLoginSuccess = (user: WorkspaceMember, org?: Organization) => {
     setCurrentUser(user);
+    setIsAuthenticated(true);
+    setIsAuthModalOpen(false);
     if (org) {
       setActiveOrg(org);
       setOrganizations((prev) => {
@@ -152,6 +162,22 @@ export default function KaelixoApp() {
     } catch {
       // ignore
     }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+    } catch {
+      // ignore
+    }
+    try {
+      localStorage.removeItem("kaelixo_user");
+      localStorage.removeItem("kaelixo_org");
+    } catch {
+      // ignore
+    }
+    setIsAuthenticated(false);
+    setIsAuthModalOpen(true);
   };
 
   const handleUpdateOrgInviteCode = (newCode: string) => {
@@ -199,7 +225,11 @@ export default function KaelixoApp() {
 
         // Fetch Departments
         const { data: dbDepts } = await supabase.from("departments").select("*");
+        const deptCodeMap = new Map<string, DepartmentCode>();
         if (dbDepts && dbDepts.length > 0) {
+          dbDepts.forEach((d: any) => {
+            deptCodeMap.set(d.id, d.code as DepartmentCode);
+          });
           const deptsWithAll: Department[] = [
             INITIAL_DEPTS[0], // All Departments
             ...dbDepts.map((d: any) => ({
@@ -221,22 +251,31 @@ export default function KaelixoApp() {
           .order("created_at", { ascending: true });
 
         if (dbChannels && dbChannels.length > 0) {
-          const formatted: Channel[] = dbChannels.map((ch: any) => ({
-            id: ch.id,
-            name: ch.name,
-            topic: ch.topic || "",
-            departmentId: ch.department_id,
-            departmentCode: ch.department_id ? "dev" : "all",
-            isPrivate: ch.is_private || false,
-            isDm: ch.is_dm || false,
-            recipientId: ch.recipient_id,
-            recipientName: ch.recipient_name,
-            recipientAvatar: ch.recipient_avatar,
-          }));
+          const formatted: Channel[] = dbChannels.map((ch: any) => {
+            let deptCode: DepartmentCode = "all";
+            if (ch.department_id) {
+              deptCode = deptCodeMap.get(ch.department_id) || "dev";
+            }
+            return {
+              id: ch.id,
+              name: ch.name,
+              topic: ch.topic || "",
+              departmentId: ch.department_id,
+              departmentCode: deptCode,
+              isPrivate: ch.is_private || false,
+              isDm: ch.is_dm || false,
+              recipientId: ch.recipient_id,
+              recipientName: ch.recipient_name,
+              recipientAvatar: ch.recipient_avatar,
+            };
+          });
 
           setChannels(formatted);
-          const firstNonDm = formatted.find((c) => !c.isDm) || formatted[0];
-          setActiveChannelId(firstNonDm.id);
+          setActiveChannelId((prev) => {
+            if (prev && formatted.some((c) => c.id === prev)) return prev;
+            const firstNonDm = formatted.find((c) => !c.isDm) || formatted[0];
+            return firstNonDm ? firstNonDm.id : prev;
+          });
           setIsLiveConnected(true);
         }
       } catch (err) {
@@ -417,14 +456,14 @@ export default function KaelixoApp() {
     loadMessages();
   }, [activeChannelId]);
 
-  // 3. Supabase Realtime Subscription
+  // 3. Supabase Realtime Subscription + WebSocket Broadcast
   useEffect(() => {
     const channel = supabase
       .channel("realtime-messages-stream-v2")
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "messages" },
-        (payload) => {
+        (payload: any) => {
           const newMsg = payload.new as any;
           if (newMsg && newMsg.channel_id) {
             let parsedAttachments: Attachment[] = [];
@@ -482,13 +521,37 @@ export default function KaelixoApp() {
                 [newMsg.channel_id]: [...currentList, formatted],
               };
             });
+            setIsLiveConnected(true);
+          }
+        }
+      )
+      .on(
+        "broadcast",
+        { event: "new_message" },
+        (payload: any) => {
+          const newMsg = payload.payload;
+          if (newMsg && newMsg.channelId) {
+            setMessagesByChannel((prev) => {
+              const currentList = prev[newMsg.channelId] || [];
+              if (currentList.some((m) => m.id === newMsg.id)) return prev;
+
+              if (newMsg.sender?.name !== currentUser.name) {
+                playChime();
+              }
+
+              return {
+                ...prev,
+                [newMsg.channelId]: [...currentList, newMsg],
+              };
+            });
+            setIsLiveConnected(true);
           }
         }
       )
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "messages" },
-        (payload) => {
+        (payload: any) => {
           const updatedRow = payload.new as any;
           if (updatedRow && updatedRow.id) {
             setMessagesByChannel((prev) => {
@@ -518,7 +581,7 @@ export default function KaelixoApp() {
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "reactions" },
-        (payload) => {
+        (payload: any) => {
           const row = payload.new as any;
           if (row && row.message_id && row.emoji) {
             applyReactionChange(
@@ -533,7 +596,7 @@ export default function KaelixoApp() {
       .on(
         "postgres_changes",
         { event: "DELETE", schema: "public", table: "reactions" },
-        (payload) => {
+        (payload: any) => {
           const oldRow = payload.old as any;
           if (oldRow && oldRow.message_id && oldRow.emoji) {
             applyReactionChange(
@@ -545,16 +608,97 @@ export default function KaelixoApp() {
           }
         }
       )
-      .subscribe((status) => {
+      .subscribe((status: any) => {
         if (status === "SUBSCRIBED") {
           setIsLiveConnected(true);
+        } else if (status === "CLOSED" || status === "CHANNEL_ERROR") {
+          setIsLiveConnected(false);
         }
       });
 
+    realtimeChannelRef.current = channel;
+
     return () => {
       supabase.removeChannel(channel);
+      realtimeChannelRef.current = null;
     };
   }, [currentUser.name]);
+
+  // 4. Background Sync Polling Fallback (sync every 3 seconds for active channel)
+  useEffect(() => {
+    if (!activeChannelId || !UUID_REGEX.test(activeChannelId)) return;
+
+    const syncInterval = setInterval(async () => {
+      try {
+        const { data: dbMessages } = await supabase
+          .from("messages")
+          .select("*")
+          .eq("channel_id", activeChannelId)
+          .order("created_at", { ascending: true });
+
+        if (dbMessages && dbMessages.length > 0) {
+          setMessagesByChannel((prev) => {
+            const currentList = prev[activeChannelId] || [];
+            const existingIds = new Set(currentList.map((m) => m.id));
+            let hasNew = false;
+            const newFromDb: Message[] = [];
+
+            for (const m of dbMessages) {
+              if (!existingIds.has(m.id)) {
+                hasNew = true;
+                let parsedAttachments: Attachment[] = [];
+                if (Array.isArray(m.attachments)) parsedAttachments = m.attachments;
+                else if (typeof m.attachments === "string") {
+                  try { parsedAttachments = JSON.parse(m.attachments); } catch {}
+                }
+
+                newFromDb.push({
+                  id: m.id,
+                  channelId: m.channel_id,
+                  parentId: m.parent_id || null,
+                  threadCount: m.reply_count || 0,
+                  lastReplyAt: m.last_reply_at || null,
+                  isPinned: m.is_pinned || false,
+                  isEdited: m.is_edited || false,
+                  isDeleted: m.is_deleted || false,
+                  sender: {
+                    id: m.sender_id || `user-anon`,
+                    name: m.sender_name || "Colleague",
+                    email: "member@kaelixo.com",
+                    avatar:
+                      m.sender_avatar ||
+                      `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(
+                        m.sender_name || "member"
+                      )}`,
+                    role: (m.sender_role as any) || "member",
+                    department: (m.sender_department as any) || "dev",
+                    status: "online",
+                  },
+                  content: m.content || "",
+                  createdAt: new Date(m.created_at).toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  }),
+                  attachments: parsedAttachments,
+                  reactions: createReactionsArray([]),
+                });
+              }
+            }
+
+            if (!hasNew) return prev;
+            return {
+              ...prev,
+              [activeChannelId]: [...currentList, ...newFromDb],
+            };
+          });
+        }
+      } catch {
+        // silent fallback
+      }
+    }, 3000);
+
+    return () => clearInterval(syncInterval);
+  }, [activeChannelId]);
 
   // Handle switching to a Direct Message with a team member
   const handleSelectDirectMessage = async (member: WorkspaceMember) => {
@@ -619,9 +763,20 @@ export default function KaelixoApp() {
     const timeString = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
     const localId = `msg-${Date.now()}`;
 
+    // Target channel UUID resolution
+    let targetChannelId = activeChannelId;
+    if (!UUID_REGEX.test(targetChannelId)) {
+      const matched = channels.find(
+        (c) => c.id === targetChannelId || c.name === activeChannel.name
+      );
+      if (matched && UUID_REGEX.test(matched.id)) {
+        targetChannelId = matched.id;
+      }
+    }
+
     const newMessage: Message = {
       id: localId,
-      channelId: activeChannelId,
+      channelId: targetChannelId,
       sender: currentUser,
       content,
       attachments: attachments || [],
@@ -631,14 +786,25 @@ export default function KaelixoApp() {
 
     setMessagesByChannel((prev) => ({
       ...prev,
-      [activeChannelId]: [...(prev[activeChannelId] || []), newMessage],
+      [targetChannelId]: [...(prev[targetChannelId] || []), newMessage],
     }));
+
+    // Broadcast immediately over WebSocket channel for instant 0ms latency across clients
+    try {
+      realtimeChannelRef.current?.send({
+        type: "broadcast",
+        event: "new_message",
+        payload: newMessage,
+      });
+    } catch (bErr) {
+      console.warn("Broadcast note:", bErr);
+    }
 
     try {
       const { data: insertedMsg, error: insertError } = await supabase
         .from("messages")
         .insert({
-          channel_id: activeChannelId,
+          channel_id: targetChannelId,
           content: content || "",
           sender_name: currentUser.name,
           sender_avatar: currentUser.avatar,
@@ -646,17 +812,39 @@ export default function KaelixoApp() {
           sender_department: currentUser.department,
           attachments: attachments || [],
         })
-        .select("id")
+        .select()
         .single();
 
       if (insertError) throw insertError;
+
+      if (insertedMsg?.id) {
+        // Update local message ID to Postgres UUID
+        setMessagesByChannel((prev) => {
+          const list = prev[targetChannelId] || [];
+          return {
+            ...prev,
+            [targetChannelId]: list.map((m) =>
+              m.id === localId ? { ...m, id: insertedMsg.id } : m
+            ),
+          };
+        });
+
+        // Also broadcast the confirmed message with real UUID
+        try {
+          realtimeChannelRef.current?.send({
+            type: "broadcast",
+            event: "new_message",
+            payload: { ...newMessage, id: insertedMsg.id },
+          });
+        } catch {}
+      }
 
       // If attachments exist, also register in public.attachments table
       if (attachments && attachments.length > 0 && insertedMsg?.id) {
         for (const att of attachments) {
           await supabase.from("attachments").insert({
             message_id: insertedMsg.id,
-            channel_id: activeChannelId,
+            channel_id: targetChannelId,
             file_name: att.name,
             file_size: formatFileSize(att.size),
             file_type: att.type,
@@ -952,12 +1140,30 @@ export default function KaelixoApp() {
     }));
 
     try {
-      await supabase.from("channels").insert({
-        organization_id: activeOrg.id,
-        name: data.name,
-        topic: data.topic,
-        is_private: data.isPrivate,
-      });
+      const { data: dbChan } = await supabase
+        .from("channels")
+        .insert({
+          organization_id: activeOrg.id,
+          name: data.name,
+          topic: data.topic,
+          is_private: data.isPrivate,
+        })
+        .select()
+        .single();
+
+      if (dbChan?.id) {
+        setChannels((prev) =>
+          prev.map((c) => (c.id === localId ? { ...c, id: dbChan.id } : c))
+        );
+        setActiveChannelId(dbChan.id);
+        setMessagesByChannel((prev) => {
+          const list = prev[localId] || [];
+          const next = { ...prev };
+          delete next[localId];
+          next[dbChan.id] = list.map((m) => ({ ...m, channelId: dbChan.id }));
+          return next;
+        });
+      }
       setIsLiveConnected(true);
     } catch {
       // ignore
@@ -1043,15 +1249,20 @@ export default function KaelixoApp() {
         onOpenAuthModal={() => setIsAuthModalOpen(true)}
         onOpenInviteModal={() => setIsInviteModalOpen(true)}
         onSelectDirectMessage={handleSelectDirectMessage}
+        onLogout={handleLogout}
         isMobileOpen={isMobileSidebarOpen}
         onCloseMobile={() => setIsMobileSidebarOpen(false)}
       />
 
       {/* Main Chat Stage */}
-      <main className="flex-1 flex flex-col h-screen min-w-0 bg-white dark:bg-neutral-950">
+      <main
+        className={`flex-1 flex flex-col h-screen min-w-0 bg-white dark:bg-neutral-950 transition-all duration-300 ${
+          !isAuthenticated ? "filter blur-[2px] pointer-events-none select-none opacity-40" : ""
+        }`}
+      >
         {/* Top Header */}
         <header className="h-16 px-4 md:px-6 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between flex-shrink-0 bg-white/80 dark:bg-neutral-950/80 backdrop-blur-md">
-          <div className="flex items-center space-x-2 md:space-x-3 min-w-0">
+          <div className="flex items-center space-x-2 md:space-x-3 min-w-0 flex-1 mr-3">
             {/* Mobile Hamburger Toggle */}
             <button
               onClick={() => setIsMobileSidebarOpen(true)}
@@ -1061,8 +1272,8 @@ export default function KaelixoApp() {
               <Menu className="w-5 h-5" />
             </button>
             {activeDmRecipient ? (
-              <div className="flex items-center space-x-2.5">
-                <div className="relative">
+              <div className="flex items-center space-x-2.5 min-w-0">
+                <div className="relative flex-shrink-0">
                   <img
                     src={activeDmRecipient.avatar}
                     alt={activeDmRecipient.name}
@@ -1070,32 +1281,32 @@ export default function KaelixoApp() {
                   />
                   <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-neutral-900" />
                 </div>
-                <div>
-                  <h2 className="font-bold text-base text-neutral-900 dark:text-white tracking-tight">
+                <div className="min-w-0 truncate">
+                  <h2 className="font-bold text-base text-neutral-900 dark:text-white tracking-tight truncate">
                     {activeDmRecipient.name}
                   </h2>
-                  <p className="text-[11px] text-neutral-400 capitalize">
+                  <p className="text-[11px] text-neutral-400 capitalize truncate">
                     {activeDmRecipient.role} • {activeDmRecipient.department} Department
                   </p>
                 </div>
               </div>
             ) : (
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2 min-w-0">
                 {activeChannel.isPrivate ? (
-                  <Lock className="w-4 h-4 text-neutral-400" />
+                  <Lock className="w-4 h-4 text-neutral-400 flex-shrink-0" />
                 ) : (
-                  <Hash className="w-5 h-5 text-neutral-400" />
+                  <Hash className="w-5 h-5 text-neutral-400 flex-shrink-0" />
                 )}
-                <h2 className="font-bold text-base text-neutral-900 dark:text-white tracking-tight truncate">
+                <h2 className="font-bold text-base text-neutral-900 dark:text-white tracking-tight truncate flex-shrink-0">
                   {activeChannel.name}
                 </h2>
                 {activeChannel.departmentCode && activeChannel.departmentCode !== "all" && (
-                  <span className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/40">
+                  <span className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/40 flex-shrink-0">
                     {activeChannel.departmentCode}
                   </span>
                 )}
                 {activeChannel.topic && (
-                  <span className="text-xs text-neutral-400 border-l border-neutral-200 dark:border-neutral-800 pl-3 truncate max-w-md hidden md:inline">
+                  <span className="text-xs text-neutral-400 border-l border-neutral-200 dark:border-neutral-800 pl-3 truncate max-w-[180px] md:max-w-xs lg:max-w-md hidden sm:inline">
                     {activeChannel.topic}
                   </span>
                 )}
@@ -1332,12 +1543,15 @@ export default function KaelixoApp() {
 
       <SlackAuthModal
         isOpen={isAuthModalOpen}
-        onClose={() => setIsAuthModalOpen(false)}
+        onClose={() => {
+          if (isAuthenticated) setIsAuthModalOpen(false);
+        }}
         departments={departments}
         currentUser={currentUser}
         organizations={organizations}
         initialInviteCode={initialInviteCode}
         onLoginSuccess={handleLoginSuccess}
+        isDismissible={isAuthenticated}
       />
 
       <SearchModal

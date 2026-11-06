@@ -96,7 +96,7 @@ export function subscribeToChatEvents(handlers: RealtimeHandlers): RealtimeChann
     .on(
       "postgres_changes",
       { event: "INSERT", schema: "public", table: "messages" },
-      (payload) => {
+      (payload: any) => {
         const row = payload.new;
         if (row && row.id) {
           handlers.onMessageInsert(formatDbMessage(row));
@@ -107,7 +107,7 @@ export function subscribeToChatEvents(handlers: RealtimeHandlers): RealtimeChann
     .on(
       "postgres_changes",
       { event: "UPDATE", schema: "public", table: "messages" },
-      (payload) => {
+      (payload: any) => {
         const row = payload.new;
         if (row && row.id) {
           handlers.onMessageUpdate(formatDbMessage(row));
@@ -118,7 +118,7 @@ export function subscribeToChatEvents(handlers: RealtimeHandlers): RealtimeChann
     .on(
       "postgres_changes",
       { event: "DELETE", schema: "public", table: "messages" },
-      (payload) => {
+      (payload: any) => {
         const oldRow = payload.old;
         if (oldRow && oldRow.id) {
           handlers.onMessageDelete(oldRow.id, oldRow.channel_id);
@@ -129,7 +129,7 @@ export function subscribeToChatEvents(handlers: RealtimeHandlers): RealtimeChann
     .on(
       "postgres_changes",
       { event: "INSERT", schema: "public", table: "reactions" },
-      (payload) => {
+      (payload: any) => {
         const row = payload.new as any;
         if (row && row.message_id) {
           handlers.onReactionInsert({
@@ -145,7 +145,7 @@ export function subscribeToChatEvents(handlers: RealtimeHandlers): RealtimeChann
     .on(
       "postgres_changes",
       { event: "DELETE", schema: "public", table: "reactions" },
-      (payload) => {
+      (payload: any) => {
         const oldRow = payload.old as any;
         if (oldRow && oldRow.message_id) {
           handlers.onReactionDelete({
@@ -157,7 +157,7 @@ export function subscribeToChatEvents(handlers: RealtimeHandlers): RealtimeChann
         }
       }
     )
-    .subscribe((status) => {
+    .subscribe((status: any) => {
       if (handlers.onStatusChange) {
         handlers.onStatusChange(status);
       }
@@ -237,7 +237,7 @@ export function initPresenceTracker(
     .on("presence", { event: "leave" }, () => {
       broadcastCurrentPresences();
     })
-    .subscribe(async (status) => {
+    .subscribe(async (status: any) => {
       if (status === "SUBSCRIBED") {
         await presenceChannel.track({
           id: currentUser.id,
