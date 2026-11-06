@@ -20,8 +20,8 @@ import {
   MessageCircle,
   X,
   Share2,
-  UserPlus,
   LogOut,
+  Users,
 } from "lucide-react";
 import { DepartmentCode, Channel, WorkspaceMember, Department, Organization } from "@/types";
 
@@ -42,6 +42,8 @@ interface SidebarProps {
   onOpenNewChannelModal: () => void;
   onOpenAuthModal: () => void;
   onOpenInviteModal?: () => void;
+  onOpenMemberDirectory?: () => void;
+  onOpenUserProfile?: (member: WorkspaceMember) => void;
   onSelectDirectMessage: (member: WorkspaceMember) => void;
   onLogout?: () => void;
   isMobileOpen?: boolean;
@@ -65,6 +67,8 @@ export function Sidebar({
   onOpenNewChannelModal,
   onOpenAuthModal,
   onOpenInviteModal,
+  onOpenMemberDirectory,
+  onOpenUserProfile,
   onSelectDirectMessage,
   onLogout,
   isMobileOpen = false,
@@ -201,6 +205,27 @@ export function Sidebar({
             </button>
           )}
         </div>
+
+        {/* Member Directory Navigation Trigger */}
+        {onOpenMemberDirectory && (
+          <div className="mt-2">
+            <button
+              onClick={onOpenMemberDirectory}
+              className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl bg-neutral-800/60 hover:bg-neutral-800 border border-neutral-700/60 text-xs transition group cursor-pointer"
+              title="Open People & Team Member Directory"
+            >
+              <div className="flex items-center space-x-1.5 min-w-0">
+                <Users className="w-3.5 h-3.5 text-indigo-400 group-hover:text-indigo-300" />
+                <span className="text-[11px] font-semibold text-neutral-300 group-hover:text-white truncate">
+                  Member Directory
+                </span>
+              </div>
+              <span className="font-mono text-[10px] text-neutral-400 font-bold bg-neutral-800 px-1.5 py-0.5 rounded border border-neutral-700">
+                {teamMembers.length}
+              </span>
+            </button>
+          </div>
+        )}
 
         {/* Company Switcher Dropdown */}
         {showOrgDropdown && (
@@ -391,9 +416,15 @@ export function Sidebar({
       {/* User Footer Profile & Slack Auth Trigger */}
       <div className="p-3 border-t border-neutral-800 bg-neutral-900/95 flex items-center justify-between">
         <div
-          onClick={onOpenAuthModal}
+          onClick={() => {
+            if (onOpenUserProfile) {
+              onOpenUserProfile(currentUser);
+            } else {
+              onOpenAuthModal();
+            }
+          }}
           className="flex items-center space-x-2.5 min-w-0 cursor-pointer flex-1 group"
-          title="Switch profile or edit status"
+          title="View profile and status"
         >
           <div className="relative flex-shrink-0">
             <img
@@ -401,7 +432,11 @@ export function Sidebar({
               alt={currentUser.name}
               className="w-8 h-8 rounded-xl bg-neutral-800 ring-1 ring-neutral-700 group-hover:ring-indigo-500 transition"
             />
-            <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-neutral-900" />
+            <span
+              className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full ${getStatusColor(
+                currentUser.status
+              )}`}
+            />
           </div>
           <div className="truncate">
             <p className="text-xs font-semibold text-neutral-100 group-hover:text-indigo-300 transition truncate">

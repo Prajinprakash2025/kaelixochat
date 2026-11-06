@@ -8,7 +8,6 @@ import {
   Send,
   Smile,
   Paperclip,
-  SmilePlus,
   Trash2,
   FileText,
   AlertCircle,
@@ -28,6 +27,7 @@ export interface ThreadSidePanelProps {
   onSendReply: (content: string, parentId: string, attachments?: Attachment[]) => void;
   onAddReaction?: (messageId: string, emoji: string) => void;
   members?: WorkspaceMember[];
+  onOpenProfile?: (member: WorkspaceMember) => void;
 }
 
 export function ThreadSidePanel({
@@ -40,11 +40,10 @@ export function ThreadSidePanel({
   onSendReply,
   onAddReaction,
   members = [],
+  onOpenProfile,
 }: ThreadSidePanelProps) {
   const [replyText, setReplyText] = useState("");
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [activeHoverPickerId, setActiveHoverPickerId] = useState<string | null>(null);
-  const [activeChipPickerId, setActiveChipPickerId] = useState<string | null>(null);
 
   // Attachment upload staging
   const [stagedFiles, setStagedFiles] = useState<File[]>([]);
@@ -155,6 +154,8 @@ export function ThreadSidePanel({
     );
   };
 
+  const parentSenderId =
+    parentMessage.sender?.id || parentMessage.senderId || `user-${parentMessage.id}`;
   const parentSenderName = parentMessage.sender?.name || parentMessage.senderName || "Colleague";
   const parentSenderAvatar =
     parentMessage.sender?.avatar ||
@@ -202,11 +203,37 @@ export function ThreadSidePanel({
             <img
               src={parentSenderAvatar}
               alt={parentSenderName}
-              className="w-8 h-8 rounded-lg bg-neutral-200 dark:bg-neutral-700 object-cover flex-shrink-0"
+              onClick={() => {
+                if (onOpenProfile) {
+                  const target = members.find((m) => m.id === parentSenderId) || parentMessage.sender || {
+                    id: parentSenderId,
+                    name: parentSenderName,
+                    avatar: parentSenderAvatar,
+                  };
+                  onOpenProfile(target as WorkspaceMember);
+                }
+              }}
+              className={`w-8 h-8 rounded-lg bg-neutral-200 dark:bg-neutral-700 object-cover flex-shrink-0 ${
+                onOpenProfile ? "cursor-pointer hover:ring-2 hover:ring-indigo-500 transition" : ""
+              }`}
             />
             <div className="min-w-0">
               <div className="flex items-center space-x-2">
-                <span className="font-bold text-xs text-neutral-900 dark:text-neutral-100 truncate">
+                <span
+                  onClick={() => {
+                    if (onOpenProfile) {
+                      const target = members.find((m) => m.id === parentSenderId) || parentMessage.sender || {
+                        id: parentSenderId,
+                        name: parentSenderName,
+                        avatar: parentSenderAvatar,
+                      };
+                      onOpenProfile(target as WorkspaceMember);
+                    }
+                  }}
+                  className={`font-bold text-xs text-neutral-900 dark:text-neutral-100 truncate ${
+                    onOpenProfile ? "cursor-pointer hover:underline hover:text-indigo-600 dark:hover:text-indigo-400" : ""
+                  }`}
+                >
                   {parentSenderName}
                 </span>
                 <span className="text-[10px] text-neutral-400 flex-shrink-0">
@@ -292,6 +319,7 @@ export function ThreadSidePanel({
           </div>
         ) : (
           replies.map((reply) => {
+            const replySenderId = reply.sender?.id || reply.senderId;
             const replySenderName = reply.sender?.name || reply.senderName || "Colleague";
             const replySenderAvatar =
               reply.sender?.avatar ||
@@ -307,11 +335,37 @@ export function ThreadSidePanel({
                 <img
                   src={replySenderAvatar}
                   alt={replySenderName}
-                  className="w-7 h-7 rounded-lg bg-neutral-200 dark:bg-neutral-700 object-cover mt-0.5 flex-shrink-0"
+                  onClick={() => {
+                    if (onOpenProfile) {
+                      const target = members.find((m) => m.id === replySenderId) || reply.sender || {
+                        id: replySenderId,
+                        name: replySenderName,
+                        avatar: replySenderAvatar,
+                      };
+                      onOpenProfile(target as WorkspaceMember);
+                    }
+                  }}
+                  className={`w-7 h-7 rounded-lg bg-neutral-200 dark:bg-neutral-700 object-cover mt-0.5 flex-shrink-0 ${
+                    onOpenProfile ? "cursor-pointer hover:ring-2 hover:ring-indigo-500 transition" : ""
+                  }`}
                 />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center space-x-2 mb-0.5">
-                    <span className="font-semibold text-xs text-neutral-900 dark:text-neutral-100 truncate">
+                    <span
+                      onClick={() => {
+                        if (onOpenProfile) {
+                          const target = members.find((m) => m.id === replySenderId) || reply.sender || {
+                            id: replySenderId,
+                            name: replySenderName,
+                            avatar: replySenderAvatar,
+                          };
+                          onOpenProfile(target as WorkspaceMember);
+                        }
+                      }}
+                      className={`font-semibold text-xs text-neutral-900 dark:text-neutral-100 truncate ${
+                        onOpenProfile ? "cursor-pointer hover:underline hover:text-indigo-600 dark:hover:text-indigo-400" : ""
+                      }`}
+                    >
                       {replySenderName}
                     </span>
                     <span className="text-[10px] text-neutral-400 flex-shrink-0">

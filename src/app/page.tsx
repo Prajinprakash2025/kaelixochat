@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { Sidebar } from "@/components/layout/sidebar";
 import { DepartmentToolbar } from "@/components/chat/department-toolbar";
 import { MessageFeed } from "@/components/chat/message-feed";
@@ -11,6 +11,7 @@ import { NewDepartmentModal } from "@/components/modals/new-department-modal";
 import { SlackAuthModal } from "@/components/modals/slack-auth-modal";
 import { InviteTeamModal } from "@/components/modals/invite-team-modal";
 import { ThreadPanel } from "@/components/chat/thread-panel";
+import { PinnedMessagesDrawer } from "@/components/chat/pinned-messages-drawer";
 import { SearchModal } from "@/components/modals/search-modal";
 import {
   DEPARTMENTS as INITIAL_DEPTS,
@@ -27,25 +28,31 @@ import {
   Department,
   Organization,
   Attachment,
-  MessageReaction,
-  MessageReactionsArray,
+  RightPanelMode,
+  Notification,
   reactionsMapToArray,
   createReactionsArray,
 } from "@/types";
 import { formatFileSize } from "@/utils/storage";
 import { getOrCreateDmChannel } from "@/utils/channels";
+import { initPresenceTracker, PresenceMap } from "@/utils/realtime";
+import { NotificationCenter } from "@/components/layout/notification-center";
+import { MemberDirectoryModal } from "@/components/directory/member-directory-modal";
+import { AddMemberModal } from "@/components/directory/add-member-modal";
+import { UserProfileDrawer } from "@/components/profile/user-profile-drawer";
+import { EditProfileModal } from "@/components/profile/edit-profile-modal";
 import {
   Hash,
   Lock,
   Search,
   PanelRight,
   Radio,
-  UserCheck,
   User,
-  Plus,
-  Building2,
   Menu,
   Share2,
+  Pin,
+  Users,
+  X as CloseIcon,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
@@ -97,47 +104,179 @@ function mergeMessageIntoList(currentList: Message[], incoming: Message): Messag
   return [...currentList, incoming];
 }
 
-
 export default function KaelixoApp() {
   const [organizations, setOrganizations] = useState<Organization[]>(DEFAULT_ORGS);
-  const [activeOrg, setActiveOrg] = useState<Organization>(DEFAULT_ORGS[0]);
+  const [activeOrg, setActiveOrg] = useState<Organization>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const savedOrg = localStorage.getItem("kaelixo_org");
+        if (savedOrg) return JSON.parse(savedOrg);
+      } catch {}
+    }
+    return DEFAULT_ORGS[0];
+  });
   const [departments, setDepartments] = useState<Department[]>(INITIAL_DEPTS);
   const [selectedDepartment, setSelectedDepartment] = useState<DepartmentCode>("all");
   const [channels, setChannels] = useState<Channel[]>(INITIAL_CHANNELS);
   const [activeChannelId, setActiveChannelId] = useState<string>("33333333-3333-3333-3333-333333333331");
   const [activeDmRecipient, setActiveDmRecipient] = useState<WorkspaceMember | null>(null);
   const [messagesByChannel, setMessagesByChannel] = useState<Record<string, Message[]>>(INITIAL_MESSAGES);
-  const [currentUser, setCurrentUser] = useState<WorkspaceMember>(DEFAULT_USER);
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [currentUser, setCurrentUser] = useState<WorkspaceMember>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("kaelixo_user");
+        if (saved) return JSON.parse(saved);
+      } catch {}
+    }
+    return DEFAULT_USER;
+  });
+
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        return Boolean(localStorage.getItem("kaelixo_user"));
+      } catch {}
+    }
+    return false;
+  });
+
+  // Dynamic Workspace Members State (Features 25 & 26 / R7)
+  const [teamMembers, setTeamMembers] = useState<WorkspaceMember[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("kaelixo_team_members");
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
+      } catch {}
+    }
+    return TEAM_MEMBERS;
+  });
+
+  // Real-time Presence State (Feature 20 / R5)
+  const [presenceMap, setPresenceMap] = useState<PresenceMap>({});
+
+  // In-App Notifications State (Feature 21 / R5)
+  const [notifications, setNotifications] = useState<Notification[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("kaelixo_notifications");
+        if (saved) return JSON.parse(saved);
+      } catch {}
+    }
+    return [];
+  });
 
   // Modals state
   const [isNewChannelModalOpen, setIsNewChannelModalOpen] = useState(false);
   const [isNewCompanyModalOpen, setIsNewCompanyModalOpen] = useState(false);
   const [isNewDepartmentModalOpen, setIsNewDepartmentModalOpen] = useState(false);
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("invite")) return true;
+      try {
+        return !localStorage.getItem("kaelixo_user");
+      } catch {}
+    }
+    return false;
+  });
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
-  const [initialInviteCode, setInitialInviteCode] = useState("");
+  const [isMemberDirectoryOpen, setIsMemberDirectoryOpen] = useState(false);
+  const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
+  const [isEditProfileModalOpen, setIsEditProfileModalOpen] = useState(false);
+  const [activeProfileMember, setActiveProfileMember] = useState<WorkspaceMember | null>(null);
+
+  const [initialInviteCode] = useState(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      return params.get("invite") || "";
+    }
+    return "";
+  });
+
+  const [activeToast, setActiveToast] = useState<{
+    id: string;
+    senderName: string;
+    senderAvatar?: string;
+    content: string;
+    channelName: string;
+    channelId: string;
+    messageId: string;
+  } | null>(null);
 
   const [externalTemplateText, setExternalTemplateText] = useState("");
-  const [showRightDrawer, setShowRightDrawer] = useState(false);
   const [isLiveConnected, setIsLiveConnected] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
+  // Milestone 3: Right Dock Architecture (Feature 12, extended for Feature 27 Profile)
+  const [rightPanelMode, setRightPanelMode] = useState<RightPanelMode>("none");
   const [activeThreadParent, setActiveThreadParent] = useState<Message | null>(null);
+  const [threadReplies, setThreadReplies] = useState<Message[]>([]);
+  const [_isThreadLoading, setIsThreadLoading] = useState(false);
+
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
 
   const realtimeChannelRef = useRef<any>(null);
 
-  // URL query parameter invite detection (?invite=...)
+  const supabase = useMemo(() => createClient(), []);
+
+  // Presence Tracker Initialization (Feature 20)
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      const inviteParam = params.get("invite");
-      if (inviteParam) {
-        setInitialInviteCode(inviteParam);
-        setIsAuthModalOpen(true);
+    const channel = initPresenceTracker(currentUser, (newMap) => {
+      setPresenceMap(newMap);
+    });
+    return () => {
+      try {
+        channel.unsubscribe();
+      } catch {}
+    };
+  }, [currentUser]);
+
+  // Persist teamMembers and notifications to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem("kaelixo_team_members", JSON.stringify(teamMembers));
+    } catch {}
+  }, [teamMembers]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("kaelixo_notifications", JSON.stringify(notifications));
+    } catch {}
+  }, [notifications]);
+
+  // Dynamic presence overlay onto teamMembers
+  const membersWithPresence = useMemo(() => {
+    return teamMembers.map((m) => {
+      if (m.id === currentUser.id) {
+        return {
+          ...m,
+          ...currentUser,
+          status: currentUser.status || "online",
+          online: currentUser.status !== "offline",
+        };
       }
-    }
-  }, []);
+      const presence = presenceMap[m.id];
+      if (presence) {
+        return {
+          ...m,
+          status: presence.status || "online",
+          online: presence.status !== "offline",
+          statusText: presence.statusText || m.statusText,
+        };
+      }
+      return {
+        ...m,
+        online: m.status === "online",
+      };
+    });
+  }, [teamMembers, currentUser, presenceMap]);
+
+  const unreadNotificationCount = useMemo(() => {
+    return notifications.filter((n) => n.read === false || n.isRead === false).length;
+  }, [notifications]);
 
   // Cmd+K search shortcut
   useEffect(() => {
@@ -151,29 +290,7 @@ export default function KaelixoApp() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  const supabase = createClient();
 
-  // Load user & org from localStorage; require auth if no user saved
-  useEffect(() => {
-    try {
-      const savedUser = localStorage.getItem("kaelixo_user");
-      if (savedUser) {
-        setCurrentUser(JSON.parse(savedUser));
-        setIsAuthenticated(true);
-      } else {
-        setIsAuthenticated(false);
-        setIsAuthModalOpen(true);
-      }
-      const savedOrg = localStorage.getItem("kaelixo_org");
-      if (savedOrg) {
-        const parsedOrg = JSON.parse(savedOrg);
-        setActiveOrg(parsedOrg);
-      }
-    } catch {
-      setIsAuthenticated(false);
-      setIsAuthModalOpen(true);
-    }
-  }, []);
 
   const handleLoginSuccess = (user: WorkspaceMember, org?: Organization) => {
     setCurrentUser(user);
@@ -223,9 +340,186 @@ export default function KaelixoApp() {
     );
   };
 
-  const handleSelectSearchResult = (channelId: string, messageId: string) => {
+  // Message Jump-To & Visual Highlight Pulse
+  const handleJumpToMessage = (messageId: string, parentId?: string | null) => {
+    if (parentId) {
+      // Find parent message and open thread panel
+      for (const msgs of Object.values(messagesByChannel)) {
+        const parentMsg = msgs.find((m) => m.id === parentId);
+        if (parentMsg) {
+          setActiveThreadParent(parentMsg);
+          setRightPanelMode("thread");
+          break;
+        }
+      }
+    }
+    setTimeout(() => {
+      const el = document.getElementById(`message-${messageId}`);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        el.classList.add("ring-2", "ring-indigo-500", "bg-indigo-50/70", "dark:bg-indigo-950/60");
+        setTimeout(() => {
+          el.classList.remove("ring-2", "ring-indigo-500", "bg-indigo-50/70", "dark:bg-indigo-950/60");
+        }, 2500);
+      }
+    }, 250);
+  };
+
+  const handleSelectSearchResult = (
+    channelId: string,
+    messageId: string,
+    parentId?: string | null
+  ) => {
     setActiveChannelId(channelId);
     setIsSearchModalOpen(false);
+    handleJumpToMessage(messageId, parentId);
+  };
+
+  const handleSelectNotification = (n: Notification) => {
+    setActiveChannelId(n.channelId);
+    if (n.messageId) {
+      handleJumpToMessage(n.messageId);
+    }
+  };
+
+  const handleMarkNotificationAsRead = (id: string) => {
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, read: true, isRead: true } : n))
+    );
+  };
+
+  const handleMarkAllNotificationsAsRead = () => {
+    setNotifications((prev) =>
+      prev.map((n) => ({ ...n, read: true, isRead: true }))
+    );
+  };
+
+  const handleAddMember = async (data: {
+    email: string;
+    name?: string;
+    department: DepartmentCode;
+    role: "Member" | "Manager";
+  }) => {
+    const newMember: WorkspaceMember = {
+      id: `user-${Date.now()}`,
+      name: data.name || data.email.split("@")[0],
+      displayName: (data.name || data.email.split("@")[0]).toLowerCase().replace(/\s+/g, "."),
+      email: data.email,
+      avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(
+        data.name || data.email
+      )}`,
+      role: data.role,
+      department: data.department,
+      status: "online",
+      statusText: "Just joined Kaelixo",
+      statusEmoji: "👋",
+      online: true,
+      isActive: true,
+    };
+
+    setTeamMembers((prev) => [...prev, newMember]);
+  };
+
+  const handleRemoveMember = (memberId: string) => {
+    setTeamMembers((prev) => prev.filter((m) => m.id !== memberId));
+    if (activeProfileMember?.id === memberId) {
+      setActiveProfileMember(null);
+      setRightPanelMode("none");
+    }
+  };
+
+  const handleSaveProfile = async (updatedData: Partial<WorkspaceMember>) => {
+    const updatedUser: WorkspaceMember = {
+      ...currentUser,
+      ...updatedData,
+    };
+    setCurrentUser(updatedUser);
+    try {
+      localStorage.setItem("kaelixo_user", JSON.stringify(updatedUser));
+    } catch {}
+
+    setTeamMembers((prev) =>
+      prev.map((m) => (m.id === currentUser.id ? { ...m, ...updatedData } : m))
+    );
+
+    if (activeProfileMember?.id === currentUser.id) {
+      setActiveProfileMember((prev) => (prev ? { ...prev, ...updatedData } : null));
+    }
+  };
+
+  const processIncomingNotification = (
+    msg: {
+      id: string;
+      channelId: string;
+      senderId?: string;
+      senderName?: string;
+      senderAvatar?: string;
+      content: string;
+      parentId?: string | null;
+    },
+    channelObj?: Channel
+  ) => {
+    if (msg.senderName === currentUser.name || msg.senderId === currentUser.id) return;
+
+    const channelName = channelObj?.name || "conversation";
+    const isDm = channelObj?.isDm || msg.channelId.startsWith("dm-");
+
+    const contentLower = (msg.content || "").toLowerCase();
+    const myName = currentUser.name.toLowerCase();
+    const myDisplayName = (currentUser.displayName || "").toLowerCase();
+    const isMention =
+      contentLower.includes(`@${myName}`) ||
+      (myDisplayName && contentLower.includes(`@${myDisplayName}`)) ||
+      contentLower.includes("@channel") ||
+      contentLower.includes("@here");
+
+    const isDmToMe = Boolean(isDm);
+    const isThreadReplyToMe = Boolean(
+      msg.parentId &&
+        activeThreadParent &&
+        activeThreadParent.id === msg.parentId &&
+        (activeThreadParent.senderId === currentUser.id ||
+          activeThreadParent.sender?.name === currentUser.name)
+    );
+
+    if (isMention || isDmToMe || isThreadReplyToMe) {
+      const type = isMention ? "mention" : isDmToMe ? "dm" : "thread_reply";
+      const notif: Notification = {
+        id: `notif-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+        userId: currentUser.id,
+        senderId: msg.senderId || "",
+        senderName: msg.senderName || "Colleague",
+        senderAvatar:
+          msg.senderAvatar ||
+          `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(
+            msg.senderName || "User"
+          )}`,
+        type,
+        channelId: msg.channelId,
+        channelName,
+        messageId: msg.id,
+        content: msg.content || "",
+        read: false,
+        isRead: false,
+        createdAt: "Just now",
+      };
+
+      setNotifications((prev) => [notif, ...prev]);
+
+      setActiveToast({
+        id: notif.id,
+        senderName: notif.senderName || "Colleague",
+        senderAvatar: notif.senderAvatar,
+        content: notif.content,
+        channelName: isDm ? "Direct Message" : `#${channelName}`,
+        channelId: notif.channelId,
+        messageId: notif.messageId || "",
+      });
+
+      setTimeout(() => {
+        setActiveToast((prev) => (prev?.id === notif.id ? null : prev));
+      }, 5000);
+    }
   };
 
   // Play audio chime
@@ -390,9 +684,48 @@ export default function KaelixoApp() {
 
       return changed ? nextState : prev;
     });
+
+    // Also update thread replies if message is in current thread
+    setThreadReplies((prev) =>
+      prev.map((msg) => {
+        if (msg.id !== messageId) return msg;
+        const currentReactions = reactionsMapToArray(msg.reactions);
+        const existingIdx = currentReactions.findIndex((r) => r.emoji === emoji);
+        let updatedReactions = [...currentReactions];
+
+        if (action === "add") {
+          if (existingIdx > -1) {
+            const r = updatedReactions[existingIdx];
+            if (!r.users.includes(userId)) {
+              updatedReactions[existingIdx] = {
+                ...r,
+                count: r.count + 1,
+                users: [...r.users, userId],
+              };
+            }
+          } else {
+            updatedReactions.push({ emoji, count: 1, users: [userId] });
+          }
+        } else if (action === "remove" && existingIdx > -1) {
+          const r = updatedReactions[existingIdx];
+          const nextUsers = r.users.filter((id) => id !== userId);
+          if (nextUsers.length === 0) {
+            updatedReactions.splice(existingIdx, 1);
+          } else {
+            updatedReactions[existingIdx] = {
+              ...r,
+              count: Math.max(0, r.count - 1),
+              users: nextUsers,
+            };
+          }
+        }
+
+        return { ...msg, reactions: createReactionsArray(updatedReactions) };
+      })
+    );
   };
 
-  // 2. Fetch live messages for active channel or DM
+  // 2. Fetch live messages for active channel or DM (Feature 15: parent_id IS NULL for main feed)
   useEffect(() => {
     async function loadMessages() {
       try {
@@ -400,6 +733,7 @@ export default function KaelixoApp() {
           .from("messages")
           .select("*")
           .eq("channel_id", activeChannelId)
+          .is("parent_id", null) // Top-level messages only in main chat feed
           .order("created_at", { ascending: true });
 
         if (dbMessages && dbMessages.length > 0) {
@@ -455,8 +789,15 @@ export default function KaelixoApp() {
               threadCount: m.reply_count || 0,
               lastReplyAt: m.last_reply_at || null,
               isPinned: m.is_pinned || false,
+              pinnedAt: m.pinned_at || null,
+              pinnedByName: m.pinned_by_name || null,
+              pinnedById: m.pinned_by_id || null,
               isEdited: m.is_edited || false,
+              editedAt: m.edited_at || null,
               isDeleted: m.is_deleted || false,
+              deletedAt: m.deleted_at || null,
+              senderId: m.sender_id,
+              senderName: m.sender_name,
               sender: {
                 id: m.sender_id || `user-anon`,
                 name: m.sender_name || "Colleague",
@@ -494,7 +835,7 @@ export default function KaelixoApp() {
     loadMessages();
   }, [activeChannelId]);
 
-  // 3. Supabase Realtime Subscription + WebSocket Broadcast
+  // 3. Supabase Realtime Subscription + Multi-Client Synchronization
   useEffect(() => {
     const channel = supabase
       .channel("realtime-messages-stream-v2")
@@ -503,65 +844,94 @@ export default function KaelixoApp() {
         { event: "INSERT", schema: "public", table: "messages" },
         (payload: any) => {
           const newMsg = payload.new as any;
-          if (newMsg && newMsg.channel_id) {
-            let parsedAttachments: Attachment[] = [];
-            if (Array.isArray(newMsg.attachments)) {
-              parsedAttachments = newMsg.attachments;
-            } else if (typeof newMsg.attachments === "string") {
-              try {
-                parsedAttachments = JSON.parse(newMsg.attachments);
-              } catch {
-                parsedAttachments = [];
-              }
+          if (!newMsg || !newMsg.channel_id) return;
+
+          let parsedAttachments: Attachment[] = [];
+          if (Array.isArray(newMsg.attachments)) {
+            parsedAttachments = newMsg.attachments;
+          } else if (typeof newMsg.attachments === "string") {
+            try {
+              parsedAttachments = JSON.parse(newMsg.attachments);
+            } catch {
+              parsedAttachments = [];
             }
+          }
 
-            const formatted: Message = {
-              id: newMsg.id,
-              channelId: newMsg.channel_id,
-              parentId: newMsg.parent_id || null,
-              threadCount: newMsg.reply_count || 0,
-              lastReplyAt: newMsg.last_reply_at || null,
-              isPinned: newMsg.is_pinned || false,
-              isEdited: newMsg.is_edited || false,
-              isDeleted: newMsg.is_deleted || false,
-              sender: {
-                id: newMsg.sender_id || `user-anon`,
-                name: newMsg.sender_name || "Colleague",
-                email: "colleague@kaelixo.com",
-                avatar:
-                  newMsg.sender_avatar ||
-                  `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(
-                    newMsg.sender_name || "team"
-                  )}`,
-                role: (newMsg.sender_role as any) || "member",
-                department: (newMsg.sender_department as any) || "dev",
-                status: "online",
-              },
-              content: newMsg.content || "",
-              createdAt: new Date(newMsg.created_at).toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-              }),
-              attachments: parsedAttachments,
-              reactions: createReactionsArray([]),
-            };
+          const formatted: Message = {
+            id: newMsg.id,
+            channelId: newMsg.channel_id,
+            parentId: newMsg.parent_id || null,
+            threadCount: newMsg.reply_count || 0,
+            lastReplyAt: newMsg.last_reply_at || null,
+            isPinned: newMsg.is_pinned || false,
+            pinnedAt: newMsg.pinned_at || null,
+            pinnedByName: newMsg.pinned_by_name || null,
+            pinnedById: newMsg.pinned_by_id || null,
+            isEdited: newMsg.is_edited || false,
+            editedAt: newMsg.edited_at || null,
+            isDeleted: newMsg.is_deleted || false,
+            deletedAt: newMsg.deleted_at || null,
+            senderId: newMsg.sender_id,
+            senderName: newMsg.sender_name,
+            sender: {
+              id: newMsg.sender_id || `user-anon`,
+              name: newMsg.sender_name || "Colleague",
+              email: "colleague@kaelixo.com",
+              avatar:
+                newMsg.sender_avatar ||
+                `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(
+                  newMsg.sender_name || "team"
+                )}`,
+              role: (newMsg.sender_role as any) || "member",
+              department: (newMsg.sender_department as any) || "dev",
+              status: "online",
+            },
+            content: newMsg.content || "",
+            createdAt: new Date(newMsg.created_at).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            }),
+            attachments: parsedAttachments,
+            reactions: createReactionsArray([]),
+          };
 
-            setMessagesByChannel((prev) => {
-              const currentList = prev[newMsg.channel_id] || [];
-              const updated = mergeMessageIntoList(currentList, formatted);
-              if (updated === currentList) return prev;
+          // Check for in-app notifications (mentions, DMs, thread replies)
+          processIncomingNotification(
+            formatted,
+            channels.find((c) => c.id === newMsg.channel_id)
+          );
 
+          // Feature 15: Thread message segregation
+          if (newMsg.parent_id) {
+            // Only add to threadReplies if this thread is currently open
+            if (activeThreadParent && activeThreadParent.id === newMsg.parent_id) {
+              setThreadReplies((prev) => {
+                if (prev.some((r) => r.id === newMsg.id)) return prev;
+                return [...prev, formatted];
+              });
               if (newMsg.sender_name !== currentUser.name) {
                 playChime();
               }
-
-              return {
-                ...prev,
-                [newMsg.channel_id]: updated,
-              };
-            });
-            setIsLiveConnected(true);
+            }
+            return; // DO NOT append thread reply to main channel feed!
           }
+
+          // Top-level message: append to main feed
+          setMessagesByChannel((prev) => {
+            const currentList = prev[newMsg.channel_id] || [];
+            const updated = mergeMessageIntoList(currentList, formatted);
+            if (updated === currentList) return prev;
+
+            if (newMsg.sender_name !== currentUser.name) {
+              playChime();
+            }
+
+            return {
+              ...prev,
+              [newMsg.channel_id]: updated,
+            };
+          });
+          setIsLiveConnected(true);
         }
       )
       .on(
@@ -569,29 +939,126 @@ export default function KaelixoApp() {
         { event: "UPDATE", schema: "public", table: "messages" },
         (payload: any) => {
           const updatedRow = payload.new as any;
-          if (updatedRow && updatedRow.id) {
-            setMessagesByChannel((prev) => {
-              const chId = updatedRow.channel_id;
-              const list = prev[chId];
-              if (!list) return prev;
+          if (!updatedRow || !updatedRow.id) return;
+
+          // 1. Update matching message in messagesByChannel
+          setMessagesByChannel((prev) => {
+            const chId = updatedRow.channel_id;
+            const list = prev[chId];
+            if (!list) return prev;
+
+            return {
+              ...prev,
+              [chId]: list.map((m) => {
+                if (m.id !== updatedRow.id) return m;
+
+                let attachments = m.attachments;
+                if (updatedRow.attachments) {
+                  attachments = Array.isArray(updatedRow.attachments)
+                    ? updatedRow.attachments
+                    : JSON.parse(updatedRow.attachments || "[]");
+                }
+
+                return {
+                  ...m,
+                  content: updatedRow.content ?? m.content,
+                  isPinned: updatedRow.is_pinned !== undefined ? updatedRow.is_pinned : m.isPinned,
+                  pinnedAt: updatedRow.pinned_at !== undefined ? updatedRow.pinned_at : m.pinnedAt,
+                  pinnedByName:
+                    updatedRow.pinned_by_name !== undefined
+                      ? updatedRow.pinned_by_name
+                      : m.pinnedByName,
+                  pinnedById:
+                    updatedRow.pinned_by_id !== undefined ? updatedRow.pinned_by_id : m.pinnedById,
+                  isEdited: updatedRow.is_edited !== undefined ? updatedRow.is_edited : m.isEdited,
+                  editedAt: updatedRow.edited_at !== undefined ? updatedRow.edited_at : m.editedAt,
+                  isDeleted:
+                    updatedRow.is_deleted !== undefined ? updatedRow.is_deleted : m.isDeleted,
+                  deletedAt:
+                    updatedRow.deleted_at !== undefined ? updatedRow.deleted_at : m.deletedAt,
+                  threadCount:
+                    updatedRow.reply_count !== undefined ? updatedRow.reply_count : m.threadCount,
+                  lastReplyAt:
+                    updatedRow.last_reply_at !== undefined
+                      ? updatedRow.last_reply_at
+                      : m.lastReplyAt,
+                  attachments,
+                };
+              }),
+            };
+          });
+
+          // 2. If activeThreadParent was updated, sync its state
+          setActiveThreadParent((prev) => {
+            if (!prev || prev.id !== updatedRow.id) return prev;
+            return {
+              ...prev,
+              content: updatedRow.content ?? prev.content,
+              isPinned: updatedRow.is_pinned !== undefined ? updatedRow.is_pinned : prev.isPinned,
+              isEdited: updatedRow.is_edited !== undefined ? updatedRow.is_edited : prev.isEdited,
+              isDeleted:
+                updatedRow.is_deleted !== undefined ? updatedRow.is_deleted : prev.isDeleted,
+              threadCount:
+                updatedRow.reply_count !== undefined ? updatedRow.reply_count : prev.threadCount,
+              lastReplyAt:
+                updatedRow.last_reply_at !== undefined
+                  ? updatedRow.last_reply_at
+                  : prev.lastReplyAt,
+            };
+          });
+
+          // 3. If child reply in threadReplies was updated, sync its state
+          setThreadReplies((prev) =>
+            prev.map((r) => {
+              if (r.id !== updatedRow.id) return r;
               return {
-                ...prev,
-                [chId]: list.map((m) =>
-                  m.id === updatedRow.id
-                    ? {
-                        ...m,
-                        content: updatedRow.content,
-                        isPinned: updatedRow.is_pinned,
-                        isEdited: updatedRow.is_edited,
-                        isDeleted: updatedRow.is_deleted,
-                        threadCount: updatedRow.reply_count,
-                        lastReplyAt: updatedRow.last_reply_at,
-                      }
-                    : m
-                ),
+                ...r,
+                content: updatedRow.content ?? r.content,
+                isEdited: updatedRow.is_edited !== undefined ? updatedRow.is_edited : r.isEdited,
+                editedAt: updatedRow.edited_at !== undefined ? updatedRow.edited_at : r.editedAt,
+                isDeleted:
+                  updatedRow.is_deleted !== undefined ? updatedRow.is_deleted : r.isDeleted,
+                deletedAt:
+                  updatedRow.deleted_at !== undefined ? updatedRow.deleted_at : r.deletedAt,
               };
-            });
-          }
+            })
+          );
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "DELETE", schema: "public", table: "messages" },
+        (payload: any) => {
+          const deletedId = payload.old?.id;
+          if (!deletedId) return;
+
+          setMessagesByChannel((prev) => {
+            let changed = false;
+            const nextState: Record<string, Message[]> = {};
+
+            for (const [chId, msgList] of Object.entries(prev)) {
+              if (msgList.some((m) => m.id === deletedId)) {
+                changed = true;
+                nextState[chId] = msgList.filter((m) => m.id !== deletedId);
+              } else {
+                nextState[chId] = msgList;
+              }
+            }
+
+            return changed ? nextState : prev;
+          });
+
+          // If thread reply was deleted, remove from threadReplies
+          setThreadReplies((prev) => prev.filter((r) => r.id !== deletedId));
+
+          // If parent message was hard-deleted, close thread
+          setActiveThreadParent((prev) => {
+            if (prev && prev.id === deletedId) {
+              setRightPanelMode((mode) => (mode === "thread" ? "none" : mode));
+              return null;
+            }
+            return prev;
+          });
         }
       )
       .on(
@@ -638,9 +1105,9 @@ export default function KaelixoApp() {
       supabase.removeChannel(channel);
       realtimeChannelRef.current = null;
     };
-  }, [currentUser.name]);
+  }, [currentUser.name, activeThreadParent?.id]);
 
-  // 4. Background Sync Polling Fallback (sync every 4 seconds for active channel)
+  // 4. Background Sync Polling Fallback (sync every 4 seconds for active channel root messages)
   useEffect(() => {
     if (!activeChannelId || !UUID_REGEX.test(activeChannelId)) return;
 
@@ -650,6 +1117,7 @@ export default function KaelixoApp() {
           .from("messages")
           .select("*")
           .eq("channel_id", activeChannelId)
+          .is("parent_id", null)
           .order("created_at", { ascending: true });
 
         if (dbMessages && dbMessages.length > 0) {
@@ -676,8 +1144,15 @@ export default function KaelixoApp() {
                 threadCount: m.reply_count || 0,
                 lastReplyAt: m.last_reply_at || null,
                 isPinned: m.is_pinned || false,
+                pinnedAt: m.pinned_at || null,
+                pinnedByName: m.pinned_by_name || null,
+                pinnedById: m.pinned_by_id || null,
                 isEdited: m.is_edited || false,
+                editedAt: m.edited_at || null,
                 isDeleted: m.is_deleted || false,
+                deletedAt: m.deleted_at || null,
+                senderId: m.sender_id,
+                senderName: m.sender_name,
                 sender: {
                   id: m.sender_id || `user-anon`,
                   name: m.sender_name || "Colleague",
@@ -724,6 +1199,12 @@ export default function KaelixoApp() {
 
   // Handle switching to a Direct Message with a team member
   const handleSelectDirectMessage = async (member: WorkspaceMember) => {
+    // Reset right dock when switching channels to avoid cross-context confusion
+    if (rightPanelMode === "thread") {
+      setRightPanelMode("none");
+      setActiveThreadParent(null);
+    }
+
     try {
       const dmId = await getOrCreateDmChannel(
         currentUser.id,
@@ -758,11 +1239,15 @@ export default function KaelixoApp() {
   };
 
   const handleSelectRegularChannel = (channelId: string) => {
+    if (rightPanelMode === "thread") {
+      setRightPanelMode("none");
+      setActiveThreadParent(null);
+    }
     setActiveDmRecipient(null);
     setActiveChannelId(channelId);
   };
 
-  // Active channel
+  // Active channel resolution
   const activeChannel =
     channels.find((c) => c.id === activeChannelId) ||
     (activeDmRecipient
@@ -777,7 +1262,6 @@ export default function KaelixoApp() {
 
   const activeMessages = messagesByChannel[activeChannelId] || [];
   const mainFeedMessages = activeMessages.filter((m) => !m.parentId);
-  const threadReplies = activeMessages.filter((m) => m.parentId === activeThreadParent?.id);
 
   // Send message
   const handleSendMessage = async (content: string, attachments?: Attachment[]) => {
@@ -803,6 +1287,8 @@ export default function KaelixoApp() {
       id: messageUuid,
       channelId: targetChannelId,
       sender: currentUser,
+      senderId: currentUser.id,
+      senderName: currentUser.name,
       content,
       attachments: attachments || [],
       createdAt: timeString,
@@ -816,7 +1302,7 @@ export default function KaelixoApp() {
     }));
 
     try {
-      const { data: insertedMsg, error: insertError } = await supabase
+      const { error: insertError } = await supabase
         .from("messages")
         .insert({
           id: messageUuid,
@@ -856,7 +1342,7 @@ export default function KaelixoApp() {
     }
   };
 
-  // Reactions
+  // Reactions (Feature 11)
   const handleAddReaction = async (messageId: string, emoji: string) => {
     let willRemove = false;
 
@@ -909,6 +1395,43 @@ export default function KaelixoApp() {
       return { ...prev, [activeChannelId]: updatedList };
     });
 
+    // Also update thread replies if message is in thread panel
+    setThreadReplies((prev) =>
+      prev.map((r) => {
+        if (r.id !== messageId) return r;
+        const currentReactions = reactionsMapToArray(r.reactions);
+        const existingIdx = currentReactions.findIndex((x) => x.emoji === emoji);
+        let updatedReactions = [...currentReactions];
+
+        if (existingIdx > -1) {
+          const rx = updatedReactions[existingIdx];
+          const hasUser = rx.users.includes(currentUser.id);
+          if (hasUser) {
+            const nextUsers = rx.users.filter((id) => id !== currentUser.id);
+            if (nextUsers.length === 0) {
+              updatedReactions.splice(existingIdx, 1);
+            } else {
+              updatedReactions[existingIdx] = {
+                ...rx,
+                count: Math.max(0, rx.count - 1),
+                users: nextUsers,
+              };
+            }
+          } else {
+            updatedReactions[existingIdx] = {
+              ...rx,
+              count: rx.count + 1,
+              users: [...rx.users, currentUser.id],
+            };
+          }
+        } else {
+          updatedReactions.push({ emoji, count: 1, users: [currentUser.id] });
+        }
+
+        return { ...r, reactions: createReactionsArray(updatedReactions) };
+      })
+    );
+
     // 2. Persist to Supabase if valid UUID
     if (UUID_REGEX.test(messageId)) {
       try {
@@ -937,7 +1460,110 @@ export default function KaelixoApp() {
     }
   };
 
-  // Thread Reply
+  // Feature 13: Open Thread in Side Panel
+  const handleOpenThread = async (parentMessage: Message) => {
+    setActiveThreadParent(parentMessage);
+    setRightPanelMode("thread");
+    setIsThreadLoading(true);
+
+    try {
+      // 1. Initial local load
+      const channelMsgs = messagesByChannel[activeChannelId] || [];
+      const localReplies = channelMsgs.filter((m) => m.parentId === parentMessage.id);
+      if (localReplies.length > 0) {
+        setThreadReplies(localReplies);
+      }
+
+      // 2. Supabase DB fetch
+      if (UUID_REGEX.test(parentMessage.id)) {
+        const { data: dbReplies, error } = await supabase
+          .from("messages")
+          .select("*")
+          .eq("parent_id", parentMessage.id)
+          .order("created_at", { ascending: true });
+
+        if (error) throw error;
+
+        if (dbReplies) {
+          const replyIds = dbReplies.map((r: any) => r.id);
+          let reactionsByMsg: Record<string, { emoji: string; count: number; users: string[] }[]> = {};
+
+          if (replyIds.length > 0) {
+            const { data: dbReactions } = await supabase
+              .from("reactions")
+              .select("*")
+              .in("message_id", replyIds);
+
+            if (dbReactions) {
+              for (const r of dbReactions) {
+                const mId = r.message_id;
+                if (!reactionsByMsg[mId]) reactionsByMsg[mId] = [];
+                const existing = reactionsByMsg[mId].find((x) => x.emoji === r.emoji);
+                const uId = r.user_id || r.member_id || "";
+                if (existing) {
+                  existing.count += 1;
+                  if (!existing.users.includes(uId)) existing.users.push(uId);
+                } else {
+                  reactionsByMsg[mId].push({ emoji: r.emoji, count: 1, users: [uId] });
+                }
+              }
+            }
+          }
+
+          const formattedReplies: Message[] = dbReplies.map((r: any) => {
+            let atts: Attachment[] = [];
+            if (Array.isArray(r.attachments)) atts = r.attachments;
+            else if (typeof r.attachments === "string") {
+              try {
+                atts = JSON.parse(r.attachments);
+              } catch {
+                atts = [];
+              }
+            }
+            return {
+              id: r.id,
+              channelId: r.channel_id,
+              parentId: r.parent_id,
+              senderId: r.sender_id,
+              senderName: r.sender_name,
+              sender: {
+                id: r.sender_id || "user-anon",
+                name: r.sender_name || "Colleague",
+                email: "colleague@kaelixo.com",
+                avatar:
+                  r.sender_avatar ||
+                  `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(
+                    r.sender_name || "member"
+                  )}`,
+                role: (r.sender_role as any) || "member",
+                department: (r.sender_department as any) || "dev",
+                status: "online",
+              },
+              content: r.content || "",
+              createdAt: new Date(r.created_at).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              }),
+              attachments: atts,
+              reactions: createReactionsArray(reactionsByMsg[r.id] || []),
+              isEdited: r.is_edited || false,
+              editedAt: r.edited_at || null,
+              isDeleted: r.is_deleted || false,
+              deletedAt: r.deleted_at || null,
+            };
+          });
+
+          setThreadReplies(formattedReplies);
+        }
+      }
+    } catch (err) {
+      console.warn("Failed to load thread replies:", err);
+    } finally {
+      setIsThreadLoading(false);
+    }
+  };
+
+  // Feature 13: Send Thread Reply
   const handleSendThreadReply = async (
     content: string,
     parentId: string,
@@ -955,12 +1581,18 @@ export default function KaelixoApp() {
       channelId: activeChannelId,
       parentId,
       sender: currentUser,
+      senderId: currentUser.id,
+      senderName: currentUser.name,
       content,
       attachments: attachments || [],
       createdAt: timeString,
       reactions: createReactionsArray([]),
     };
 
+    // 1. Optimistic update in threadReplies
+    setThreadReplies((prev) => [...prev, newReply]);
+
+    // 2. Increment parent threadCount & update lastReplyAt in main feed
     setMessagesByChannel((prev) => {
       const channelMsgs = prev[activeChannelId] || [];
       const updated = channelMsgs.map((m) => {
@@ -975,10 +1607,11 @@ export default function KaelixoApp() {
       });
       return {
         ...prev,
-        [activeChannelId]: mergeMessageIntoList(updated, newReply),
+        [activeChannelId]: updated,
       };
     });
 
+    // 3. Update activeThreadParent state
     setActiveThreadParent((prev) => {
       if (prev && prev.id === parentId) {
         return {
@@ -990,6 +1623,7 @@ export default function KaelixoApp() {
       return prev;
     });
 
+    // 4. Persist to Supabase
     try {
       await supabase.from("messages").insert({
         id: replyUuid,
@@ -1002,31 +1636,69 @@ export default function KaelixoApp() {
         sender_department: currentUser.department,
         attachments: attachments || [],
       });
+
+      if (attachments && attachments.length > 0) {
+        for (const att of attachments) {
+          await supabase.from("attachments").insert({
+            message_id: replyUuid,
+            channel_id: activeChannelId,
+            file_name: att.name,
+            file_size: formatFileSize(att.size),
+            file_type: att.type,
+            mime_type: att.type,
+            storage_path: att.storagePath,
+            url: att.url,
+            uploader_name: currentUser.name,
+          });
+        }
+      }
     } catch (err) {
       console.warn("Thread reply insert note:", err);
     }
   };
 
-  // Toggle Message Pin
+  // Feature 18: Toggle Message Pin
   const handleTogglePin = async (messageId: string, currentPinStatus: boolean) => {
+    const channelList = messagesByChannel[activeChannelId] || [];
+    const targetMessage = channelList.find((m) => m.id === messageId);
+    if (!targetMessage) return;
+
+    // Guard: Reject pinning an already deleted message (contract requirement R4-B.5)
+    if (!currentPinStatus && targetMessage.isDeleted) {
+      console.warn("Cannot pin a deleted message");
+      return;
+    }
+
     const nextStatus = !currentPinStatus;
+    const nowIso = new Date().toISOString();
+
+    // 1. Optimistic local state update
     setMessagesByChannel((prev) => {
       const list = prev[activeChannelId] || [];
       return {
         ...prev,
         [activeChannelId]: list.map((m) =>
-          m.id === messageId ? { ...m, isPinned: nextStatus } : m
+          m.id === messageId
+            ? {
+                ...m,
+                isPinned: nextStatus,
+                pinnedAt: nextStatus ? nowIso : null,
+                pinnedByName: nextStatus ? currentUser.name : null,
+                pinnedById: nextStatus ? currentUser.id : null,
+              }
+            : m
         ),
       };
     });
 
+    // 2. Persist to Supabase if valid UUID
     if (UUID_REGEX.test(messageId)) {
       try {
         await supabase
           .from("messages")
           .update({
             is_pinned: nextStatus,
-            pinned_at: nextStatus ? new Date().toISOString() : null,
+            pinned_at: nextStatus ? nowIso : null,
             pinned_by_name: nextStatus ? currentUser.name : null,
             pinned_by_id: nextStatus ? currentUser.id : null,
           })
@@ -1037,20 +1709,53 @@ export default function KaelixoApp() {
     }
   };
 
-  // Edit Message
+  // Feature 16: Edit Message (Inline with author check & Enter/Esc controls)
   const handleEditMessage = async (messageId: string, newContent: string) => {
+    const nowIso = new Date().toISOString();
+
+    // 1. Optimistic update
     setMessagesByChannel((prev) => {
       const list = prev[activeChannelId] || [];
+      const targetMsg = list.find((m) => m.id === messageId);
+      if (!targetMsg) return prev;
+
+      // Guard: Author check
+      const isAuthor =
+        targetMsg.sender.id === currentUser.id ||
+        targetMsg.sender.name === currentUser.name ||
+        targetMsg.senderId === currentUser.id;
+      if (!isAuthor) {
+        console.warn("Unauthorized: only author can edit message");
+        return prev;
+      }
+
       return {
         ...prev,
         [activeChannelId]: list.map((m) =>
           m.id === messageId
-            ? { ...m, content: newContent, isEdited: true, editedAt: new Date().toISOString() }
+            ? { ...m, content: newContent, isEdited: true, editedAt: nowIso, updatedAt: nowIso }
             : m
         ),
       };
     });
 
+    // Sync to thread replies if present
+    setThreadReplies((prev) =>
+      prev.map((r) =>
+        r.id === messageId
+          ? { ...r, content: newContent, isEdited: true, editedAt: nowIso }
+          : r
+      )
+    );
+
+    // Sync to active thread parent if present
+    setActiveThreadParent((prev) =>
+      prev && prev.id === messageId
+        ? { ...prev, content: newContent, isEdited: true, editedAt: nowIso }
+        : prev
+    );
+
+    // 2. Supabase DB update
     if (UUID_REGEX.test(messageId)) {
       try {
         await supabase
@@ -1058,7 +1763,8 @@ export default function KaelixoApp() {
           .update({
             content: newContent,
             is_edited: true,
-            edited_at: new Date().toISOString(),
+            edited_at: nowIso,
+            updated_at: nowIso,
           })
           .eq("id", messageId);
       } catch (e) {
@@ -1067,10 +1773,26 @@ export default function KaelixoApp() {
     }
   };
 
-  // Delete Message (Soft delete)
+  // Feature 17: Delete Message (Soft delete tombstone & unpinning)
   const handleDeleteMessage = async (messageId: string) => {
+    const nowIso = new Date().toISOString();
+
+    // 1. Optimistic update
     setMessagesByChannel((prev) => {
       const list = prev[activeChannelId] || [];
+      const targetMsg = list.find((m) => m.id === messageId);
+      if (!targetMsg) return prev;
+
+      // Guard: Author check
+      const isAuthor =
+        targetMsg.sender.id === currentUser.id ||
+        targetMsg.sender.name === currentUser.name ||
+        targetMsg.senderId === currentUser.id;
+      if (!isAuthor) {
+        console.warn("Unauthorized: only author can delete message");
+        return prev;
+      }
+
       return {
         ...prev,
         [activeChannelId]: list.map((m) =>
@@ -1078,27 +1800,68 @@ export default function KaelixoApp() {
             ? {
                 ...m,
                 isDeleted: true,
-                content: "This message was deleted.",
-                deletedAt: new Date().toISOString(),
+                content: "This message was deleted",
+                isPinned: false,
+                pinnedAt: null,
+                pinnedByName: null,
+                deletedAt: nowIso,
               }
             : m
         ),
       };
     });
 
+    // Sync to thread replies if present
+    setThreadReplies((prev) =>
+      prev.map((r) =>
+        r.id === messageId
+          ? { ...r, isDeleted: true, content: "This message was deleted", deletedAt: nowIso }
+          : r
+      )
+    );
+
+    // Sync to active thread parent if present
+    setActiveThreadParent((prev) =>
+      prev && prev.id === messageId
+        ? { ...prev, isDeleted: true, content: "This message was deleted", deletedAt: nowIso }
+        : prev
+    );
+
+    // 2. Supabase DB update
     if (UUID_REGEX.test(messageId)) {
       try {
         await supabase
           .from("messages")
           .update({
             is_deleted: true,
-            deleted_at: new Date().toISOString(),
+            content: "This message was deleted",
+            is_pinned: false,
+            pinned_at: null,
+            pinned_by_name: null,
+            deleted_at: nowIso,
+            updated_at: nowIso,
           })
           .eq("id", messageId);
       } catch (e) {
         console.warn("Delete message error:", e);
       }
     }
+  };
+
+
+
+  // Dock toggles
+  const handleTogglePinnedDrawer = () => {
+    setRightPanelMode((prev) => (prev === "pinned" ? "none" : "pinned"));
+  };
+
+  const handleToggleDetailsDrawer = () => {
+    setRightPanelMode((prev) => (prev === "details" ? "none" : "details"));
+  };
+
+  const handleCloseRightDock = () => {
+    setRightPanelMode("none");
+    setActiveThreadParent(null);
   };
 
   // Create Channel
@@ -1226,6 +1989,9 @@ export default function KaelixoApp() {
     }
   };
 
+  const pinnedCount = activeMessages.filter((m) => m.isPinned && !m.isDeleted).length;
+  const isPinnedOpen = rightPanelMode === "pinned";
+
   return (
     <div className="flex h-screen bg-white dark:bg-neutral-950 overflow-hidden font-sans antialiased text-neutral-900 dark:text-neutral-100">
       {/* Sidebar with Company Switcher & DMs */}
@@ -1241,11 +2007,16 @@ export default function KaelixoApp() {
         channels={channels}
         activeChannelId={activeChannelId}
         onSelectChannel={handleSelectRegularChannel}
-        teamMembers={TEAM_MEMBERS}
+        teamMembers={membersWithPresence}
         currentUser={currentUser}
         onOpenNewChannelModal={() => setIsNewChannelModalOpen(true)}
         onOpenAuthModal={() => setIsAuthModalOpen(true)}
         onOpenInviteModal={() => setIsInviteModalOpen(true)}
+        onOpenMemberDirectory={() => setIsMemberDirectoryOpen(true)}
+        onOpenUserProfile={(member) => {
+          setActiveProfileMember(member);
+          setRightPanelMode("profile");
+        }}
         onSelectDirectMessage={handleSelectDirectMessage}
         onLogout={handleLogout}
         isMobileOpen={isMobileSidebarOpen}
@@ -1264,23 +2035,46 @@ export default function KaelixoApp() {
             {/* Mobile Hamburger Toggle */}
             <button
               onClick={() => setIsMobileSidebarOpen(true)}
-              className="p-2 -ml-2 rounded-xl text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-900 md:hidden transition flex-shrink-0"
+              className="p-2 -ml-2 rounded-xl text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-900 md:hidden transition flex-shrink-0 cursor-pointer"
               title="Open Navigation"
             >
               <Menu className="w-5 h-5" />
             </button>
             {activeDmRecipient ? (
               <div className="flex items-center space-x-2.5 min-w-0">
-                <div className="relative flex-shrink-0">
+                <div
+                  className="relative flex-shrink-0 cursor-pointer group/dmheader"
+                  onClick={() => {
+                    setActiveProfileMember(activeDmRecipient);
+                    setRightPanelMode("profile");
+                  }}
+                  title="View Profile Details"
+                >
                   <img
                     src={activeDmRecipient.avatar}
                     alt={activeDmRecipient.name}
-                    className="w-8 h-8 rounded-xl bg-neutral-200 dark:bg-neutral-800"
+                    className="w-8 h-8 rounded-xl bg-neutral-200 dark:bg-neutral-800 ring-1 ring-neutral-300 dark:ring-neutral-700 group-hover/dmheader:ring-2 group-hover/dmheader:ring-indigo-500 transition"
                   />
-                  <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-neutral-900" />
+                  <span
+                    className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full ring-2 ring-white dark:ring-neutral-900 ${
+                      activeDmRecipient.online || activeDmRecipient.status === "online"
+                        ? "bg-emerald-500"
+                        : activeDmRecipient.status === "away"
+                        ? "bg-amber-500"
+                        : activeDmRecipient.status === "in_call"
+                        ? "bg-rose-500 animate-pulse"
+                        : "bg-neutral-400"
+                    }`}
+                  />
                 </div>
-                <div className="min-w-0 truncate">
-                  <h2 className="font-bold text-base text-neutral-900 dark:text-white tracking-tight truncate">
+                <div
+                  className="min-w-0 truncate cursor-pointer"
+                  onClick={() => {
+                    setActiveProfileMember(activeDmRecipient);
+                    setRightPanelMode("profile");
+                  }}
+                >
+                  <h2 className="font-bold text-base text-neutral-900 dark:text-white tracking-tight truncate hover:underline hover:text-indigo-600 dark:hover:text-indigo-400">
                     {activeDmRecipient.name}
                   </h2>
                   <p className="text-[11px] text-neutral-400 capitalize truncate">
@@ -1333,7 +2127,7 @@ export default function KaelixoApp() {
             {/* Search Trigger (Cmd+K) */}
             <button
               onClick={() => setIsSearchModalOpen(true)}
-              className="flex items-center space-x-1.5 text-xs text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white bg-neutral-100 dark:bg-neutral-800/80 px-2.5 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-700/60 transition"
+              className="flex items-center space-x-1.5 text-xs text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white bg-neutral-100 dark:bg-neutral-800/80 px-2.5 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-700/60 transition cursor-pointer"
               title="Search messages & channels (Ctrl+K)"
             >
               <Search className="w-3.5 h-3.5 text-neutral-400" />
@@ -1343,33 +2137,86 @@ export default function KaelixoApp() {
               </kbd>
             </button>
 
+            {/* Member Directory Trigger (Features 25 & 26 / R7) */}
+            <button
+              onClick={() => setIsMemberDirectoryOpen(true)}
+              className="flex items-center space-x-1.5 text-xs text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white bg-neutral-100 dark:bg-neutral-800/80 px-2.5 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-700/60 transition cursor-pointer"
+              title="Open People & Member Directory"
+            >
+              <Users className="w-3.5 h-3.5 text-indigo-500" />
+              <span className="hidden sm:inline">Directory</span>
+            </button>
+
+            {/* In-App Notifications Center (Feature 21 / R5) */}
+            <NotificationCenter
+              notifications={notifications}
+              unreadCount={unreadNotificationCount}
+              onMarkAsRead={handleMarkNotificationAsRead}
+              onMarkAllAsRead={handleMarkAllNotificationsAsRead}
+              onSelectNotification={handleSelectNotification}
+            />
+
+            {/* Feature 18: Pinned Messages Trigger with Count Badge */}
+            <button
+              type="button"
+              onClick={handleTogglePinnedDrawer}
+              title={
+                pinnedCount > 0
+                  ? `${pinnedCount} pinned message${pinnedCount === 1 ? "" : "s"}`
+                  : "Pinned messages"
+              }
+              className={`relative flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer border ${
+                isPinnedOpen
+                  ? "bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 border-amber-300 dark:border-amber-800 ring-2 ring-amber-400/20"
+                  : "bg-white dark:bg-neutral-900 text-neutral-600 dark:text-neutral-300 border-neutral-200 dark:border-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+              }`}
+            >
+              <Pin
+                className={`w-3.5 h-3.5 ${
+                  isPinnedOpen || pinnedCount > 0
+                    ? "fill-amber-500 text-amber-500"
+                    : "text-neutral-500"
+                }`}
+              />
+              <span className="hidden sm:inline">Pinned</span>
+              {pinnedCount > 0 && (
+                <span className="ml-0.5 px-1.5 py-0.2 text-[10px] font-bold rounded-full bg-amber-100 dark:bg-amber-900/80 text-amber-800 dark:text-amber-200 border border-amber-300 dark:border-amber-700">
+                  {pinnedCount}
+                </span>
+              )}
+            </button>
+
             {/* Invite Team Button */}
             <button
               onClick={() => setIsInviteModalOpen(true)}
-              className="flex items-center space-x-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 px-2.5 py-1.5 rounded-xl border border-indigo-200 dark:border-indigo-800/50 transition shadow-sm"
+              className="flex items-center space-x-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 px-2.5 py-1.5 rounded-xl border border-indigo-200 dark:border-indigo-800/50 transition shadow-sm cursor-pointer"
               title="Invite Team Members (Generate Link & Code)"
             >
               <Share2 className="w-3.5 h-3.5 text-indigo-500" />
               <span className="hidden sm:inline">Invite</span>
             </button>
 
-            {/* User Profile Switch Button */}
+            {/* User Profile Drawer Trigger (Feature 27 / R8) */}
             <button
-              onClick={() => setIsAuthModalOpen(true)}
-              className="flex items-center space-x-1.5 text-xs font-semibold text-neutral-700 dark:text-neutral-200 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 px-3 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-700 transition"
-              title="Profile & Settings"
+              onClick={() => {
+                setActiveProfileMember(currentUser);
+                setRightPanelMode("profile");
+              }}
+              className="flex items-center space-x-1.5 text-xs font-semibold text-neutral-700 dark:text-neutral-200 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-750 px-3 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-700 transition cursor-pointer"
+              title="View Profile & Settings"
             >
               <User className="w-3.5 h-3.5 text-indigo-500" />
               <span>{currentUser.name.split(" ")[0]}</span>
             </button>
 
+            {/* Channel Details Drawer Toggle Button */}
             <button
-              onClick={() => setShowRightDrawer(!showRightDrawer)}
+              onClick={handleToggleDetailsDrawer}
               title="Channel Details"
-              className={`p-2 rounded-xl transition ${
-                showRightDrawer
-                  ? "bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400"
-                  : "text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-900"
+              className={`p-2 rounded-xl transition cursor-pointer border ${
+                rightPanelMode === "details"
+                  ? "bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800"
+                  : "text-neutral-500 border-neutral-200 dark:border-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-900"
               }`}
             >
               <PanelRight className="w-4 h-4" />
@@ -1385,16 +2232,20 @@ export default function KaelixoApp() {
           />
         )}
 
-        {/* Message Feed */}
+        {/* Message Feed (Features 14, 15, 16, 17, 18) */}
         <MessageFeed
           messages={mainFeedMessages}
           currentUser={currentUser}
           onAddReaction={handleAddReaction}
-          members={TEAM_MEMBERS}
-          onOpenThread={(msg) => setActiveThreadParent(msg)}
+          members={membersWithPresence}
+          onOpenThread={handleOpenThread}
           onTogglePin={handleTogglePin}
           onEditMessage={handleEditMessage}
           onDeleteMessage={handleDeleteMessage}
+          onOpenProfile={(member) => {
+            setActiveProfileMember(member);
+            setRightPanelMode("profile");
+          }}
         />
 
         {/* Input Composer */}
@@ -1407,16 +2258,59 @@ export default function KaelixoApp() {
         />
       </main>
 
-      {/* Right Drawer */}
-      {showRightDrawer && (
-        <aside className="w-80 border-l border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/40 p-5 flex flex-col h-screen overflow-y-auto">
+      {/* Feature 12 & Feature 27: Unified Multi-Dock Right Rail Architecture */}
+      {rightPanelMode === "pinned" && (
+        <PinnedMessagesDrawer
+          channelName={activeChannel.name}
+          isDm={activeChannel.isDm}
+          pinnedMessages={activeMessages.filter((m) => m.isPinned && !m.isDeleted)}
+          currentUser={currentUser}
+          onClose={handleCloseRightDock}
+          onUnpin={(messageId) => handleTogglePin(messageId, true)}
+          onJumpToMessage={handleJumpToMessage}
+        />
+      )}
+
+      {rightPanelMode === "thread" && activeThreadParent && (
+        <ThreadPanel
+          parentMessage={activeThreadParent}
+          replies={threadReplies}
+          currentUser={currentUser}
+          channelName={activeChannel.name}
+          isDm={activeChannel.isDm}
+          onClose={handleCloseRightDock}
+          onSendReply={handleSendThreadReply}
+          onAddReaction={handleAddReaction}
+          members={membersWithPresence}
+          onOpenProfile={(member) => {
+            setActiveProfileMember(member);
+            setRightPanelMode("profile");
+          }}
+        />
+      )}
+
+      {rightPanelMode === "profile" && activeProfileMember && (
+        <UserProfileDrawer
+          member={activeProfileMember}
+          currentUser={currentUser}
+          onClose={handleCloseRightDock}
+          onStartDm={(member) => {
+            handleSelectDirectMessage(member);
+            handleCloseRightDock();
+          }}
+          onOpenEditProfile={() => setIsEditProfileModalOpen(true)}
+        />
+      )}
+
+      {rightPanelMode === "details" && (
+        <aside className="w-80 border-l border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/40 p-5 flex flex-col h-screen overflow-y-auto z-30 shadow-xl animate-in slide-in-from-right duration-200">
           <div className="flex items-center justify-between pb-4 border-b border-neutral-200 dark:border-neutral-800">
             <h3 className="font-bold text-sm text-neutral-900 dark:text-white">
               {activeDmRecipient ? "Member Profile" : "Channel Details"}
             </h3>
             <button
-              onClick={() => setShowRightDrawer(false)}
-              className="text-neutral-400 hover:text-neutral-600 text-xs font-semibold"
+              onClick={handleCloseRightDock}
+              className="text-neutral-400 hover:text-neutral-600 text-xs font-semibold cursor-pointer"
             >
               Close
             </button>
@@ -1464,20 +2358,36 @@ export default function KaelixoApp() {
 
             <div className="pt-2 border-t border-neutral-200 dark:border-neutral-800">
               <span className="text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-3 block">
-                Workspace Members ({TEAM_MEMBERS.length})
+                Workspace Members ({membersWithPresence.length})
               </span>
               <div className="space-y-2">
-                {TEAM_MEMBERS.map((m) => (
+                {membersWithPresence.map((m) => (
                   <div
                     key={m.id}
-                    onClick={() => handleSelectDirectMessage(m)}
+                    onClick={() => {
+                      setActiveProfileMember(m);
+                      setRightPanelMode("profile");
+                    }}
                     className="flex items-center space-x-2.5 p-1.5 rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-800 cursor-pointer transition"
                   >
-                    <img
-                      src={m.avatar}
-                      alt={m.name}
-                      className="w-6 h-6 rounded-lg bg-neutral-200 dark:bg-neutral-800"
-                    />
+                    <div className="relative flex-shrink-0">
+                      <img
+                        src={m.avatar}
+                        alt={m.name}
+                        className="w-6 h-6 rounded-lg bg-neutral-200 dark:bg-neutral-800"
+                      />
+                      <span
+                        className={`absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full ${
+                          m.online || m.status === "online"
+                            ? "bg-emerald-500"
+                            : m.status === "away"
+                            ? "bg-amber-500"
+                            : m.status === "in_call"
+                            ? "bg-rose-500"
+                            : "bg-neutral-400"
+                        }`}
+                      />
+                    </div>
                     <div className="truncate">
                       <p className="text-xs font-medium text-neutral-800 dark:text-neutral-200 truncate">
                         {m.name}
@@ -1494,20 +2404,50 @@ export default function KaelixoApp() {
         </aside>
       )}
 
-      {/* Thread Side Panel */}
-      {activeThreadParent && (
-        <div className="w-80 md:w-96 border-l border-neutral-200 dark:border-neutral-800 flex-shrink-0 h-screen overflow-hidden bg-white dark:bg-neutral-900 z-30 shadow-xl">
-          <ThreadPanel
-            parentMessage={activeThreadParent}
-            replies={threadReplies}
-            currentUser={currentUser}
-            channelName={activeChannel.name}
-            isDm={activeChannel.isDm}
-            onClose={() => setActiveThreadParent(null)}
-            onSendReply={handleSendThreadReply}
-            onAddReaction={handleAddReaction}
-            members={TEAM_MEMBERS}
+      {/* Toast Alert Banner */}
+      {activeToast && (
+        <div
+          onClick={() => {
+            setActiveChannelId(activeToast.channelId);
+            if (activeToast.messageId) {
+              handleJumpToMessage(activeToast.messageId);
+            }
+            setActiveToast(null);
+          }}
+          className="fixed top-5 right-5 z-50 max-w-sm bg-white dark:bg-neutral-900 border border-indigo-200 dark:border-indigo-800 rounded-2xl p-3.5 shadow-2xl flex items-start space-x-3 cursor-pointer hover:shadow-indigo-500/10 transition animate-in slide-in-from-top-3 duration-200"
+        >
+          <img
+            src={
+              activeToast.senderAvatar ||
+              `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(
+                activeToast.senderName
+              )}`
+            }
+            alt={activeToast.senderName}
+            className="w-9 h-9 rounded-xl object-cover bg-neutral-200 dark:bg-neutral-700 flex-shrink-0 ring-1 ring-neutral-300 dark:ring-neutral-700"
           />
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center justify-between gap-1 mb-0.5">
+              <span className="font-bold text-xs text-neutral-900 dark:text-neutral-100 truncate">
+                {activeToast.senderName}
+              </span>
+              <span className="text-[10px] font-medium text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950 px-1.5 py-0.2 rounded">
+                {activeToast.channelName}
+              </span>
+            </div>
+            <p className="text-xs text-neutral-600 dark:text-neutral-300 line-clamp-2 leading-relaxed">
+              {activeToast.content}
+            </p>
+          </div>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setActiveToast(null);
+            }}
+            className="text-neutral-400 hover:text-neutral-600 dark:hover:text-white p-1"
+          >
+            <CloseIcon className="w-3.5 h-3.5" />
+          </button>
         </div>
       )}
 
@@ -1558,6 +2498,49 @@ export default function KaelixoApp() {
         channels={channels}
         messagesByChannel={messagesByChannel}
         onSelectResult={handleSelectSearchResult}
+      />
+
+      {/* Member Directory Modal (Features 25 & 26 / R7) */}
+      <MemberDirectoryModal
+        isOpen={isMemberDirectoryOpen}
+        onClose={() => setIsMemberDirectoryOpen(false)}
+        members={membersWithPresence}
+        currentUser={currentUser}
+        departments={departments}
+        activeOrg={activeOrg}
+        onSelectMemberForDm={(member) => {
+          handleSelectDirectMessage(member);
+          setIsMemberDirectoryOpen(false);
+        }}
+        onOpenProfileDrawer={(member) => {
+          setActiveProfileMember(member);
+          setRightPanelMode("profile");
+          setIsMemberDirectoryOpen(false);
+        }}
+        onOpenAddMemberModal={() => {
+          setIsMemberDirectoryOpen(false);
+          setIsAddMemberModalOpen(true);
+        }}
+        onRemoveMember={handleRemoveMember}
+      />
+
+      {/* Add Member Modal (Feature 26 / R7) */}
+      <AddMemberModal
+        isOpen={isAddMemberModalOpen}
+        onClose={() => setIsAddMemberModalOpen(false)}
+        currentUser={currentUser}
+        departments={departments}
+        existingEmails={teamMembers.map((m) => m.email)}
+        onAddMember={handleAddMember}
+      />
+
+      {/* Edit Profile Modal (Feature 27 / R8) */}
+      <EditProfileModal
+        isOpen={isEditProfileModalOpen}
+        onClose={() => setIsEditProfileModalOpen(false)}
+        currentUser={currentUser}
+        departments={departments}
+        onSaveProfile={handleSaveProfile}
       />
     </div>
   );

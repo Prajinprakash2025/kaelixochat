@@ -16,6 +16,7 @@ interface MessageFeedProps {
   onTogglePin?: (messageId: string, currentPinStatus: boolean) => void;
   onEditMessage?: (messageId: string, newContent: string) => void;
   onDeleteMessage?: (messageId: string) => void;
+  onOpenProfile?: (member: WorkspaceMember) => void;
 }
 
 export function formatReactorsTooltip(
@@ -91,12 +92,14 @@ export function MessageFeed({
   onTogglePin,
   onEditMessage,
   onDeleteMessage,
+  onOpenProfile,
 }: MessageFeedProps) {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [activeHoverPickerId, setActiveHoverPickerId] = useState<string | null>(null);
   const [activeChipPickerId, setActiveChipPickerId] = useState<string | null>(null);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState("");
+  const [messageToDelete, setMessageToDelete] = useState<Message | null>(null);
 
   const handleCopy = (id: string, text: string) => {
     navigator.clipboard.writeText(text);
@@ -104,15 +107,24 @@ export function MessageFeed({
     setTimeout(() => setCopiedId(null), 2000);
   };
 
+  const isAuthor = (msg: Message) => {
+    return Boolean(
+      (msg.senderId && msg.senderId === currentUser.id) ||
+      (msg.sender?.id && msg.sender.id === currentUser.id) ||
+      (msg.senderName && msg.senderName === currentUser.name) ||
+      (msg.sender?.name && msg.sender.name === currentUser.name)
+    );
+  };
+
   const quickEmojis = ["👍", "❤️", "😂", "🎉", "🚀"];
 
   const renderRoleBadge = (role?: string, department?: string) => {
     if (!role) return null;
     let color = "bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300";
-    if (role === "owner")
+    if (role === "owner" || role === "Workspace Owner")
       color =
         "bg-purple-100 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 border-purple-200 dark:border-purple-800/40";
-    else if (role === "manager" || role === "admin")
+    else if (role === "manager" || role === "admin" || role === "Department Head" || role === "Manager")
       color =
         "bg-indigo-100 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800/40";
 
@@ -125,11 +137,10 @@ export function MessageFeed({
     );
   };
 
-  // Simple Markdown formatter for bold, code blocks, lists
+  // Markdown formatter for bold, code blocks, lists
   const formatContent = (content: string) => {
     if (!content) return null;
 
-    // Check for code blocks
     if (content.includes("```")) {
       const parts = content.split("```");
       return parts.map((part, index) => {
@@ -193,6 +204,7 @@ export function MessageFeed({
         </div>
       ) : (
         messages.map((msg) => {
+          const senderId = msg.sender?.id || msg.senderId || `user-${msg.id}`;
           const senderName = msg.sender?.name || msg.senderName || "Colleague";
           const senderAvatar =
             msg.sender?.avatar ||
@@ -208,84 +220,185 @@ export function MessageFeed({
           return (
             <div
               key={msg.id}
-              className={`group relative flex items-start space-x-3.5 p-3 rounded-2xl transition hover:bg-neutral-100/70 dark:hover:bg-neutral-900/60 ${
+              id={`message-${msg.id}`}
+              className={`group relative flex items-start space-x-3.5 p-3 rounded-2xl transition duration-200 hover:bg-neutral-100/70 dark:hover:bg-neutral-900/60 ${
                 msg.isPinned
-                  ? "bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200/50 dark:border-amber-900/30"
+                  ? "bg-amber-50/40 dark:bg-amber-950/20 border-l-4 border-l-amber-500 border-t border-r border-b border-amber-200/50 dark:border-amber-900/30 shadow-xs"
                   : ""
               }`}
             >
               {/* Avatar */}
-              <div className="flex-shrink-0 mt-0.5">
+              <div
+                className={`flex-shrink-0 mt-0.5 ${onOpenProfile ? "cursor-pointer group/avatar" : ""}`}
+                onClick={() => {
+                  if (onOpenProfile) {
+                    const profileTarget = members.find((m) => m.id === senderId) || msg.sender || {
+                      id: senderId,
+                      name: senderName,
+                      avatar: senderAvatar,
+                      role: senderRole,
+                      department: senderDepartment,
+                    };
+                    onOpenProfile(profileTarget as WorkspaceMember);
+                  }
+                }}
+              >
                 <img
                   src={senderAvatar}
                   alt={senderName}
-                  className="w-10 h-10 rounded-xl bg-neutral-200 dark:bg-neutral-800 object-cover ring-1 ring-neutral-300 dark:ring-neutral-700"
+                  className="w-10 h-10 rounded-xl bg-neutral-200 dark:bg-neutral-800 object-cover ring-1 ring-neutral-300 dark:ring-neutral-700 group-hover/avatar:ring-2 group-hover/avatar:ring-indigo-500 transition"
                 />
               </div>
 
               {/* Message Content */}
               <div className="flex-1 min-w-0">
-                {/* Header (Sender, Badge, Timestamp) */}
+                {/* Header (Sender, Badge, Timestamp, Edited, Pinned) */}
                 <div className="flex items-center space-x-2.5 mb-1 flex-wrap">
-                  <span className="font-semibold text-sm text-neutral-900 dark:text-neutral-100">
+                  <span
+                    onClick={() => {
+                      if (onOpenProfile) {
+                        const profileTarget = members.find((m) => m.id === senderId) || msg.sender || {
+                          id: senderId,
+                          name: senderName,
+                          avatar: senderAvatar,
+                          role: senderRole,
+                          department: senderDepartment,
+                        };
+                        onOpenProfile(profileTarget as WorkspaceMember);
+                      }
+                    }}
+                    className={`font-semibold text-sm text-neutral-900 dark:text-neutral-100 ${
+                      onOpenProfile ? "cursor-pointer hover:underline hover:text-indigo-600 dark:hover:text-indigo-400" : ""
+                    }`}
+                  >
                     {senderName}
                   </span>
                   {renderRoleBadge(senderRole, senderDepartment)}
                   <span className="text-[11px] text-neutral-400">
                     {msg.createdAt}
                   </span>
-                  {msg.isPinned && (
-                    <span className="flex items-center space-x-1 text-[11px] text-amber-600 dark:text-amber-400 font-medium">
-                      <Pin className="w-3 h-3 fill-amber-500" />
-                      <span>Pinned</span>
+
+                  {/* Edited indicator (Feature 16) */}
+                  {msg.isEdited && (
+                    <span
+                      className="text-[11px] text-neutral-400 dark:text-neutral-500 italic select-none"
+                      title={
+                        msg.editedAt
+                          ? `Edited at ${new Date(msg.editedAt).toLocaleTimeString([], {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}`
+                          : "Edited"
+                      }
+                    >
+                      (edited)
                     </span>
+                  )}
+
+                  {/* Pinned badge (Feature 18) */}
+                  {msg.isPinned && (
+                    <div
+                      className="flex items-center space-x-1 px-1.5 py-0.5 rounded-md bg-amber-100/80 dark:bg-amber-950/70 border border-amber-300/60 dark:border-amber-800/60 text-amber-700 dark:text-amber-300 text-[10px] font-medium"
+                      title={
+                        msg.pinnedAt
+                          ? `Pinned on ${new Date(msg.pinnedAt).toLocaleDateString()} at ${new Date(
+                              msg.pinnedAt
+                            ).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
+                          : "Pinned message"
+                      }
+                    >
+                      <Pin className="w-2.5 h-2.5 fill-amber-500 text-amber-600 dark:text-amber-400" />
+                      <span>
+                        Pinned{msg.pinnedByName ? ` by ${msg.pinnedByName.split(" ")[0]}` : ""}
+                      </span>
+                    </div>
                   )}
                 </div>
 
-                {/* Body Text */}
+                {/* Body Text & Inline Editor (Feature 16) & Tombstone (Feature 17) */}
                 {editingMessageId === msg.id ? (
                   <div className="mt-1 space-y-2">
                     <textarea
                       value={editContent}
                       onChange={(e) => setEditContent(e.target.value)}
-                      className="w-full text-sm p-2 rounded-xl border border-indigo-400 dark:border-indigo-600 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                      rows={2}
-                    />
-                    <div className="flex items-center space-x-2 text-xs">
-                      <button
-                        onClick={() => {
-                          if (onEditMessage && editContent.trim()) {
-                            onEditMessage(msg.id, editContent.trim());
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          const trimmed = editContent.trim();
+                          if (trimmed || (msg.attachments && msg.attachments.length > 0)) {
+                            onEditMessage?.(msg.id, trimmed);
+                            setEditingMessageId(null);
                           }
+                        } else if (e.key === "Escape") {
+                          e.preventDefault();
                           setEditingMessageId(null);
-                        }}
-                        className="px-3 py-1 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-500 transition cursor-pointer"
-                      >
-                        Save
-                      </button>
-                      <button
-                        onClick={() => setEditingMessageId(null)}
-                        className="px-3 py-1 text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition cursor-pointer"
-                      >
-                        Cancel
-                      </button>
+                        }
+                      }}
+                      className="w-full text-sm p-2.5 rounded-xl border border-indigo-400 dark:border-indigo-600 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm"
+                      rows={Math.max(2, editContent.split("\n").length)}
+                      autoFocus
+                    />
+                    <div className="flex items-center justify-between text-xs">
+                      <div className="flex items-center space-x-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const trimmed = editContent.trim();
+                            if (trimmed || (msg.attachments && msg.attachments.length > 0)) {
+                              onEditMessage?.(msg.id, trimmed);
+                            }
+                            setEditingMessageId(null);
+                          }}
+                          disabled={
+                            !editContent.trim() &&
+                            (!msg.attachments || msg.attachments.length === 0)
+                          }
+                          className="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg font-medium transition cursor-pointer shadow-sm"
+                        >
+                          Save
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditingMessageId(null)}
+                          className="px-3 py-1 text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition cursor-pointer"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                      <span className="text-[11px] text-neutral-400 select-none">
+                        <kbd className="font-mono bg-neutral-100 dark:bg-neutral-800 px-1 py-0.5 rounded text-[10px]">
+                          esc
+                        </kbd>{" "}
+                        to cancel •{" "}
+                        <kbd className="font-mono bg-neutral-100 dark:bg-neutral-800 px-1 py-0.5 rounded text-[10px]">
+                          enter
+                        </kbd>{" "}
+                        to save
+                      </span>
                     </div>
                   </div>
+                ) : msg.isDeleted ? (
+                  /* Tombstone rendering (Feature 17) */
+                  <div className="flex items-center space-x-2 py-1 text-xs text-neutral-400 dark:text-neutral-500 italic">
+                    <Trash2 className="w-3.5 h-3.5 opacity-50 flex-shrink-0" />
+                    <span>This message was deleted</span>
+                  </div>
                 ) : (
-                  msg.content && msg.content.trim() && (
+                  msg.content &&
+                  msg.content.trim() && (
                     <div className="text-sm text-neutral-800 dark:text-neutral-200 text-pretty">
                       {formatContent(msg.content)}
                     </div>
                   )
                 )}
 
-                {/* Attachments (Feature 7) */}
-                {msg.attachments && msg.attachments.length > 0 && (
+                {/* Attachments (only if not deleted) */}
+                {!msg.isDeleted && msg.attachments && msg.attachments.length > 0 && (
                   <AttachmentPreview attachments={msg.attachments} />
                 )}
 
-                {/* Reactions list & inline add reaction button (Feature 11) */}
-                {(reactionList.length > 0 || isChipPickerOpen) && (
+                {/* Reactions list & inline add reaction button (only if not deleted) */}
+                {!msg.isDeleted && (reactionList.length > 0 || isChipPickerOpen) && (
                   <div className="flex flex-wrap items-center gap-1.5 mt-2.5">
                     {reactionList.map((reaction, i) => {
                       const hasReacted = reaction.users.includes(currentUser.id);
@@ -343,135 +456,168 @@ export function MessageFeed({
                   </div>
                 )}
 
-                {/* Thread reply count if any */}
-                {msg.threadCount && msg.threadCount > 0 && (
-                  <div
+                {/* Thread Parent Feed Indicator Badge (Feature 14) */}
+                {Boolean(msg.threadCount && msg.threadCount > 0) && (
+                  <button
+                    type="button"
                     onClick={() => onOpenThread?.(msg)}
-                    className="mt-2 flex items-center space-x-1.5 text-xs text-indigo-600 dark:text-indigo-400 font-medium hover:underline cursor-pointer"
+                    className="mt-2.5 inline-flex items-center space-x-2 px-3 py-1.5 rounded-xl bg-indigo-50/80 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/60 border border-indigo-200/80 dark:border-indigo-800/60 transition group/thread cursor-pointer text-left"
+                    title="Open thread replies"
                   >
-                    <MessageSquare className="w-3.5 h-3.5" />
-                    <span>{msg.threadCount} {msg.threadCount === 1 ? "reply" : "replies"} in thread</span>
-                  </div>
+                    <div className="flex items-center space-x-1.5 text-indigo-600 dark:text-indigo-400">
+                      <MessageSquare className="w-3.5 h-3.5 group-hover/thread:scale-110 transition-transform" />
+                      <span className="text-xs font-semibold">
+                        {msg.threadCount} {msg.threadCount === 1 ? "reply" : "replies"}
+                      </span>
+                    </div>
+
+                    {msg.lastReplyAt && (
+                      <span className="text-[11px] text-neutral-500 dark:text-neutral-400 font-normal border-l border-indigo-200 dark:border-indigo-800 pl-2">
+                        Last reply {formatLastReplyTime(msg.lastReplyAt)}
+                      </span>
+                    )}
+
+                    <span className="text-[10px] text-indigo-500 font-medium opacity-0 group-hover/thread:opacity-100 transition-opacity ml-1">
+                      View thread →
+                    </span>
+                  </button>
                 )}
               </div>
 
               {/* Floating Message Hover Action Bar (Feature 10) */}
-              <div
-                className={`absolute -top-3.5 right-4 z-20 flex items-center space-x-0.5 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 shadow-md rounded-xl p-0.5 transition-opacity ${
-                  isHoverBarPickerOpen ? "opacity-100 pointer-events-auto" : "opacity-0 group-hover:opacity-100"
-                }`}
-              >
-                {/* 5 Quick Emojis */}
-                {quickEmojis.map((emoji) => {
-                  const hasReacted = reactionList.some(
-                    (r) => r.emoji === emoji && r.users.includes(currentUser.id)
-                  );
-                  return (
-                    <button
-                      key={emoji}
-                      type="button"
-                      onClick={() => onAddReaction(msg.id, emoji)}
-                      className={`p-1 rounded-lg text-sm transition cursor-pointer ${
-                        hasReacted
-                          ? "bg-indigo-100 dark:bg-indigo-900/60 text-indigo-600 dark:text-indigo-300"
-                          : "hover:bg-neutral-100 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300"
-                      }`}
-                      title={`React with ${emoji}`}
-                    >
-                      {emoji}
-                    </button>
-                  );
-                })}
+              {!msg.isDeleted && (
+                <div
+                  className={`absolute -top-3.5 right-4 z-20 flex items-center space-x-0.5 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 shadow-md rounded-xl p-0.5 transition-opacity ${
+                    isHoverBarPickerOpen
+                      ? "opacity-100 pointer-events-auto"
+                      : "opacity-0 group-hover:opacity-100"
+                  }`}
+                >
+                  {/* 5 Quick Emojis */}
+                  {quickEmojis.map((emoji) => {
+                    const hasReacted = reactionList.some(
+                      (r) => r.emoji === emoji && r.users.includes(currentUser.id)
+                    );
+                    return (
+                      <button
+                        key={emoji}
+                        type="button"
+                        onClick={() => onAddReaction(msg.id, emoji)}
+                        className={`p-1 rounded-lg text-sm transition cursor-pointer ${
+                          hasReacted
+                            ? "bg-indigo-100 dark:bg-indigo-900/60 text-indigo-600 dark:text-indigo-300"
+                            : "hover:bg-neutral-100 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300"
+                        }`}
+                        title={`React with ${emoji}`}
+                      >
+                        {emoji}
+                      </button>
+                    );
+                  })}
 
-                {/* Full Emoji Picker Trigger (SmilePlus) */}
-                <div className="relative">
+                  {/* Full Emoji Picker Trigger (SmilePlus) */}
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setActiveHoverPickerId(isHoverBarPickerOpen ? null : msg.id)}
+                      className="p-1 hover:bg-neutral-100 dark:hover:bg-neutral-700 rounded-lg text-neutral-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition cursor-pointer"
+                      title="Add Reaction"
+                    >
+                      <SmilePlus className="w-4 h-4" />
+                    </button>
+                    {isHoverBarPickerOpen && (
+                      <div className="absolute right-0 top-full mt-1.5 z-40">
+                        <EmojiPicker
+                          align="right"
+                          onSelectEmoji={(emoji) => {
+                            onAddReaction(msg.id, emoji);
+                            setActiveHoverPickerId(null);
+                          }}
+                          onClose={() => setActiveHoverPickerId(null)}
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Reply in Thread Action */}
                   <button
                     type="button"
-                    onClick={() => setActiveHoverPickerId(isHoverBarPickerOpen ? null : msg.id)}
+                    onClick={() => onOpenThread?.(msg)}
                     className="p-1 hover:bg-neutral-100 dark:hover:bg-neutral-700 rounded-lg text-neutral-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition cursor-pointer"
-                    title="Add Reaction"
+                    title="Reply in thread"
                   >
-                    <SmilePlus className="w-4 h-4" />
+                    <MessageSquare className="w-4 h-4" />
                   </button>
-                  {isHoverBarPickerOpen && (
-                    <div className="absolute right-0 top-full mt-1.5 z-40">
-                      <EmojiPicker
-                        align="right"
-                        onSelectEmoji={(emoji) => {
-                          onAddReaction(msg.id, emoji);
-                          setActiveHoverPickerId(null);
+
+                  {/* Pin / Unpin Action (Feature 18) */}
+                  <button
+                    type="button"
+                    onClick={() => onTogglePin?.(msg.id, !!msg.isPinned)}
+                    className={`p-1 hover:bg-neutral-100 dark:hover:bg-neutral-700 rounded-lg transition cursor-pointer ${
+                      msg.isPinned
+                        ? "text-amber-500 bg-amber-50 dark:bg-amber-950/50"
+                        : "text-neutral-500 hover:text-amber-500"
+                    }`}
+                    title={msg.isPinned ? "Unpin message" : "Pin message"}
+                  >
+                    <Pin className={`w-4 h-4 ${msg.isPinned ? "fill-amber-500 text-amber-500" : ""}`} />
+                  </button>
+
+                  {/* Edit & Delete Actions (for author only) */}
+                  {isAuthor(msg) && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingMessageId(msg.id);
+                          setEditContent(msg.content);
                         }}
-                        onClose={() => setActiveHoverPickerId(null)}
-                      />
-                    </div>
+                        className="p-1 hover:bg-neutral-100 dark:hover:bg-neutral-700 rounded-lg text-neutral-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition cursor-pointer"
+                        title="Edit message"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setMessageToDelete(msg)}
+                        className="p-1 hover:bg-neutral-100 dark:hover:bg-neutral-700 rounded-lg text-neutral-500 hover:text-rose-500 transition cursor-pointer"
+                        title="Delete message"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </>
                   )}
+
+                  {/* Copy Button */}
+                  <button
+                    type="button"
+                    onClick={() => handleCopy(msg.id, msg.content)}
+                    className="p-1 hover:bg-neutral-100 dark:hover:bg-neutral-700 rounded-lg text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 transition cursor-pointer"
+                    title="Copy message"
+                  >
+                    {copiedId === msg.id ? (
+                      <Check className="w-4 h-4 text-emerald-500" />
+                    ) : (
+                      <MoreHorizontal className="w-4 h-4" />
+                    )}
+                  </button>
                 </div>
-
-                {/* Reply in Thread Action */}
-                <button
-                  type="button"
-                  onClick={() => onOpenThread?.(msg)}
-                  className="p-1 hover:bg-neutral-100 dark:hover:bg-neutral-700 rounded-lg text-neutral-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition cursor-pointer"
-                  title="Reply in thread"
-                >
-                  <MessageSquare className="w-4 h-4" />
-                </button>
-
-                {/* Pin / Unpin Action */}
-                <button
-                  type="button"
-                  onClick={() => onTogglePin?.(msg.id, !!msg.isPinned)}
-                  className={`p-1 hover:bg-neutral-100 dark:hover:bg-neutral-700 rounded-lg transition cursor-pointer ${
-                    msg.isPinned ? "text-amber-500" : "text-neutral-500 hover:text-amber-500"
-                  }`}
-                  title={msg.isPinned ? "Unpin message" : "Pin message"}
-                >
-                  <Pin className={`w-4 h-4 ${msg.isPinned ? "fill-amber-500" : ""}`} />
-                </button>
-
-                {/* Edit & Delete Actions (for author) */}
-                {(msg.sender.id === currentUser.id || msg.sender.name === currentUser.name) && (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setEditingMessageId(msg.id);
-                        setEditContent(msg.content);
-                      }}
-                      className="p-1 hover:bg-neutral-100 dark:hover:bg-neutral-700 rounded-lg text-neutral-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition cursor-pointer"
-                      title="Edit message"
-                    >
-                      <Pencil className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => onDeleteMessage?.(msg.id)}
-                      className="p-1 hover:bg-neutral-100 dark:hover:bg-neutral-700 rounded-lg text-neutral-500 hover:text-rose-500 transition cursor-pointer"
-                      title="Delete message"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </>
-                )}
-
-                {/* Copy Button */}
-                <button
-                  type="button"
-                  onClick={() => handleCopy(msg.id, msg.content)}
-                  className="p-1 hover:bg-neutral-100 dark:hover:bg-neutral-700 rounded-lg text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 transition cursor-pointer"
-                  title="Copy message"
-                >
-                  {copiedId === msg.id ? (
-                    <Check className="w-4 h-4 text-emerald-500" />
-                  ) : (
-                    <MoreHorizontal className="w-4 h-4" />
-                  )}
-                </button>
-              </div>
+              )}
             </div>
           );
         })
       )}
+
+      {/* Delete Confirmation Modal (Feature 17) */}
+      <DeleteMessageModal
+        isOpen={Boolean(messageToDelete)}
+        message={messageToDelete}
+        onClose={() => setMessageToDelete(null)}
+        onConfirm={(id) => {
+          onDeleteMessage?.(id);
+          setMessageToDelete(null);
+        }}
+      />
     </div>
   );
 }

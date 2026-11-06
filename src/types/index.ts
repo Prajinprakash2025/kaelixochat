@@ -23,15 +23,32 @@ export interface Organization {
   invite_code?: string;
 }
 
+export type MemberRole =
+  | "owner"
+  | "admin"
+  | "manager"
+  | "member"
+  | "Workspace Owner"
+  | "Department Head"
+  | "Manager"
+  | "Member";
+
 export interface WorkspaceMember {
   id: string;
   name: string;
+  displayName?: string;
   email: string;
+  phone?: string;
   avatar: string;
-  role: "owner" | "admin" | "manager" | "member";
+  role: MemberRole;
+  title?: string;
   department: DepartmentCode;
   status: "online" | "away" | "offline" | "in_call";
   statusText?: string;
+  statusEmoji?: string;
+  bio?: string;
+  online?: boolean;
+  isActive?: boolean;
 }
 
 // ------------------------------------------------------------------------------
@@ -149,7 +166,7 @@ export interface Message {
 // Right Dock State Contract (PROJECT.md Contract 4)
 // ------------------------------------------------------------------------------
 
-export type RightPanelMode = "none" | "thread" | "pinned" | "details";
+export type RightPanelMode = "none" | "thread" | "pinned" | "details" | "profile";
 
 // ------------------------------------------------------------------------------
 // Notification Contracts (R5)
@@ -222,7 +239,7 @@ export function reactionsMapToArray(reactions?: MessageReactions | ReactionsMap)
     emoji,
     count: data.count,
     users: data.users,
-    userNames: (data as any).userNames,
+    userNames: (data as MessageReactionSummary).userNames,
   }));
 }
 
@@ -248,7 +265,7 @@ export function createReactionsArray(
   const arr = [...list] as MessageReactionsArray;
   for (const item of list) {
     if (item && item.emoji) {
-      (arr as any)[item.emoji] = {
+      (arr as unknown as Record<string, MessageReactionSummary>)[item.emoji] = {
         count: item.count,
         users: item.users,
         userNames: item.userNames,
