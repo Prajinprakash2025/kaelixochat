@@ -84,7 +84,7 @@ export function Sidebar({
 
   // Filter channels based on selected department tab
   const filteredChannels = channels.filter((ch) => {
-    if (ch.isDm) return false; // DMs are handled in Direct Messages section
+    if (ch.isDm || ch.name.startsWith("dm:") || ch.name.includes(":")) return false; // DMs are handled in Direct Messages section
     if (selectedDepartment === "all") return true;
     return ch.departmentCode === selectedDepartment || ch.departmentCode === "all";
   });
