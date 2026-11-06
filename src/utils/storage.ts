@@ -373,3 +373,38 @@ export async function deleteAttachment(storagePath: string): Promise<void> {
     throw new Error(`Failed to delete storage file: ${error.message}`);
   }
 }
+
+/**
+ * Uploads a profile avatar image to Supabase Storage in kaelixo-attachments/avatars.
+ * Returns the permanent public CDN URL.
+ */
+export async function uploadAvatar(file: File, userId: string): Promise<string> {
+  validateAttachment(file);
+  const cleanUserId = sanitizeChannelId(userId || "avatars");
+  const cleanFileName = sanitizeFileName(file.name);
+  const timestamp = Date.now();
+  const storagePath = `avatars/${cleanUserId}/${timestamp}-${cleanFileName}`;
+
+  const supabase = createClient();
+  const { error } = await supabase.storage
+    .from(ATTACHMENT_BUCKET)
+    .upload(storagePath, file, {
+      cacheControl: "3600",
+      upsert: true,
+      contentType: file.type || "image/jpeg",
+    });
+
+  if (error) {
+    throw new Error(`Avatar upload failed: ${error.message}`);
+  }
+
+  const { data: urlData } = supabase.storage
+    .from(ATTACHMENT_BUCKET)
+    .getPublicUrl(storagePath);
+
+  if (!urlData?.publicUrl) {
+    throw new Error("Failed to get public URL for avatar");
+  }
+
+  return urlData.publicUrl;
+}

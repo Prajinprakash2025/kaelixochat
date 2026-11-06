@@ -438,12 +438,80 @@ export default function KaelixoApp() {
       localStorage.setItem("kaelixo_user", JSON.stringify(updatedUser));
     } catch {}
 
-    setTeamMembers((prev) =>
-      prev.map((m) => (m.id === currentUser.id ? { ...m, ...updatedData } : m))
-    );
+    setTeamMembers((prev) => {
+      const idx = prev.findIndex((m) => m.id === currentUser.id || m.name === currentUser.name);
+      if (idx > -1) {
+        const next = [...prev];
+        next[idx] = { ...next[idx], ...updatedData };
+        return next;
+      }
+      return [...prev, updatedUser];
+    });
 
-    if (activeProfileMember?.id === currentUser.id) {
+    if (
+      activeProfileMember?.id === currentUser.id ||
+      activeProfileMember?.name === currentUser.name
+    ) {
       setActiveProfileMember((prev) => (prev ? { ...prev, ...updatedData } : null));
+    }
+
+    // 1. Instant Realtime broadcast to all connected clients
+    if (realtimeChannelRef.current) {
+      try {
+        realtimeChannelRef.current.send({
+          type: "broadcast",
+          event: "profile_update",
+          payload: updatedUser,
+        });
+      } catch (broadcastErr) {
+        console.warn("Realtime broadcast note:", broadcastErr);
+      }
+    }
+
+    // 2. Persist to Supabase database so all other devices & future visits see it
+    try {
+      await supabase.from("user_presence").upsert({
+        user_id: updatedUser.id,
+        name: updatedUser.name,
+        avatar: updatedUser.avatar,
+        department: updatedUser.department,
+        role: updatedUser.role,
+        status: updatedUser.status || "online",
+        status_text: updatedUser.statusText || "",
+        updated_at: new Date().toISOString(),
+      });
+
+      // Update previous messages in Supabase & local state so past chat shows new avatar
+      if (updatedData.avatar) {
+        await supabase
+          .from("messages")
+          .update({ sender_avatar: updatedData.avatar })
+          .or(`sender_id.eq.${updatedUser.id},sender_name.eq.${updatedUser.name}`);
+
+        setMessagesByChannel((prev) => {
+          const nextState: Record<string, Message[]> = {};
+          for (const [chId, msgList] of Object.entries(prev)) {
+            nextState[chId] = msgList.map((msg) => {
+              if (
+                msg.senderId === updatedUser.id ||
+                msg.sender?.id === updatedUser.id ||
+                msg.senderName === updatedUser.name ||
+                msg.sender?.name === updatedUser.name
+              ) {
+                return {
+                  ...msg,
+                  sender: msg.sender ? { ...msg.sender, avatar: updatedData.avatar! } : msg.sender,
+                  senderAvatar: updatedData.avatar,
+                };
+              }
+              return msg;
+            });
+          }
+          return nextState;
+        });
+      }
+    } catch (dbErr) {
+      console.warn("Supabase profile persistence note:", dbErr);
     }
   };
 
@@ -609,6 +677,55 @@ export default function KaelixoApp() {
             return firstNonDm ? firstNonDm.id : prev;
           });
           setIsLiveConnected(true);
+        }
+
+        // Fetch Live User Profiles & Presence from Supabase so all devices see latest profiles
+        try {
+          const { data: dbMembers } = await supabase
+            .from("user_presence")
+            .select("*")
+            .order("updated_at", { ascending: false });
+
+          if (dbMembers && dbMembers.length > 0) {
+            setTeamMembers((prev) => {
+              const merged = [...prev];
+              for (const row of dbMembers) {
+                const idx = merged.findIndex((m) => m.id === row.user_id || m.name === row.name);
+                const memberData: Partial<WorkspaceMember> = {
+                  id: row.user_id,
+                  name: row.name,
+                  avatar: row.avatar || undefined,
+                  department: (row.department as any) || "management",
+                  role: (row.role as any) || "member",
+                  status: (row.status as any) || "online",
+                  statusText: row.status_text || "",
+                };
+                if (idx > -1) {
+                  merged[idx] = {
+                    ...merged[idx],
+                    ...memberData,
+                    avatar: row.avatar || merged[idx].avatar,
+                  };
+                } else {
+                  merged.push({
+                    id: row.user_id,
+                    name: row.name,
+                    email: `${row.name.toLowerCase().replace(/\s+/g, ".")}@kaelixo.com`,
+                    avatar:
+                      row.avatar ||
+                      `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(row.name)}`,
+                    role: (row.role as any) || "member",
+                    department: (row.department as any) || "management",
+                    status: (row.status as any) || "online",
+                    statusText: row.status_text || "",
+                  });
+                }
+              }
+              return merged;
+            });
+          }
+        } catch (memberErr) {
+          console.warn("User presence fetch note:", memberErr);
         }
       } catch (err) {
         console.warn("Using local cache:", err);
@@ -1089,6 +1206,88 @@ export default function KaelixoApp() {
               "remove"
             );
           }
+        }
+      )
+      .on("broadcast", { event: "profile_update" }, ({ payload }: any) => {
+        if (!payload || !payload.id) return;
+        setTeamMembers((prev) => {
+          const idx = prev.findIndex((m) => m.id === payload.id || m.name === payload.name);
+          if (idx > -1) {
+            const next = [...prev];
+            next[idx] = { ...next[idx], ...payload };
+            return next;
+          }
+          return [...prev, payload];
+        });
+
+        // Also update open profile drawer if viewing this member
+        setActiveProfileMember((prev) => {
+          if (prev && (prev.id === payload.id || prev.name === payload.name)) {
+            return { ...prev, ...payload };
+          }
+          return prev;
+        });
+
+        // Also update avatar on any messages in feed from this member
+        if (payload.avatar) {
+          setMessagesByChannel((prev) => {
+            const nextState: Record<string, Message[]> = {};
+            for (const [chId, msgList] of Object.entries(prev)) {
+              nextState[chId] = msgList.map((msg) => {
+                if (
+                  msg.senderId === payload.id ||
+                  msg.sender?.id === payload.id ||
+                  msg.senderName === payload.name ||
+                  msg.sender?.name === payload.name
+                ) {
+                  return {
+                    ...msg,
+                    sender: msg.sender ? { ...msg.sender, avatar: payload.avatar } : msg.sender,
+                    senderAvatar: payload.avatar,
+                  };
+                }
+                return msg;
+              });
+            }
+            return nextState;
+          });
+        }
+      })
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "user_presence" },
+        (payload: any) => {
+          const row = (payload.new || payload.old) as any;
+          if (!row || !row.user_id) return;
+          setTeamMembers((prev) => {
+            const idx = prev.findIndex((m) => m.id === row.user_id || m.name === row.name);
+            if (idx > -1) {
+              const next = [...prev];
+              next[idx] = {
+                ...next[idx],
+                avatar: row.avatar || next[idx].avatar,
+                name: row.name || next[idx].name,
+                role: (row.role as any) || next[idx].role,
+                department: (row.department as any) || next[idx].department,
+                status: (row.status as any) || next[idx].status,
+                statusText: row.status_text !== undefined ? row.status_text : next[idx].statusText,
+              };
+              return next;
+            }
+            return [
+              ...prev,
+              {
+                id: row.user_id,
+                name: row.name,
+                email: `${row.name.toLowerCase().replace(/\s+/g, ".")}@kaelixo.com`,
+                avatar: row.avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(row.name)}`,
+                role: (row.role as any) || "member",
+                department: (row.department as any) || "management",
+                status: (row.status as any) || "online",
+                statusText: row.status_text || "",
+              },
+            ];
+          });
         }
       )
       .subscribe((status: any) => {

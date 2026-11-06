@@ -3,6 +3,7 @@
 import React, { useState, useRef, useId } from "react";
 import { X, Camera, Upload, Trash2, User, Phone, Briefcase, FileText } from "lucide-react";
 import { WorkspaceMember, Department } from "@/types";
+import { uploadAvatar } from "@/utils/storage";
 
 export interface EditProfileModalProps {
   isOpen: boolean;
@@ -37,6 +38,7 @@ export function EditProfileModal({
   const [statusText, setStatusText] = useState(currentUser.statusText || "");
   const [bio, setBio] = useState(currentUser.bio || "");
   const [avatar, setAvatar] = useState(currentUser.avatar || "");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -57,11 +59,20 @@ export function EditProfileModal({
     }
 
     setError(null);
-    const objectUrl = URL.createObjectURL(file);
-    setAvatar(objectUrl);
+    setSelectedFile(file);
+
+    // Read as Data URL so image is permanent and portable across clients
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        setAvatar(reader.result);
+      }
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleRemovePhoto = () => {
+    setSelectedFile(null);
     const defaultAvatar = `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(
       name || currentUser.name
     )}`;
@@ -80,6 +91,21 @@ export function EditProfileModal({
 
     setIsSubmitting(true);
     try {
+      let finalAvatar = avatar || currentUser.avatar;
+
+      // If user uploaded a new image file, upload to Supabase Storage for permanent CDN URL
+      if (selectedFile) {
+        try {
+          const uploadedUrl = await uploadAvatar(selectedFile, currentUser.id);
+          if (uploadedUrl) {
+            finalAvatar = uploadedUrl;
+          }
+        } catch (uploadErr) {
+          console.warn("Storage upload fallback to base64 data URL:", uploadErr);
+          // finalAvatar remains the portable base64 data URL from reader.readAsDataURL
+        }
+      }
+
       await onSaveProfile({
         name: trimmedName,
         displayName: displayName.trim() || trimmedName.toLowerCase().replace(/\s+/g, "."),
@@ -88,7 +114,7 @@ export function EditProfileModal({
         statusEmoji: statusEmoji.trim() || "💬",
         statusText: statusText.trim(),
         bio: bio.trim(),
-        avatar: avatar || currentUser.avatar,
+        avatar: finalAvatar,
       });
       onClose();
     } catch (err: unknown) {

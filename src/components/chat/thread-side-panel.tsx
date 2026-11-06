@@ -156,8 +156,15 @@ export function ThreadSidePanel({
 
   const parentSenderId =
     parentMessage.sender?.id || parentMessage.senderId || `user-${parentMessage.id}`;
-  const parentSenderName = parentMessage.sender?.name || parentMessage.senderName || "Colleague";
+  const matchedParentMember = members.find(
+    (m) =>
+      (m.id && (m.id === parentSenderId || m.id === parentMessage.senderId || m.id === parentMessage.sender?.id)) ||
+      (m.name && (m.name === parentMessage.senderName || m.name === parentMessage.sender?.name))
+  );
+  const parentSenderName =
+    matchedParentMember?.name || parentMessage.sender?.name || parentMessage.senderName || "Colleague";
   const parentSenderAvatar =
+    matchedParentMember?.avatar ||
     parentMessage.sender?.avatar ||
     parentMessage.senderAvatar ||
     `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(parentSenderName)}`;
@@ -320,8 +327,15 @@ export function ThreadSidePanel({
         ) : (
           replies.map((reply) => {
             const replySenderId = reply.sender?.id || reply.senderId;
-            const replySenderName = reply.sender?.name || reply.senderName || "Colleague";
+            const matchedReplyMember = members.find(
+              (m) =>
+                (m.id && (m.id === replySenderId || m.id === reply.senderId || m.id === reply.sender?.id)) ||
+                (m.name && (m.name === reply.senderName || m.name === reply.sender?.name))
+            );
+            const replySenderName =
+              matchedReplyMember?.name || reply.sender?.name || reply.senderName || "Colleague";
             const replySenderAvatar =
+              matchedReplyMember?.avatar ||
               reply.sender?.avatar ||
               reply.senderAvatar ||
               `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(replySenderName)}`;

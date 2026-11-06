@@ -205,13 +205,19 @@ export function MessageFeed({
       ) : (
         messages.map((msg) => {
           const senderId = msg.sender?.id || msg.senderId || `user-${msg.id}`;
-          const senderName = msg.sender?.name || msg.senderName || "Colleague";
+          const matchedMember = members.find(
+            (m) =>
+              (m.id && (m.id === senderId || m.id === msg.senderId || m.id === msg.sender?.id)) ||
+              (m.name && (m.name === msg.senderName || m.name === msg.sender?.name))
+          );
+          const senderName = matchedMember?.name || msg.sender?.name || msg.senderName || "Colleague";
           const senderAvatar =
+            matchedMember?.avatar ||
             msg.sender?.avatar ||
             msg.senderAvatar ||
             `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(senderName)}`;
-          const senderRole = msg.sender?.role || msg.senderRole;
-          const senderDepartment = msg.sender?.department || msg.senderDepartment;
+          const senderRole = matchedMember?.role || msg.sender?.role || msg.senderRole;
+          const senderDepartment = matchedMember?.department || msg.sender?.department || msg.senderDepartment;
 
           const isHoverBarPickerOpen = activeHoverPickerId === msg.id;
           const isChipPickerOpen = activeChipPickerId === msg.id;
@@ -232,7 +238,7 @@ export function MessageFeed({
                 className={`flex-shrink-0 mt-0.5 ${onOpenProfile ? "cursor-pointer group/avatar" : ""}`}
                 onClick={() => {
                   if (onOpenProfile) {
-                    const profileTarget = members.find((m) => m.id === senderId) || msg.sender || {
+                    const profileTarget = matchedMember || members.find((m) => m.id === senderId) || msg.sender || {
                       id: senderId,
                       name: senderName,
                       avatar: senderAvatar,
@@ -257,7 +263,7 @@ export function MessageFeed({
                   <span
                     onClick={() => {
                       if (onOpenProfile) {
-                        const profileTarget = members.find((m) => m.id === senderId) || msg.sender || {
+                        const profileTarget = matchedMember || members.find((m) => m.id === senderId) || msg.sender || {
                           id: senderId,
                           name: senderName,
                           avatar: senderAvatar,
