@@ -56,7 +56,7 @@ export function UserProfileDrawer({
   };
 
   return (
-    <aside className="w-80 sm:w-96 border-l border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 flex flex-col h-full flex-shrink-0 animate-in slide-in-from-right duration-200 overflow-hidden">
+    <aside className="fixed inset-0 z-50 sm:static sm:inset-auto sm:z-auto w-full sm:w-80 md:w-96 border-l border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 flex flex-col h-full flex-shrink-0 animate-in slide-in-from-right duration-200 overflow-hidden">
       {/* Top Header */}
       <div className="p-4 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between">
         <h3 className="font-bold text-sm text-neutral-900 dark:text-neutral-100">

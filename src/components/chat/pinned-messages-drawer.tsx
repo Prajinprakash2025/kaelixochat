@@ -32,7 +32,7 @@ export function PinnedMessagesDrawer({
   });
 
   return (
-    <aside className="w-80 md:w-96 border-l border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 flex flex-col h-screen z-30 shadow-xl flex-shrink-0 animate-in slide-in-from-right duration-200">
+    <aside className="fixed inset-0 z-50 sm:static sm:inset-auto sm:z-30 w-full sm:w-80 md:w-96 border-l border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 flex flex-col h-full sm:h-screen shadow-xl flex-shrink-0 animate-in slide-in-from-right duration-200">
       {/* Drawer Header */}
       <div className="h-16 px-4 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between flex-shrink-0 bg-neutral-50/70 dark:bg-neutral-900/80">
         <div className="flex items-center space-x-2.5 min-w-0">

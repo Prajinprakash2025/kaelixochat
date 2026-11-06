@@ -331,7 +331,7 @@ export function ChatInput({
 
   return (
     <div
-      className="p-4 border-t border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900/70 relative"
+      className="p-2 sm:p-4 border-t border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900/70 relative"
       onDragEnter={handleDragEnter}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
@@ -362,7 +362,7 @@ export function ChatInput({
 
       <div className="relative rounded-2xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50/50 dark:bg-neutral-800/50 focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-transparent transition shadow-xs">
         {/* Formatting Bar */}
-        <div className="flex items-center justify-between px-3.5 py-1.5 border-b border-neutral-200 dark:border-neutral-700/60 text-neutral-500 dark:text-neutral-400">
+        <div className="flex items-center justify-between px-3 py-1.5 border-b border-neutral-200 dark:border-neutral-700/60 text-neutral-500 dark:text-neutral-400">
           <div className="flex items-center space-x-1">
             <button
               type="button"
@@ -388,13 +388,13 @@ export function ChatInput({
             >
               <Code className="w-3.5 h-3.5" />
             </button>
-            <span className="h-3 w-[1px] bg-neutral-300 dark:bg-neutral-700 mx-1" />
-            <span className="text-[11px] text-neutral-400 font-medium">
+            <span className="hidden sm:inline h-3 w-[1px] bg-neutral-300 dark:bg-neutral-700 mx-1" />
+            <span className="hidden sm:inline text-[11px] text-neutral-400 font-medium">
               Markdown ready
             </span>
           </div>
 
-          <div className="text-[11px] text-neutral-400 flex items-center space-x-1">
+          <div className="hidden sm:flex text-[11px] text-neutral-400 items-center space-x-1">
             <Sparkles className="w-3 h-3 text-indigo-500" />
             <span>Kaelixo Instant</span>
           </div>
@@ -408,9 +408,9 @@ export function ChatInput({
           onKeyDown={handleKeyDown}
           onPaste={handlePaste}
           placeholder={`Message #${channelName}...`}
-          rows={3}
+          rows={2}
           disabled={disabled}
-          className="w-full bg-transparent p-3 text-sm text-neutral-900 dark:text-neutral-100 placeholder-neutral-400 focus:outline-none resize-none font-sans"
+          className="w-full bg-transparent p-2.5 sm:p-3 text-sm text-neutral-900 dark:text-neutral-100 placeholder-neutral-400 focus:outline-none resize-none font-sans"
         />
 
         {/* File Attachments Staging Area */}

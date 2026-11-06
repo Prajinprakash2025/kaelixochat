@@ -1404,6 +1404,7 @@ export default function KaelixoApp() {
       setActiveThreadParent(null);
     }
 
+    setIsMobileSidebarOpen(false);
     try {
       const dmId = await getOrCreateDmChannel(
         currentUser.id,
@@ -1444,6 +1445,7 @@ export default function KaelixoApp() {
     }
     setActiveDmRecipient(null);
     setActiveChannelId(channelId);
+    setIsMobileSidebarOpen(false);
   };
 
   // Active channel resolution
@@ -2229,18 +2231,23 @@ export default function KaelixoApp() {
         }`}
       >
         {/* Top Header */}
-        <header className="h-16 px-4 md:px-6 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between flex-shrink-0 bg-white/80 dark:bg-neutral-950/80 backdrop-blur-md">
-          <div className="flex items-center space-x-2 md:space-x-3 min-w-0 flex-1 mr-3">
-            {/* Mobile Hamburger Toggle */}
+        <header className="h-14 sm:h-16 px-3 sm:px-6 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between flex-shrink-0 bg-white/80 dark:bg-neutral-950/80 backdrop-blur-md">
+          <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1 mr-2">
+            {/* Mobile Hamburger Toggle with Realtime Status Dot */}
             <button
               onClick={() => setIsMobileSidebarOpen(true)}
-              className="p-2 -ml-2 rounded-xl text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-900 md:hidden transition flex-shrink-0 cursor-pointer"
+              className="relative p-2 -ml-1 rounded-xl text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-900 md:hidden transition flex-shrink-0 cursor-pointer"
               title="Open Navigation"
             >
               <Menu className="w-5 h-5" />
+              <span
+                className={`absolute top-1.5 right-1.5 w-2 h-2 rounded-full ${
+                  isLiveConnected ? "bg-emerald-500 animate-pulse" : "bg-indigo-500"
+                }`}
+              />
             </button>
             {activeDmRecipient ? (
-              <div className="flex items-center space-x-2.5 min-w-0">
+              <div className="flex items-center space-x-2 sm:space-x-2.5 min-w-0">
                 <div
                   className="relative flex-shrink-0 cursor-pointer group/dmheader"
                   onClick={() => {
@@ -2252,7 +2259,7 @@ export default function KaelixoApp() {
                   <img
                     src={activeDmRecipient.avatar}
                     alt={activeDmRecipient.name}
-                    className="w-8 h-8 rounded-xl bg-neutral-200 dark:bg-neutral-800 ring-1 ring-neutral-300 dark:ring-neutral-700 group-hover/dmheader:ring-2 group-hover/dmheader:ring-indigo-500 transition"
+                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-neutral-200 dark:bg-neutral-800 ring-1 ring-neutral-300 dark:ring-neutral-700 group-hover/dmheader:ring-2 group-hover/dmheader:ring-indigo-500 transition object-cover"
                   />
                   <span
                     className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full ring-2 ring-white dark:ring-neutral-900 ${
@@ -2273,31 +2280,31 @@ export default function KaelixoApp() {
                     setRightPanelMode("profile");
                   }}
                 >
-                  <h2 className="font-bold text-base text-neutral-900 dark:text-white tracking-tight truncate hover:underline hover:text-indigo-600 dark:hover:text-indigo-400">
+                  <h2 className="font-bold text-sm sm:text-base text-neutral-900 dark:text-white tracking-tight truncate hover:underline hover:text-indigo-600 dark:hover:text-indigo-400">
                     {activeDmRecipient.name}
                   </h2>
-                  <p className="text-[11px] text-neutral-400 capitalize truncate">
+                  <p className="text-[10px] sm:text-[11px] text-neutral-400 capitalize truncate hidden sm:block">
                     {activeDmRecipient.role} • {activeDmRecipient.department} Department
                   </p>
                 </div>
               </div>
             ) : (
-              <div className="flex items-center space-x-2 min-w-0">
+              <div className="flex items-center space-x-1.5 sm:space-x-2 min-w-0">
                 {activeChannel.isPrivate ? (
                   <Lock className="w-4 h-4 text-neutral-400 flex-shrink-0" />
                 ) : (
-                  <Hash className="w-5 h-5 text-neutral-400 flex-shrink-0" />
+                  <Hash className="w-4 h-4 sm:w-5 sm:h-5 text-neutral-400 flex-shrink-0" />
                 )}
-                <h2 className="font-bold text-base text-neutral-900 dark:text-white tracking-tight truncate flex-shrink-0">
+                <h2 className="font-bold text-sm sm:text-base text-neutral-900 dark:text-white tracking-tight truncate flex-shrink-0 max-w-[130px] sm:max-w-none">
                   {activeChannel.name}
                 </h2>
                 {activeChannel.departmentCode && activeChannel.departmentCode !== "all" && (
-                  <span className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/40 flex-shrink-0">
+                  <span className="hidden sm:inline-block text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/40 flex-shrink-0">
                     {activeChannel.departmentCode}
                   </span>
                 )}
                 {activeChannel.topic && (
-                  <span className="text-xs text-neutral-400 border-l border-neutral-200 dark:border-neutral-800 pl-3 truncate max-w-[180px] md:max-w-xs lg:max-w-md hidden sm:inline">
+                  <span className="text-xs text-neutral-400 border-l border-neutral-200 dark:border-neutral-800 pl-3 truncate max-w-[180px] md:max-w-xs lg:max-w-md hidden md:inline">
                     {activeChannel.topic}
                   </span>
                 )}
@@ -2306,10 +2313,10 @@ export default function KaelixoApp() {
           </div>
 
           {/* Action Tools */}
-          <div className="flex items-center space-x-2 flex-shrink-0">
-            {/* Supabase Status */}
+          <div className="flex items-center space-x-1 sm:space-x-2 flex-shrink-0">
+            {/* Supabase Status (Desktop & Tablet) */}
             <div
-              className={`flex items-center space-x-1.5 text-[11px] font-medium px-2.5 py-1 rounded-full border ${
+              className={`hidden sm:flex items-center space-x-1.5 text-[11px] font-medium px-2.5 py-1 rounded-full border ${
                 isLiveConnected
                   ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/50"
                   : "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800/50"
@@ -2323,30 +2330,30 @@ export default function KaelixoApp() {
               <span>{isLiveConnected ? "Live" : "Connecting..."}</span>
             </div>
 
-            {/* Search Trigger (Cmd+K) */}
+            {/* Search Trigger */}
             <button
               onClick={() => setIsSearchModalOpen(true)}
-              className="flex items-center space-x-1.5 text-xs text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white bg-neutral-100 dark:bg-neutral-800/80 px-2.5 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-700/60 transition cursor-pointer"
+              className="flex items-center space-x-1.5 text-xs text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white bg-neutral-100 dark:bg-neutral-800/80 p-2 sm:px-2.5 sm:py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-700/60 transition cursor-pointer"
               title="Search messages & channels (Ctrl+K)"
             >
-              <Search className="w-3.5 h-3.5 text-neutral-400" />
-              <span className="hidden sm:inline">Search</span>
-              <kbd className="hidden sm:inline text-[10px] bg-white dark:bg-neutral-700 px-1 py-0.5 rounded border border-neutral-300 dark:border-neutral-600 font-mono text-neutral-400">
+              <Search className="w-4 h-4 sm:w-3.5 sm:h-3.5 text-neutral-400" />
+              <span className="hidden md:inline">Search</span>
+              <kbd className="hidden lg:inline text-[10px] bg-white dark:bg-neutral-700 px-1 py-0.5 rounded border border-neutral-300 dark:border-neutral-600 font-mono text-neutral-400">
                 ⌘K
               </kbd>
             </button>
 
-            {/* Member Directory Trigger (Features 25 & 26 / R7) */}
+            {/* Member Directory Trigger */}
             <button
               onClick={() => setIsMemberDirectoryOpen(true)}
-              className="flex items-center space-x-1.5 text-xs text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white bg-neutral-100 dark:bg-neutral-800/80 px-2.5 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-700/60 transition cursor-pointer"
+              className="flex items-center space-x-1.5 text-xs text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white bg-neutral-100 dark:bg-neutral-800/80 p-2 sm:px-2.5 sm:py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-700/60 transition cursor-pointer"
               title="Open People & Member Directory"
             >
-              <Users className="w-3.5 h-3.5 text-indigo-500" />
-              <span className="hidden sm:inline">Directory</span>
+              <Users className="w-4 h-4 sm:w-3.5 sm:h-3.5 text-indigo-500" />
+              <span className="hidden md:inline">Directory</span>
             </button>
 
-            {/* In-App Notifications Center (Feature 21 / R5) */}
+            {/* In-App Notifications Center */}
             <NotificationCenter
               notifications={notifications}
               unreadCount={unreadNotificationCount}
@@ -2364,20 +2371,20 @@ export default function KaelixoApp() {
                   ? `${pinnedCount} pinned message${pinnedCount === 1 ? "" : "s"}`
                   : "Pinned messages"
               }
-              className={`relative flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer border ${
+              className={`relative flex items-center space-x-1.5 p-2 sm:px-2.5 sm:py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer border ${
                 isPinnedOpen
                   ? "bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 border-amber-300 dark:border-amber-800 ring-2 ring-amber-400/20"
                   : "bg-white dark:bg-neutral-900 text-neutral-600 dark:text-neutral-300 border-neutral-200 dark:border-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-800"
               }`}
             >
               <Pin
-                className={`w-3.5 h-3.5 ${
+                className={`w-4 h-4 sm:w-3.5 sm:h-3.5 ${
                   isPinnedOpen || pinnedCount > 0
                     ? "fill-amber-500 text-amber-500"
                     : "text-neutral-500"
                 }`}
               />
-              <span className="hidden sm:inline">Pinned</span>
+              <span className="hidden md:inline">Pinned</span>
               {pinnedCount > 0 && (
                 <span className="ml-0.5 px-1.5 py-0.2 text-[10px] font-bold rounded-full bg-amber-100 dark:bg-amber-900/80 text-amber-800 dark:text-amber-200 border border-amber-300 dark:border-amber-700">
                   {pinnedCount}
@@ -2385,34 +2392,42 @@ export default function KaelixoApp() {
               )}
             </button>
 
-            {/* Invite Team Button */}
+            {/* Invite Team Button (Desktop & Tablet) */}
             <button
               onClick={() => setIsInviteModalOpen(true)}
-              className="flex items-center space-x-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 px-2.5 py-1.5 rounded-xl border border-indigo-200 dark:border-indigo-800/50 transition shadow-sm cursor-pointer"
+              className="hidden md:flex items-center space-x-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 px-2.5 py-1.5 rounded-xl border border-indigo-200 dark:border-indigo-800/50 transition shadow-sm cursor-pointer"
               title="Invite Team Members (Generate Link & Code)"
             >
               <Share2 className="w-3.5 h-3.5 text-indigo-500" />
-              <span className="hidden sm:inline">Invite</span>
+              <span>Invite</span>
             </button>
 
-            {/* User Profile Drawer Trigger (Feature 27 / R8) */}
+            {/* User Profile Drawer Trigger */}
             <button
               onClick={() => {
                 setActiveProfileMember(currentUser);
                 setRightPanelMode("profile");
               }}
-              className="flex items-center space-x-1.5 text-xs font-semibold text-neutral-700 dark:text-neutral-200 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-750 px-3 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-700 transition cursor-pointer"
+              className="flex items-center space-x-1.5 text-xs font-semibold text-neutral-700 dark:text-neutral-200 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-750 p-1 sm:px-3 sm:py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-700 transition cursor-pointer flex-shrink-0"
               title="View Profile & Settings"
             >
-              <User className="w-3.5 h-3.5 text-indigo-500" />
-              <span>{currentUser.name.split(" ")[0]}</span>
+              {currentUser.avatar ? (
+                <img
+                  src={currentUser.avatar}
+                  alt={currentUser.name}
+                  className="w-5 h-5 rounded-lg object-cover"
+                />
+              ) : (
+                <User className="w-3.5 h-3.5 text-indigo-500" />
+              )}
+              <span className="hidden md:inline">{currentUser.name.split(" ")[0]}</span>
             </button>
 
-            {/* Channel Details Drawer Toggle Button */}
+            {/* Channel Details Drawer Toggle Button (Large screen) */}
             <button
               onClick={handleToggleDetailsDrawer}
               title="Channel Details"
-              className={`p-2 rounded-xl transition cursor-pointer border ${
+              className={`hidden lg:flex p-2 rounded-xl transition cursor-pointer border ${
                 rightPanelMode === "details"
                   ? "bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800"
                   : "text-neutral-500 border-neutral-200 dark:border-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-900"
@@ -2502,7 +2517,7 @@ export default function KaelixoApp() {
       )}
 
       {rightPanelMode === "details" && (
-        <aside className="w-80 border-l border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/40 p-5 flex flex-col h-screen overflow-y-auto z-30 shadow-xl animate-in slide-in-from-right duration-200">
+        <aside className="fixed inset-0 z-50 sm:static sm:inset-auto sm:z-30 w-full sm:w-80 border-l border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/40 p-5 flex flex-col h-screen overflow-y-auto shadow-xl animate-in slide-in-from-right duration-200">
           <div className="flex items-center justify-between pb-4 border-b border-neutral-200 dark:border-neutral-800">
             <h3 className="font-bold text-sm text-neutral-900 dark:text-white">
               {activeDmRecipient ? "Member Profile" : "Channel Details"}
