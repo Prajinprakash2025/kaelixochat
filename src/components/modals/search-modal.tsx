@@ -89,11 +89,11 @@ export function SearchModal({
         <div className="flex-1 overflow-y-auto p-3 space-y-2 custom-scrollbar">
           {!query.trim() ? (
             <div className="py-12 text-center text-xs text-neutral-400">
-              സന്ദേശങ്ങളോ ഫയലുകളോ തിരയാൻ ഒരു വാക്ക് ടൈപ്പ് ചെയ്യുക
+              Type a keyword to search messages, attachments, or team discussions
             </div>
           ) : results.length === 0 ? (
             <div className="py-12 text-center text-xs text-neutral-400">
-              &quot;{query}&quot; എന്ന വാക്കുമായി പൊരുത്തപ്പെടുന്ന മെസ്സേജുകൾ ലഭ്യമല്ല.
+              No results found matching &quot;{query}&quot;
             </div>
           ) : (
             results.map(({ message, channel }) => (

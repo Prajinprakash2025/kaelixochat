@@ -185,10 +185,10 @@ export function MessageFeed({
             💬
           </div>
           <h3 className="font-semibold text-neutral-700 dark:text-neutral-200">
-            സംഭാഷണങ്ങൾ ആരംഭിച്ചിട്ടില്ല
+            No messages yet
           </h3>
           <p className="text-xs text-neutral-500 max-w-sm mt-1">
-            ഈ ചാനലിൽ ആദ്യത്തെ മെസ്സേജ് അയച്ച് ടീമുമായി ആശയവിനിമയം ആരംഭിക്കുക!
+            Start the conversation by sending the first message to this channel.
           </p>
         </div>
       ) : (

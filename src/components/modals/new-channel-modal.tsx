@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { X, Hash, Lock, Users, Sparkles } from "lucide-react";
+import { Hash, Lock, X } from "lucide-react";
 import { DepartmentCode, Department } from "@/types";
 
 interface NewChannelModalProps {
@@ -33,15 +33,14 @@ export function NewChannelModal({
     e.preventDefault();
     if (!name.trim()) return;
 
-    // Sanitize name: lowercase, hyphens instead of spaces
-    const sanitizedName = name
+    const formattedName = name
       .toLowerCase()
       .trim()
       .replace(/\s+/g, "-")
       .replace(/[^a-z0-9-_]/g, "");
 
     onCreateChannel({
-      name: sanitizedName,
+      name: formattedName,
       topic: topic.trim(),
       departmentCode,
       isPrivate,
@@ -58,16 +57,16 @@ export function NewChannelModal({
       <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl">
         {/* Modal Header */}
         <div className="p-5 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between">
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-2.5">
             <div className="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
               <Hash className="w-4 h-4" />
             </div>
             <div>
               <h2 className="font-bold text-base text-neutral-900 dark:text-white">
-                പുതിയ ചാനൽ ഉണ്ടാക്കുക (New Channel)
+                Create a Channel
               </h2>
               <p className="text-xs text-neutral-500">
-                ചർച്ചകൾക്കായി പുതിയൊരു ചാനൽ ആരംഭിക്കുക
+                Channels are where team members communicate across topics and departments
               </p>
             </div>
           </div>
@@ -84,7 +83,7 @@ export function NewChannelModal({
           {/* Channel Name */}
           <div>
             <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 uppercase tracking-wider mb-1.5">
-              ചാനൽ പേര് (Channel Name)
+              Channel Name
             </label>
             <div className="relative flex items-center">
               <span className="absolute left-3 text-neutral-400 font-bold text-sm">
@@ -94,7 +93,7 @@ export function NewChannelModal({
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. batch-4-updates, sprint-reviews"
+                placeholder="e.g. quarterly-planning, announcements"
                 required
                 className="w-full pl-8 pr-3 py-2 text-sm rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
@@ -104,7 +103,7 @@ export function NewChannelModal({
           {/* Department Selection */}
           <div>
             <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 uppercase tracking-wider mb-1.5">
-              ഡിപ്പാർട്ട്മെന്റ് (Department)
+              Department
             </label>
             <select
               value={departmentCode}
@@ -122,13 +121,13 @@ export function NewChannelModal({
           {/* Topic / Description */}
           <div>
             <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 uppercase tracking-wider mb-1.5">
-              വിവരണം / ഉദ്ദേശ്യം (Topic)
+              Topic & Description (Optional)
             </label>
             <input
               type="text"
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
-              placeholder="ഈ ചാനലിന്റെ ഉദ്ദേശ്യം എന്താണ്?"
+              placeholder="What is this channel about?"
               className="w-full px-3 py-2 text-sm rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>
@@ -139,10 +138,10 @@ export function NewChannelModal({
               <Lock className="w-4 h-4 text-neutral-500" />
               <div>
                 <p className="text-xs font-semibold text-neutral-800 dark:text-neutral-200">
-                  സ്വകാര്യ ചാനൽ (Private Channel)
+                  Make Private
                 </p>
                 <p className="text-[11px] text-neutral-500">
-                  ക്ഷണിച്ച അംഗങ്ങൾക്ക് മാത്രം പ്രവേശനം നൽകുക
+                  When a channel is private, it can only be viewed or joined by invitation
                 </p>
               </div>
             </div>
@@ -167,7 +166,7 @@ export function NewChannelModal({
               type="submit"
               className="px-5 py-2 text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl shadow-md shadow-indigo-600/20 active:scale-95 transition"
             >
-              ചാനൽ ഉണ്ടാക്കുക
+              Create Channel
             </button>
           </div>
         </form>

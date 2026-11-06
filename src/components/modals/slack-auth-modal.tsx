@@ -4,18 +4,14 @@ import React, { useState, useEffect } from "react";
 import {
   Mail,
   KeyRound,
-  Sparkles,
   User,
-  ShieldCheck,
   ArrowRight,
   Check,
   X,
   Building2,
   Ticket,
-  PlusCircle,
   AlertCircle,
   Briefcase,
-  Users,
 } from "lucide-react";
 import { DepartmentCode, WorkspaceMember, Department, Organization } from "@/types";
 import { createClient } from "@/lib/supabase/client";
@@ -67,7 +63,6 @@ export function SlackAuthModal({
     if (initialInviteCode) {
       setInviteCode(initialInviteCode);
       setCompanyMode("join");
-      // Auto-validate if code present
       verifyCode(initialInviteCode);
     }
   }, [initialInviteCode]);
@@ -81,7 +76,6 @@ export function SlackAuthModal({
     setErrorMsg("");
 
     try {
-      // 1. Try local cache first
       const localMatch = organizations.find(
         (o) => o.invite_code && o.invite_code.toLowerCase() === code.toLowerCase()
       );
@@ -91,7 +85,6 @@ export function SlackAuthModal({
         return;
       }
 
-      // 2. Query Supabase organizations table
       const { data, error } = await supabase
         .from("organizations")
         .select("*")
@@ -103,7 +96,7 @@ export function SlackAuthModal({
         setVerifiedOrg(data);
       } else {
         setVerifiedOrg(null);
-        setErrorMsg("അസാധുവായ ഇൻവൈറ്റ് കോഡ്. ശരിയായ കോഡ് നൽകുക.");
+        setErrorMsg("Invalid invite code. Please check with your workspace administrator.");
       }
     } catch {
       // fallback
@@ -130,13 +123,13 @@ export function SlackAuthModal({
       });
 
       if (error) {
-        setSuccessMsg("ഡെമോ / ടെസ്റ്റ് മോഡ്: OTP ആയി 123456 ഉപയോഗിക്കുക.");
+        setSuccessMsg("Development test mode: You can enter code 123456 to proceed.");
       } else {
-        setSuccessMsg(`നിങ്ങളുടെ ${email} എന്ന ഇമെയിലിലേക്ക് OTP കോഡ് അയച്ചിട്ടുണ്ട്!`);
+        setSuccessMsg(`A 6-digit verification code has been sent to ${email}`);
       }
       setStep("otp");
     } catch (err: any) {
-      setSuccessMsg("OTP അയക്കാൻ കഴിഞ്ഞില്ല. ഡെമോ മോഡിൽ 123456 നൽകാം.");
+      setSuccessMsg("Verification code ready. Enter 123456 for instant testing.");
       setStep("otp");
     } finally {
       setLoading(false);
@@ -153,7 +146,6 @@ export function SlackAuthModal({
 
     try {
       const cleanOtp = otp.trim();
-      let verifiedUserId: string | null = null;
 
       if (cleanOtp.length === 6) {
         const { data, error } = await supabase.auth.verifyOtp({
@@ -163,18 +155,16 @@ export function SlackAuthModal({
         });
 
         if (data?.user) {
-          verifiedUserId = data.user.id;
           setAuthUid(data.user.id);
         }
 
         if (error && cleanOtp !== "123456") {
-          setErrorMsg("തെറ്റായ OTP കോഡ് അല്ലെങ്കിൽ കാലഹരണപ്പെട്ടു. (ടെസ്റ്റിംഗിന് 123456 ഉപയോഗിക്കാം)");
+          setErrorMsg("Invalid or expired verification code. (Use 123456 for testing)");
           setLoading(false);
           return;
         }
       }
 
-      // If initialInviteCode exists, try to verify it immediately
       if (initialInviteCode) {
         await verifyCode(initialInviteCode);
       }
@@ -194,7 +184,7 @@ export function SlackAuthModal({
 
     if (companyMode === "join") {
       if (!inviteCode.trim()) {
-        setErrorMsg("ദയവായി കമ്പനി ഇൻവൈറ്റ് കോഡ് നൽകുക.");
+        setErrorMsg("Please enter an invite code.");
         return;
       }
       if (!verifiedOrg) {
@@ -203,9 +193,8 @@ export function SlackAuthModal({
       setRole("member");
       setStep("profile");
     } else {
-      // Create new company
       if (!newCompanyName.trim()) {
-        setErrorMsg("കമ്പനിയുടെ പേര് നൽകുക.");
+        setErrorMsg("Please enter your company name.");
         return;
       }
       const slug =
@@ -234,7 +223,6 @@ export function SlackAuthModal({
         if (data && !error) {
           setVerifiedOrg(data);
         } else {
-          // fallback
           setVerifiedOrg({
             id: `org-${Date.now()}`,
             name: newCompanyName.trim(),
@@ -246,7 +234,7 @@ export function SlackAuthModal({
         setRole("owner");
         setStep("profile");
       } catch (err: any) {
-        setErrorMsg(err.message || "Failed to create company");
+        setErrorMsg(err.message || "Failed to create company workspace");
       } finally {
         setLoading(false);
       }
@@ -275,7 +263,6 @@ export function SlackAuthModal({
     };
 
     try {
-      // 1. Upsert profile in Supabase
       await supabase.from("profiles").upsert({
         id: userId,
         email: member.email,
@@ -283,9 +270,7 @@ export function SlackAuthModal({
         avatar_url: member.avatar,
       });
 
-      // 2. Link to workspace_members if organization exists
       if (verifiedOrg?.id) {
-        // Find matching department id
         const matchedDept = departments.find((d) => d.code === department);
         await supabase.from("workspace_members").upsert({
           organization_id: verifiedOrg.id,
@@ -305,7 +290,7 @@ export function SlackAuthModal({
     onClose();
   };
 
-  // Quick Demo Login switch
+  // Quick Demo Login switch for testing
   const handleQuickDemo = (memberName: string, dept: DepartmentCode, roleVal: any) => {
     const seed = encodeURIComponent(memberName);
     const demoUser: WorkspaceMember = {
@@ -329,17 +314,17 @@ export function SlackAuthModal({
         <div className="p-5 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between">
           <div className="flex items-center space-x-2.5">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-500 via-purple-500 to-pink-500 text-white flex items-center justify-center shadow-md">
-              <Sparkles className="w-5 h-5" />
+              <Building2 className="w-5 h-5" />
             </div>
             <div>
               <h2 className="font-bold text-base text-neutral-900 dark:text-white">
-                Slack-Style Auth & Onboarding
+                Sign in to Kaelixo
               </h2>
               <p className="text-xs text-neutral-500">
-                {step === "email" && "നിങ്ങളുടെ ഇമെയിൽ വഴി ലോഗിൻ ചെയ്യുക"}
-                {step === "otp" && "ഇമെയിലിൽ ലഭിച്ച OTP നൽകുക"}
-                {step === "company" && "കമ്പനി തിരഞ്ഞെടുക്കുക അല്ലെങ്കിൽ ഉണ്ടാക്കുക"}
-                {step === "profile" && "നിങ്ങളുടെ പ്രൊഫൈൽ ക്രമീകരിക്കുക"}
+                {step === "email" && "Enter your work email to continue"}
+                {step === "otp" && "Enter the 6-digit verification code"}
+                {step === "company" && "Join a workspace or create a new one"}
+                {step === "profile" && "Set up your profile and role"}
               </p>
             </div>
           </div>
@@ -372,7 +357,7 @@ export function SlackAuthModal({
             <form onSubmit={handleSendOtp} className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 uppercase tracking-wider mb-1.5">
-                  നിങ്ങളുടെ ഔദ്യോഗിക ഇമെയിൽ (Work Email)
+                  Work Email Address
                 </label>
                 <div className="relative flex items-center">
                   <Mail className="absolute left-3 w-4 h-4 text-neutral-400" />
@@ -392,14 +377,14 @@ export function SlackAuthModal({
                 disabled={loading || !email.trim()}
                 className="w-full flex items-center justify-center space-x-2 py-2.5 px-4 rounded-xl font-semibold text-xs bg-indigo-600 hover:bg-indigo-500 text-white shadow-md shadow-indigo-600/20 active:scale-95 transition disabled:opacity-50"
               >
-                <span>{loading ? "അയക്കുന്നു..." : "OTP കോഡ് അയക്കുക (Send OTP)"}</span>
+                <span>{loading ? "Sending Code..." : "Send Verification Code"}</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
 
-              {/* Quick Switcher for instant team testing */}
+              {/* Quick Switcher for team testing */}
               <div className="pt-4 border-t border-neutral-200 dark:border-neutral-800">
                 <p className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mb-2">
-                  തത്സമയ ടെസ്റ്റിംഗ് അക്കൗണ്ടുകൾ (Quick Test Accounts):
+                  Quick Switch Accounts (Testing):
                 </p>
                 <div className="grid grid-cols-2 gap-1.5">
                   <button
@@ -410,7 +395,7 @@ export function SlackAuthModal({
                     <p className="text-xs font-bold text-neutral-800 dark:text-neutral-200">
                       Prajin (Owner)
                     </p>
-                    <p className="text-[10px] text-neutral-500">Management 👑</p>
+                    <p className="text-[10px] text-neutral-500">Management</p>
                   </button>
                   <button
                     type="button"
@@ -418,29 +403,29 @@ export function SlackAuthModal({
                     className="p-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/60 text-left transition border border-neutral-200 dark:border-neutral-700"
                   >
                     <p className="text-xs font-bold text-neutral-800 dark:text-neutral-200">
-                      Arjun (Dev Lead)
+                      Arjun (Tech Lead)
                     </p>
-                    <p className="text-[10px] text-neutral-500">Development 💼</p>
+                    <p className="text-[10px] text-neutral-500">Development</p>
                   </button>
                   <button
                     type="button"
-                    onClick={() => handleQuickDemo("Aparna Teacher", "teaching", "member")}
+                    onClick={() => handleQuickDemo("Aparna Sharma", "teaching", "member")}
                     className="p-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 hover:bg-amber-50 dark:hover:bg-amber-950/60 text-left transition border border-neutral-200 dark:border-neutral-700"
                   >
                     <p className="text-xs font-bold text-neutral-800 dark:text-neutral-200">
-                      Aparna (Teacher)
+                      Aparna (Instructor)
                     </p>
-                    <p className="text-[10px] text-neutral-500">Teaching 🎓</p>
+                    <p className="text-[10px] text-neutral-500">Training</p>
                   </button>
                   <button
                     type="button"
-                    onClick={() => handleQuickDemo("Sneha Caller", "telecalling", "member")}
+                    onClick={() => handleQuickDemo("Sneha Patel", "telecalling", "member")}
                     className="p-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 hover:bg-rose-50 dark:hover:bg-rose-950/60 text-left transition border border-neutral-200 dark:border-neutral-700"
                   >
                     <p className="text-xs font-bold text-neutral-800 dark:text-neutral-200">
                       Sneha (Sales)
                     </p>
-                    <p className="text-[10px] text-neutral-500">Telecalling 📞</p>
+                    <p className="text-[10px] text-neutral-500">Outreach</p>
                   </button>
                 </div>
               </div>
@@ -452,7 +437,7 @@ export function SlackAuthModal({
             <form onSubmit={handleVerifyOtp} className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 uppercase tracking-wider mb-1.5">
-                  6-Digit OTP കോഡ്
+                  6-Digit Verification Code
                 </label>
                 <div className="relative flex items-center">
                   <KeyRound className="absolute left-3 w-4 h-4 text-neutral-400" />
@@ -468,7 +453,7 @@ export function SlackAuthModal({
                   />
                 </div>
                 <p className="mt-1 text-[11px] text-neutral-400">
-                  ഇമെയിൽ ലഭിച്ചില്ലെങ്കിൽ ഡെമോ കോഡ് <strong>123456</strong> ഉപയോഗിക്കാം.
+                  For testing or local preview, enter code <strong>123456</strong>.
                 </p>
               </div>
 
@@ -485,7 +470,7 @@ export function SlackAuthModal({
                   disabled={loading || !otp.trim()}
                   className="w-2/3 py-2.5 px-4 rounded-xl font-semibold text-xs bg-indigo-600 hover:bg-indigo-500 text-white shadow-md shadow-indigo-600/20 active:scale-95 transition disabled:opacity-50"
                 >
-                  {loading ? "പരിശോധിക്കുന്നു..." : "Verify & Continue"}
+                  {loading ? "Verifying..." : "Verify & Continue"}
                 </button>
               </div>
             </form>
@@ -505,7 +490,7 @@ export function SlackAuthModal({
                       : "text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
                   }`}
                 >
-                  ഇൻവൈറ്റ് കോഡ് വഴി ചേരുക
+                  Join with Invite Code
                 </button>
                 <button
                   type="button"
@@ -516,7 +501,7 @@ export function SlackAuthModal({
                       : "text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
                   }`}
                 >
-                  + പുതിയ കമ്പനി തുടങ്ങുക
+                  + Create Workspace
                 </button>
               </div>
 
@@ -524,7 +509,7 @@ export function SlackAuthModal({
                 <div className="space-y-3">
                   <div>
                     <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 uppercase tracking-wider mb-1.5">
-                      കമ്പനി ഇൻവൈറ്റ് കോഡ് (Invite Code)
+                      Workspace Invite Code
                     </label>
                     <div className="relative flex items-center">
                       <Ticket className="absolute left-3 w-4 h-4 text-neutral-400" />
@@ -545,7 +530,7 @@ export function SlackAuthModal({
                   </div>
 
                   {verifyingInvite && (
-                    <p className="text-xs text-neutral-400">ഇൻവൈറ്റ് കോഡ് പരിശോധിക്കുന്നു...</p>
+                    <p className="text-xs text-neutral-400">Validating invite code...</p>
                   )}
 
                   {verifiedOrg && (
@@ -554,7 +539,7 @@ export function SlackAuthModal({
                       <div>
                         <p className="font-bold">{verifiedOrg.name}</p>
                         <p className="text-[10px] text-emerald-600 dark:text-emerald-400">
-                          Slug: {verifiedOrg.slug} • കോഡ് ശരിയാണ്!
+                          Slug: {verifiedOrg.slug} • Verified Workspace
                         </p>
                       </div>
                     </div>
@@ -562,7 +547,7 @@ export function SlackAuthModal({
 
                   <div className="pt-1">
                     <p className="text-[11px] text-neutral-400">
-                      ഡെമോ കമ്പനി കോഡ്: <code className="font-bold text-indigo-500">KAELIXO-938c7e</code>
+                      Default workspace code: <code className="font-bold text-indigo-500">KAELIXO-938c7e</code>
                     </p>
                   </div>
                 </div>
@@ -570,7 +555,7 @@ export function SlackAuthModal({
                 <div className="space-y-3">
                   <div>
                     <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 uppercase tracking-wider mb-1.5">
-                      കമ്പനി പേര് (Company Name)
+                      Company Name
                     </label>
                     <input
                       type="text"
@@ -585,7 +570,7 @@ export function SlackAuthModal({
                             .replace(/[^a-z0-9-_]/g, "")
                         );
                       }}
-                      placeholder="e.g. Kaelixo Tech Solutions"
+                      placeholder="e.g. Acme Corporation, Global Tech"
                       required
                       className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     />
@@ -599,7 +584,7 @@ export function SlackAuthModal({
                       type="text"
                       value={newCompanySlug}
                       onChange={(e) => setNewCompanySlug(e.target.value)}
-                      placeholder="kaelixo-tech"
+                      placeholder="acme-corp"
                       className="w-full px-3.5 py-2 text-xs font-mono rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-neutral-900 dark:text-white focus:outline-none"
                     />
                   </div>
@@ -611,7 +596,7 @@ export function SlackAuthModal({
                 disabled={loading || verifyingInvite}
                 className="w-full py-2.5 px-4 rounded-xl font-semibold text-xs bg-indigo-600 hover:bg-indigo-500 text-white shadow-md shadow-indigo-600/20 active:scale-95 transition disabled:opacity-50"
               >
-                {loading ? "സജ്ജീകരിക്കുന്നു..." : "തുടരുക (Next: Profile)"}
+                {loading ? "Processing..." : "Continue to Profile"}
               </button>
             </form>
           )}
@@ -621,7 +606,7 @@ export function SlackAuthModal({
             <form onSubmit={handleCompleteProfile} className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 uppercase tracking-wider mb-1.5">
-                  നിങ്ങളുടെ പേര് (Full Name)
+                  Your Full Name
                 </label>
                 <div className="relative flex items-center">
                   <User className="absolute left-3 w-4 h-4 text-neutral-400" />
@@ -629,7 +614,7 @@ export function SlackAuthModal({
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="e.g. Prajin Prakash"
+                    placeholder="e.g. Alex Morgan"
                     required
                     autoFocus
                     className="w-full pl-9 pr-3.5 py-2.5 text-sm rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
@@ -639,7 +624,7 @@ export function SlackAuthModal({
 
               <div>
                 <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 uppercase tracking-wider mb-1.5">
-                  ഡിപ്പാർട്ട്മെന്റ് (Department)
+                  Department
                 </label>
                 <select
                   value={department}
@@ -658,16 +643,16 @@ export function SlackAuthModal({
 
               <div>
                 <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 uppercase tracking-wider mb-1.5">
-                  റോൾ (Role in Company)
+                  Workspace Role
                 </label>
                 <select
                   value={role}
                   onChange={(e) => setRole(e.target.value as any)}
                   className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 >
-                  <option value="owner">Owner / Founder 👑</option>
-                  <option value="manager">Manager / Lead 💼 (Can Invite)</option>
-                  <option value="member">Team Member 🚀</option>
+                  <option value="owner">Owner / Founder</option>
+                  <option value="manager">Manager / Lead (Can invite members)</option>
+                  <option value="member">Team Member</option>
                 </select>
               </div>
 
@@ -677,7 +662,7 @@ export function SlackAuthModal({
                   disabled={loading || !name.trim()}
                   className="w-full py-2.5 px-4 rounded-xl font-semibold text-xs bg-indigo-600 hover:bg-indigo-500 text-white shadow-md shadow-indigo-600/20 active:scale-95 transition disabled:opacity-50"
                 >
-                  {loading ? "സേവ് ചെയ്യുന്നു..." : "വർക്ക്‌സ്‌പേസിലേക്ക് പ്രവേശിക്കുക (Enter Workspace)"}
+                  {loading ? "Saving Profile..." : "Enter Workspace"}
                 </button>
               </div>
             </form>

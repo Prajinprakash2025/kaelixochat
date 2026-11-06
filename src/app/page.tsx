@@ -942,8 +942,8 @@ export default function KaelixoApp() {
           id: `msg-init-${Date.now()}`,
           channelId: newChannel.id,
           sender: currentUser,
-          content: `🎉 #${data.name} ചാനൽ ആരംഭിച്ചു! ${
-            data.topic ? `**ഉദ്ദേശ്യം:** ${data.topic}` : ""
+          content: `🎉 #${data.name} channel created! ${
+            data.topic ? `**Topic:** ${data.topic}` : ""
           }`,
           createdAt: "Just now",
           reactions: createReactionsArray([{ emoji: "🎉", count: 1, users: [currentUser.id] }]),
@@ -1118,7 +1118,7 @@ export default function KaelixoApp() {
                   isLiveConnected ? "text-emerald-500 animate-pulse" : "text-indigo-500"
                 }`}
               />
-              <span>{isLiveConnected ? "Supabase Live" : "Connected"}</span>
+              <span>{isLiveConnected ? "Live" : "Connecting..."}</span>
             </div>
 
             {/* Search Trigger (Cmd+K) */}
@@ -1148,7 +1148,7 @@ export default function KaelixoApp() {
             <button
               onClick={() => setIsAuthModalOpen(true)}
               className="flex items-center space-x-1.5 text-xs font-semibold text-neutral-700 dark:text-neutral-200 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 px-3 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-700 transition"
-              title="Slack Auth & Profile Setup"
+              title="Profile & Settings"
             >
               <User className="w-3.5 h-3.5 text-indigo-500" />
               <span>{currentUser.name.split(" ")[0]}</span>
@@ -1203,7 +1203,7 @@ export default function KaelixoApp() {
         <aside className="w-80 border-l border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/40 p-5 flex flex-col h-screen overflow-y-auto">
           <div className="flex items-center justify-between pb-4 border-b border-neutral-200 dark:border-neutral-800">
             <h3 className="font-bold text-sm text-neutral-900 dark:text-white">
-              {activeDmRecipient ? "അംഗത്തിന്റെ വിവരങ്ങൾ" : "ചാനൽ വിവരങ്ങൾ"}
+              {activeDmRecipient ? "Member Profile" : "Channel Details"}
             </h3>
             <button
               onClick={() => setShowRightDrawer(false)}
@@ -1235,7 +1235,7 @@ export default function KaelixoApp() {
               <>
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-1">
-                    ഉദ്ദേശ്യം (Topic)
+                    Topic
                   </p>
                   <p className="text-xs text-neutral-700 dark:text-neutral-300 leading-relaxed">
                     {activeChannel.topic || "No topic set for this channel"}
@@ -1244,7 +1244,7 @@ export default function KaelixoApp() {
 
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-1">
-                    ഡിപ്പാർട്ട്മെന്റ് (Department)
+                    Department
                   </p>
                   <p className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 capitalize">
                     {activeChannel.departmentCode || "Company Wide"}
@@ -1255,7 +1255,7 @@ export default function KaelixoApp() {
 
             <div className="pt-2 border-t border-neutral-200 dark:border-neutral-800">
               <span className="text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-3 block">
-                കമ്പനി അംഗങ്ങൾ ({TEAM_MEMBERS.length})
+                Workspace Members ({TEAM_MEMBERS.length})
               </span>
               <div className="space-y-2">
                 {TEAM_MEMBERS.map((m) => (

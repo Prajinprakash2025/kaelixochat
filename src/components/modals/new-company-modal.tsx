@@ -1,8 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Building2, X, Sparkles, Key, Check } from "lucide-react";
-import { Organization } from "@/types";
+import { Building2, X, ShieldCheck } from "lucide-react";
 
 interface NewCompanyModalProps {
   isOpen: boolean;
@@ -57,10 +56,10 @@ export function NewCompanyModal({
             </div>
             <div>
               <h2 className="font-bold text-base text-neutral-900 dark:text-white">
-                പുതിയ കമ്പനി ഉണ്ടാക്കുക (Create Company)
+                Create a Workspace
               </h2>
               <p className="text-xs text-neutral-500">
-                Slack പോലെ പുതിയൊരു കമ്പനി വർക്ക്‌സ്‌പേസ് ആരംഭിക്കുക
+                Set up a dedicated multi-tenant workspace for your company
               </p>
             </div>
           </div>
@@ -76,13 +75,13 @@ export function NewCompanyModal({
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
           <div>
             <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 uppercase tracking-wider mb-1.5">
-              കമ്പനി പേര് (Company Name)
+              Company Name
             </label>
             <input
               type="text"
               value={name}
               onChange={(e) => handleNameChange(e.target.value)}
-              placeholder="e.g. Kaelixo Tech Solutions, Acme Corp"
+              placeholder="e.g. Acme Corporation, Vertex Global"
               required
               className="w-full px-3.5 py-2 text-sm rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
@@ -104,10 +103,10 @@ export function NewCompanyModal({
             </div>
           </div>
 
-          <div className="p-3.5 rounded-2xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/40 text-xs text-indigo-700 dark:text-indigo-300 flex items-start space-x-2.5">
-            <Sparkles className="w-4 h-4 text-indigo-500 flex-shrink-0 mt-0.5" />
+          <div className="p-3 rounded-xl bg-neutral-50 dark:bg-neutral-800/60 border border-neutral-200 dark:border-neutral-700/60 text-xs text-neutral-600 dark:text-neutral-300 flex items-start space-x-2">
+            <ShieldCheck className="w-4 h-4 text-indigo-500 flex-shrink-0 mt-0.5" />
             <p>
-              കമ്പനി ഉണ്ടാക്കിക്കഴിഞ്ഞാൽ ജീവനക്കാരെ ചേർക്കാൻ ഒരു പ്രത്യേക <strong>Invite Code</strong> ഓട്ടോമാറ്റിക് ആയി ലഭിക്കും!
+              A unique workspace invite code will be automatically generated. You can share it to invite employees and managers.
             </p>
           </div>
 
@@ -124,7 +123,7 @@ export function NewCompanyModal({
               disabled={loading}
               className="px-5 py-2 text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl shadow-md shadow-indigo-600/20 active:scale-95 transition disabled:opacity-50"
             >
-              {loading ? "സൃഷ്ടിക്കുന്നു..." : "കമ്പനി ആരംഭിക്കുക"}
+              {loading ? "Creating..." : "Create Workspace"}
             </button>
           </div>
         </form>

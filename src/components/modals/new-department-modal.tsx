@@ -1,12 +1,12 @@
 "use client";
 
 import React, { useState } from "react";
-import { FolderPlus, X, Sparkles, Palette } from "lucide-react";
+import { FolderPlus, X } from "lucide-react";
 
 interface NewDepartmentModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onCreateDepartment: (dept: {
+  onCreateDepartment: (department: {
     name: string;
     code: string;
     description: string;
@@ -45,7 +45,7 @@ export function NewDepartmentModal({
       await onCreateDepartment({
         name: name.trim(),
         code: code.trim(),
-        description: description.trim() || `${name} Department`,
+        description: description.trim(),
         icon: "Briefcase",
       });
       setName("");
@@ -63,15 +63,15 @@ export function NewDepartmentModal({
         {/* Header */}
         <div className="p-5 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between">
           <div className="flex items-center space-x-2.5">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-amber-500 to-rose-500 text-white flex items-center justify-center shadow-md">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-600 text-white flex items-center justify-center shadow-md">
               <FolderPlus className="w-5 h-5" />
             </div>
             <div>
               <h2 className="font-bold text-base text-neutral-900 dark:text-white">
-                പുതിയ ഡിപ്പാർട്ട്മെന്റ് (New Department)
+                Add Department
               </h2>
               <p className="text-xs text-neutral-500">
-                കമ്പനിയിലേക്ക് പുതിയൊരു ഡിപ്പാർട്ട്മെന്റ് ചേർക്കുക
+                Organize your company into functional teams and workflows
               </p>
             </div>
           </div>
@@ -87,13 +87,13 @@ export function NewDepartmentModal({
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
           <div>
             <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 uppercase tracking-wider mb-1.5">
-              ഡിപ്പാർട്ട്മെന്റ് പേര് (Department Name)
+              Department Name
             </label>
             <input
               type="text"
               value={name}
               onChange={(e) => handleNameChange(e.target.value)}
-              placeholder="e.g. Marketing & Media, HR, Finance, Student Support"
+              placeholder="e.g. Design, Operations, Customer Success"
               required
               className="w-full px-3.5 py-2 text-sm rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
@@ -101,28 +101,28 @@ export function NewDepartmentModal({
 
           <div>
             <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 uppercase tracking-wider mb-1.5">
-              Department Code
+              Department Identifier (Code)
             </label>
             <input
               type="text"
               value={code}
               onChange={(e) => setCode(e.target.value)}
-              placeholder="e.g. marketing, hr, finance"
               required
-              className="w-full px-3.5 py-2 text-sm rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              placeholder="e.g. design, ops, cs"
+              className="w-full px-3.5 py-2 text-xs font-mono rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>
 
           <div>
             <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 uppercase tracking-wider mb-1.5">
-              വിവരണം (Description)
+              Description (Optional)
             </label>
-            <input
-              type="text"
+            <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="ഈ ഡിപ്പാർട്ട്മെന്റിന്റെ പ്രധാന ചുമതലകൾ എന്തൊക്കെയാണ്?"
-              className="w-full px-3.5 py-2 text-sm rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              rows={2}
+              placeholder="Brief overview of this department's scope"
+              className="w-full px-3.5 py-2 text-sm rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
             />
           </div>
 
@@ -139,7 +139,7 @@ export function NewDepartmentModal({
               disabled={loading}
               className="px-5 py-2 text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl shadow-md shadow-indigo-600/20 active:scale-95 transition disabled:opacity-50"
             >
-              {loading ? "സേവ് ചെയ്യുന്നു..." : "ഡിപ്പാർട്ട്മെന്റ് ചേർക്കുക"}
+              {loading ? "Adding..." : "Add Department"}
             </button>
           </div>
         </form>

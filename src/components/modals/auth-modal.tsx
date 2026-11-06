@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { User, Sparkles, Building2, Check, ShieldCheck, X } from "lucide-react";
+import { User, X } from "lucide-react";
 import { DepartmentCode, WorkspaceMember, Department } from "@/types";
 
 interface AuthModalProps {
@@ -9,7 +9,12 @@ interface AuthModalProps {
   onClose: () => void;
   departments: Department[];
   currentUser: WorkspaceMember;
-  onSaveProfile: (profile: WorkspaceMember) => void;
+  onSaveProfile: (updatedProfile: {
+    name: string;
+    department: DepartmentCode;
+    role: WorkspaceMember["role"];
+    statusText?: string;
+  }) => void;
 }
 
 export function AuthModal({
@@ -30,19 +35,12 @@ export function AuthModal({
     e.preventDefault();
     if (!name.trim()) return;
 
-    const seed = encodeURIComponent(name.trim());
-    const updatedUser: WorkspaceMember = {
-      ...currentUser,
-      id: currentUser.id || `user-${Date.now()}`,
+    onSaveProfile({
       name: name.trim(),
       department,
       role,
-      statusText: statusText.trim() || undefined,
-      avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=${seed}`,
-      status: "online",
-    };
-
-    onSaveProfile(updatedUser);
+      statusText: statusText.trim(),
+    });
     onClose();
   };
 
@@ -57,10 +55,10 @@ export function AuthModal({
             </div>
             <div>
               <h2 className="font-bold text-base text-neutral-900 dark:text-white">
-                പ്രൊഫൈൽ & ഡിപ്പാർട്ട്മെന്റ് (Your Profile)
+                Edit Profile
               </h2>
               <p className="text-xs text-neutral-500">
-                നിങ്ങളുടെ പേരും റോൾ വിവരങ്ങളും സെറ്റ് ചെയ്യുക
+                Update your display name, department, and role
               </p>
             </div>
           </div>
@@ -96,13 +94,13 @@ export function AuthModal({
           {/* Name Input */}
           <div>
             <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 uppercase tracking-wider mb-1.5">
-              നിങ്ങളുടെ പേര് (Full Name)
+              Full Name
             </label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Prajin Prakash"
+              placeholder="e.g. Alex Morgan"
               required
               className="w-full px-3.5 py-2 text-sm rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
@@ -111,7 +109,7 @@ export function AuthModal({
           {/* Department Selection */}
           <div>
             <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 uppercase tracking-wider mb-1.5">
-              നിങ്ങളുടെ ഡിപ്പാർട്ട്മെന്റ് (Department)
+              Department
             </label>
             <select
               value={department}
@@ -122,7 +120,7 @@ export function AuthModal({
                 .filter((d) => d.code !== "all")
                 .map((dept) => (
                   <option key={dept.id} value={dept.code}>
-                    {dept.name} ({dept.code.toUpperCase()})
+                    {dept.name}
                   </option>
                 ))}
             </select>
@@ -131,16 +129,16 @@ export function AuthModal({
           {/* Role */}
           <div>
             <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 uppercase tracking-wider mb-1.5">
-              റോൾ (Role in Company)
+              Role
             </label>
             <select
               value={role}
               onChange={(e) => setRole(e.target.value as any)}
               className="w-full px-3.5 py-2 text-sm rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
-              <option value="owner">Owner / Founder 👑</option>
-              <option value="manager">Manager / Team Lead 💼</option>
-              <option value="member">Team Member 🚀</option>
+              <option value="owner">Owner / Founder</option>
+              <option value="manager">Manager / Team Lead</option>
+              <option value="member">Team Member</option>
             </select>
           </div>
 
@@ -153,7 +151,7 @@ export function AuthModal({
               type="text"
               value={statusText}
               onChange={(e) => setStatusText(e.target.value)}
-              placeholder="e.g. 🚀 Working on sprint, 📞 On calls"
+              placeholder="e.g. Focused on sprint, In client review"
               className="w-full px-3.5 py-2 text-sm rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>
@@ -171,7 +169,7 @@ export function AuthModal({
               type="submit"
               className="px-5 py-2 text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl shadow-md shadow-indigo-600/20 active:scale-95 transition"
             >
-              സേവ് ചെയ്യുക (Save Profile)
+              Save Profile
             </button>
           </div>
         </form>

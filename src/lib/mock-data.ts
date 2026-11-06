@@ -152,7 +152,7 @@ export const INITIAL_MESSAGES: Record<string, Message[]> = {
       id: "msg-1",
       channelId: "chan-announcements",
       sender: CURRENT_USER,
-      content: "👋 Welcome to **Kaelixo**! നമ്മുടെ പുതിയ ടീം കമ്മ്യൂണിക്കേഷൻ പ്ലാറ്റ്‌ഫോം ഇവിടെ ആരംഭിക്കുകയാണ്. Dev, Teaching, Telecalling, Management എന്നീ എല്ലാ ഡിപ്പാർട്ട്‌മെന്റുകൾക്കും പ്രത്യേകം ചാനലുകൾ റെഡിയാണ്! 🎉",
+      content: "👋 Welcome to **Kaelixo**! Our enterprise team workspace is live. Channels are configured for Engineering, Product, Operations, and Sales teams. Feel free to explore threads, attach files, and collaborate in real-time! 🎉",
       createdAt: "10:00 AM",
       reactions: createReactionsArray([
         { emoji: "🚀", count: 4, users: ["user-2", "user-3", "user-4", "user-5"] },
@@ -196,7 +196,7 @@ export const INITIAL_MESSAGES: Record<string, Message[]> = {
       id: "msg-5",
       channelId: "chan-teaching-hub",
       sender: TEAM_MEMBERS[2], // Aparna
-      content: "Batch 4 ഇന്നത്തെ ക്ലാസ് നോട്സ് അപ്‌ലോഡ് ചെയ്തിട്ടുണ്ട്. സംശയങ്ങൾ ഉള്ളവർ ത്രെഡിൽ ചോദിക്കാം 📖",
+      content: "Session notes and slide deck for Q4 Onboarding are uploaded. Please drop any questions or feedback in this thread 📖",
       createdAt: "09:45 AM",
       reactions: createReactionsArray([{ emoji: "👍", count: 4, users: ["user-1", "user-4"] }]),
     },

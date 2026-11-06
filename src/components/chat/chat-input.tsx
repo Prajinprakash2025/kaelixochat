@@ -407,7 +407,7 @@ export function ChatInput({
           onChange={(e) => setContent(e.target.value)}
           onKeyDown={handleKeyDown}
           onPaste={handlePaste}
-          placeholder={`#${channelName} ലേക്ക് മെസ്സേജ് ടൈപ്പ് ചെയ്യുക... (Enter to send)`}
+          placeholder={`Message #${channelName}...`}
           rows={3}
           disabled={disabled}
           className="w-full bg-transparent p-3 text-sm text-neutral-900 dark:text-neutral-100 placeholder-neutral-400 focus:outline-none resize-none font-sans"
