@@ -1,4 +1,4 @@
-import { Department, WorkspaceMember, Channel, Message } from "@/types";
+import { Department, WorkspaceMember, Channel, Message, createReactionsArray } from "@/types";
 
 export const DEPARTMENTS: Department[] = [
   {
@@ -154,10 +154,10 @@ export const INITIAL_MESSAGES: Record<string, Message[]> = {
       sender: CURRENT_USER,
       content: "👋 Welcome to **Kaelixo**! നമ്മുടെ പുതിയ ടീം കമ്മ്യൂണിക്കേഷൻ പ്ലാറ്റ്‌ഫോം ഇവിടെ ആരംഭിക്കുകയാണ്. Dev, Teaching, Telecalling, Management എന്നീ എല്ലാ ഡിപ്പാർട്ട്‌മെന്റുകൾക്കും പ്രത്യേകം ചാനലുകൾ റെഡിയാണ്! 🎉",
       createdAt: "10:00 AM",
-      reactions: [
+      reactions: createReactionsArray([
         { emoji: "🚀", count: 4, users: ["user-2", "user-3", "user-4", "user-5"] },
         { emoji: "❤️", count: 3, users: ["user-2", "user-5", "user-3"] },
-      ],
+      ]),
       threadCount: 2,
       isPinned: true,
     },
@@ -169,7 +169,7 @@ export const INITIAL_MESSAGES: Record<string, Message[]> = {
       sender: TEAM_MEMBERS[2], // Aparna
       content: "Good morning team! Have a great productive day everyone ☕✨",
       createdAt: "10:05 AM",
-      reactions: [{ emoji: "☕", count: 5, users: ["user-1", "user-2", "user-4"] }],
+      reactions: createReactionsArray([{ emoji: "☕", count: 5, users: ["user-1", "user-2", "user-4"] }]),
     },
     {
       id: "msg-3",
@@ -177,7 +177,7 @@ export const INITIAL_MESSAGES: Record<string, Message[]> = {
       sender: TEAM_MEMBERS[1], // Arjun
       content: "Morning! Kaelixo UI is looking super clean and cute! ❤️",
       createdAt: "10:08 AM",
-      reactions: [{ emoji: "🙌", count: 3, users: ["user-1", "user-3"] }],
+      reactions: createReactionsArray([{ emoji: "🙌", count: 3, users: ["user-1", "user-3"] }]),
     },
   ],
   "chan-dev-sprint": [
@@ -187,7 +187,7 @@ export const INITIAL_MESSAGES: Record<string, Message[]> = {
       sender: TEAM_MEMBERS[1], // Arjun
       content: "Next.js 15 App router + Supabase Realtime setup is rock solid. Check the migration script in `supabase/schema.sql` if you need to run RLS policies.",
       createdAt: "10:12 AM",
-      reactions: [{ emoji: "🔥", count: 2, users: ["user-1"] }],
+      reactions: createReactionsArray([{ emoji: "🔥", count: 2, users: ["user-1"] }]),
       threadCount: 1,
     },
   ],
@@ -198,7 +198,7 @@ export const INITIAL_MESSAGES: Record<string, Message[]> = {
       sender: TEAM_MEMBERS[2], // Aparna
       content: "Batch 4 ഇന്നത്തെ ക്ലാസ് നോട്സ് അപ്‌ലോഡ് ചെയ്തിട്ടുണ്ട്. സംശയങ്ങൾ ഉള്ളവർ ത്രെഡിൽ ചോദിക്കാം 📖",
       createdAt: "09:45 AM",
-      reactions: [{ emoji: "👍", count: 4, users: ["user-1", "user-4"] }],
+      reactions: createReactionsArray([{ emoji: "👍", count: 4, users: ["user-1", "user-4"] }]),
     },
   ],
   "chan-telecalling-leads": [
@@ -208,7 +208,7 @@ export const INITIAL_MESSAGES: Record<string, Message[]> = {
       sender: TEAM_MEMBERS[4], // Sneha
       content: "📞 **Morning Lead Update:**\n- Calls made: 28\n- Interested leads: 7\n- Scheduled demo calls: 3\nFollow-up sheet updated!",
       createdAt: "10:15 AM",
-      reactions: [{ emoji: "🎯", count: 4, users: ["user-1", "user-4"] }],
+      reactions: createReactionsArray([{ emoji: "🎯", count: 4, users: ["user-1", "user-4"] }]),
     },
   ],
   "chan-management-sync": [
@@ -218,7 +218,7 @@ export const INITIAL_MESSAGES: Record<string, Message[]> = {
       sender: CURRENT_USER,
       content: "Internal testing phase starts today. Once our teams approve the daily workflow, we will launch Kaelixo as a SaaS offering for other companies! 💼",
       createdAt: "09:30 AM",
-      reactions: [{ emoji: "💼", count: 2, users: ["user-4"] }],
+      reactions: createReactionsArray([{ emoji: "💼", count: 2, users: ["user-4"] }]),
       isPinned: true,
     },
   ],

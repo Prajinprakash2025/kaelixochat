@@ -2,15 +2,20 @@
 
 import React, { useState } from "react";
 import { Message, WorkspaceMember, reactionsMapToArray } from "@/types";
-import { Pin, MessageSquare, MoreHorizontal, Check, SmilePlus } from "lucide-react";
+import { Pin, MessageSquare, MoreHorizontal, Check, SmilePlus, Pencil, Trash2 } from "lucide-react";
 import { AttachmentPreview } from "./attachment-preview";
 import { EmojiPicker } from "./emoji-picker";
+import { DeleteMessageModal } from "@/components/modals/delete-message-modal";
 
 interface MessageFeedProps {
   messages: Message[];
   currentUser: WorkspaceMember;
   onAddReaction: (messageId: string, emoji: string) => void;
   members?: WorkspaceMember[];
+  onOpenThread?: (message: Message) => void;
+  onTogglePin?: (messageId: string, currentPinStatus: boolean) => void;
+  onEditMessage?: (messageId: string, newContent: string) => void;
+  onDeleteMessage?: (messageId: string) => void;
 }
 
 export function formatReactorsTooltip(
@@ -26,9 +31,17 @@ export function formatReactorsTooltip(
   const hasYou = reaction.users.includes(currentUserId);
   const otherIds = reaction.users.filter((id) => id !== currentUserId);
 
-  const otherNames = otherIds.map((id, index) => {
+  const otherNames = otherIds.map((id) => {
     if (memberMap.has(id)) return memberMap.get(id)!;
-    if (reaction.userNames && reaction.userNames[index]) return reaction.userNames[index];
+    const originalIndex = reaction.users.indexOf(id);
+    if (
+      reaction.userNames &&
+      originalIndex !== -1 &&
+      reaction.userNames[originalIndex] &&
+      reaction.userNames[originalIndex].trim()
+    ) {
+      return reaction.userNames[originalIndex].trim();
+    }
     if (id.startsWith("user-")) {
       const part = id.replace("user-", "");
       return part.charAt(0).toUpperCase() + part.slice(1);
@@ -40,7 +53,9 @@ export function formatReactorsTooltip(
     if (otherNames.length === 0) return "You reacted";
     if (otherNames.length === 1) return `${otherNames[0]} and you reacted`;
     if (otherNames.length === 2) return `${otherNames[0]}, ${otherNames[1]}, and you reacted`;
-    return `${otherNames[0]}, ${otherNames[1]}, and ${otherNames.length - 1} others reacted`;
+    const remaining = otherNames.length - 2;
+    const othersLabel = remaining === 1 ? "1 other" : `${remaining} others`;
+    return `${otherNames[0]}, ${otherNames[1]}, you, and ${othersLabel} reacted`;
   } else {
     if (otherNames.length === 0) return "Someone reacted";
     if (otherNames.length === 1) return `${otherNames[0]} reacted`;
@@ -50,15 +65,38 @@ export function formatReactorsTooltip(
   }
 }
 
+export function formatLastReplyTime(isoString?: string | null): string {
+  if (!isoString) return "";
+  try {
+    const date = new Date(isoString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    if (diffMins < 1) return "just now";
+    if (diffMins < 60) return `${diffMins}m ago`;
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours}h ago`;
+    return date.toLocaleDateString([], { month: "short", day: "numeric" });
+  } catch {
+    return "";
+  }
+}
+
 export function MessageFeed({
   messages,
   currentUser,
   onAddReaction,
   members = [],
+  onOpenThread,
+  onTogglePin,
+  onEditMessage,
+  onDeleteMessage,
 }: MessageFeedProps) {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [activeHoverPickerId, setActiveHoverPickerId] = useState<string | null>(null);
   const [activeChipPickerId, setActiveChipPickerId] = useState<string | null>(null);
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [editContent, setEditContent] = useState("");
 
   const handleCopy = (id: string, text: string) => {
     navigator.clipboard.writeText(text);
@@ -204,11 +242,41 @@ export function MessageFeed({
                   )}
                 </div>
 
-                {/* Body Text (Only render when non-empty to support standalone attachments cleanly) */}
-                {msg.content && msg.content.trim() && (
-                  <div className="text-sm text-neutral-800 dark:text-neutral-200 text-pretty">
-                    {formatContent(msg.content)}
+                {/* Body Text */}
+                {editingMessageId === msg.id ? (
+                  <div className="mt-1 space-y-2">
+                    <textarea
+                      value={editContent}
+                      onChange={(e) => setEditContent(e.target.value)}
+                      className="w-full text-sm p-2 rounded-xl border border-indigo-400 dark:border-indigo-600 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      rows={2}
+                    />
+                    <div className="flex items-center space-x-2 text-xs">
+                      <button
+                        onClick={() => {
+                          if (onEditMessage && editContent.trim()) {
+                            onEditMessage(msg.id, editContent.trim());
+                          }
+                          setEditingMessageId(null);
+                        }}
+                        className="px-3 py-1 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-500 transition cursor-pointer"
+                      >
+                        Save
+                      </button>
+                      <button
+                        onClick={() => setEditingMessageId(null)}
+                        className="px-3 py-1 text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                    </div>
                   </div>
+                ) : (
+                  msg.content && msg.content.trim() && (
+                    <div className="text-sm text-neutral-800 dark:text-neutral-200 text-pretty">
+                      {formatContent(msg.content)}
+                    </div>
+                  )
                 )}
 
                 {/* Attachments (Feature 7) */}
@@ -277,9 +345,12 @@ export function MessageFeed({
 
                 {/* Thread reply count if any */}
                 {msg.threadCount && msg.threadCount > 0 && (
-                  <div className="mt-2 flex items-center space-x-1.5 text-xs text-indigo-600 dark:text-indigo-400 font-medium hover:underline cursor-pointer">
+                  <div
+                    onClick={() => onOpenThread?.(msg)}
+                    className="mt-2 flex items-center space-x-1.5 text-xs text-indigo-600 dark:text-indigo-400 font-medium hover:underline cursor-pointer"
+                  >
                     <MessageSquare className="w-3.5 h-3.5" />
-                    <span>{msg.threadCount} replies in thread</span>
+                    <span>{msg.threadCount} {msg.threadCount === 1 ? "reply" : "replies"} in thread</span>
                   </div>
                 )}
               </div>
@@ -335,6 +406,53 @@ export function MessageFeed({
                     </div>
                   )}
                 </div>
+
+                {/* Reply in Thread Action */}
+                <button
+                  type="button"
+                  onClick={() => onOpenThread?.(msg)}
+                  className="p-1 hover:bg-neutral-100 dark:hover:bg-neutral-700 rounded-lg text-neutral-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition cursor-pointer"
+                  title="Reply in thread"
+                >
+                  <MessageSquare className="w-4 h-4" />
+                </button>
+
+                {/* Pin / Unpin Action */}
+                <button
+                  type="button"
+                  onClick={() => onTogglePin?.(msg.id, !!msg.isPinned)}
+                  className={`p-1 hover:bg-neutral-100 dark:hover:bg-neutral-700 rounded-lg transition cursor-pointer ${
+                    msg.isPinned ? "text-amber-500" : "text-neutral-500 hover:text-amber-500"
+                  }`}
+                  title={msg.isPinned ? "Unpin message" : "Pin message"}
+                >
+                  <Pin className={`w-4 h-4 ${msg.isPinned ? "fill-amber-500" : ""}`} />
+                </button>
+
+                {/* Edit & Delete Actions (for author) */}
+                {(msg.sender.id === currentUser.id || msg.sender.name === currentUser.name) && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingMessageId(msg.id);
+                        setEditContent(msg.content);
+                      }}
+                      className="p-1 hover:bg-neutral-100 dark:hover:bg-neutral-700 rounded-lg text-neutral-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition cursor-pointer"
+                      title="Edit message"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onDeleteMessage?.(msg.id)}
+                      className="p-1 hover:bg-neutral-100 dark:hover:bg-neutral-700 rounded-lg text-neutral-500 hover:text-rose-500 transition cursor-pointer"
+                      title="Delete message"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </>
+                )}
 
                 {/* Copy Button */}
                 <button

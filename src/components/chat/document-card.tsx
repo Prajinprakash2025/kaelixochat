@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { Attachment } from "@/types";
-import { formatFileSize, sanitizeFileName } from "@/utils/storage";
+import { formatFileSize, sanitizeFileName, extractFileExtension } from "@/utils/storage";
 import {
   FileText,
   FileCode,
@@ -30,7 +30,7 @@ interface FileVisuals {
 }
 
 export function getFileVisuals(mimeType: string, filename: string): FileVisuals {
-  const ext = (filename.split(".").pop() || "").toLowerCase();
+  const ext = extractFileExtension(filename);
   const lowerMime = (mimeType || "").toLowerCase();
 
   // PDF

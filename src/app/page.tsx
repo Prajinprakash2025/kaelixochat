@@ -9,6 +9,9 @@ import { NewChannelModal } from "@/components/modals/new-channel-modal";
 import { NewCompanyModal } from "@/components/modals/new-company-modal";
 import { NewDepartmentModal } from "@/components/modals/new-department-modal";
 import { SlackAuthModal } from "@/components/modals/slack-auth-modal";
+import { InviteTeamModal } from "@/components/modals/invite-team-modal";
+import { ThreadPanel } from "@/components/chat/thread-panel";
+import { SearchModal } from "@/components/modals/search-modal";
 import {
   DEPARTMENTS as INITIAL_DEPTS,
   CURRENT_USER as DEFAULT_USER,
@@ -27,6 +30,7 @@ import {
   MessageReaction,
   MessageReactionsArray,
   reactionsMapToArray,
+  createReactionsArray,
 } from "@/types";
 import { formatFileSize } from "@/utils/storage";
 import { getOrCreateDmChannel } from "@/utils/channels";
@@ -41,6 +45,7 @@ import {
   Plus,
   Building2,
   Menu,
+  Share2,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
@@ -56,13 +61,6 @@ const DEFAULT_ORGS: Organization[] = [
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-function createReactionsArray(items: MessageReaction[] = []): MessageReactionsArray {
-  const arr = [...items] as MessageReactionsArray;
-  for (const item of items) {
-    (arr as any)[item.emoji] = { count: item.count, users: item.users };
-  }
-  return arr;
-}
 
 export default function KaelixoApp() {
   const [organizations, setOrganizations] = useState<Organization[]>(DEFAULT_ORGS);
@@ -80,33 +78,92 @@ export default function KaelixoApp() {
   const [isNewCompanyModalOpen, setIsNewCompanyModalOpen] = useState(false);
   const [isNewDepartmentModalOpen, setIsNewDepartmentModalOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+  const [initialInviteCode, setInitialInviteCode] = useState("");
 
   const [externalTemplateText, setExternalTemplateText] = useState("");
   const [showRightDrawer, setShowRightDrawer] = useState(false);
   const [isLiveConnected, setIsLiveConnected] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [activeThreadParent, setActiveThreadParent] = useState<Message | null>(null);
+  const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+
+  // URL query parameter invite detection (?invite=...)
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const inviteParam = params.get("invite");
+      if (inviteParam) {
+        setInitialInviteCode(inviteParam);
+        setIsAuthModalOpen(true);
+      }
+    }
+  }, []);
+
+  // Cmd+K search shortcut
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setIsSearchModalOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   const supabase = createClient();
 
-  // Load user from localStorage
+  // Load user & org from localStorage
   useEffect(() => {
     try {
       const savedUser = localStorage.getItem("kaelixo_user");
       if (savedUser) {
         setCurrentUser(JSON.parse(savedUser));
       }
+      const savedOrg = localStorage.getItem("kaelixo_org");
+      if (savedOrg) {
+        const parsedOrg = JSON.parse(savedOrg);
+        setActiveOrg(parsedOrg);
+      }
     } catch {
       // ignore
     }
   }, []);
 
-  const handleLoginSuccess = (user: WorkspaceMember) => {
+  const handleLoginSuccess = (user: WorkspaceMember, org?: Organization) => {
     setCurrentUser(user);
+    if (org) {
+      setActiveOrg(org);
+      setOrganizations((prev) => {
+        if (!prev.some((o) => o.id === org.id)) {
+          return [...prev, org];
+        }
+        return prev;
+      });
+      try {
+        localStorage.setItem("kaelixo_org", JSON.stringify(org));
+      } catch {
+        // ignore
+      }
+    }
     try {
       localStorage.setItem("kaelixo_user", JSON.stringify(user));
     } catch {
       // ignore
     }
+  };
+
+  const handleUpdateOrgInviteCode = (newCode: string) => {
+    setActiveOrg((prev) => ({ ...prev, invite_code: newCode }));
+    setOrganizations((prev) =>
+      prev.map((o) => (o.id === activeOrg.id ? { ...o, invite_code: newCode } : o))
+    );
+  };
+
+  const handleSelectSearchResult = (channelId: string, messageId: string) => {
+    setActiveChannelId(channelId);
+    setIsSearchModalOpen(false);
   };
 
   // Play audio chime
@@ -317,6 +374,12 @@ export default function KaelixoApp() {
             return {
               id: m.id,
               channelId: m.channel_id,
+              parentId: m.parent_id || null,
+              threadCount: m.reply_count || 0,
+              lastReplyAt: m.last_reply_at || null,
+              isPinned: m.is_pinned || false,
+              isEdited: m.is_edited || false,
+              isDeleted: m.is_deleted || false,
               sender: {
                 id: m.sender_id || `user-anon`,
                 name: m.sender_name || "Colleague",
@@ -337,7 +400,6 @@ export default function KaelixoApp() {
               }),
               attachments: parsedAttachments,
               reactions: createReactionsArray(reactionsByMessage[m.id] || []),
-              isPinned: m.is_pinned || false,
             };
           });
 
@@ -379,6 +441,12 @@ export default function KaelixoApp() {
             const formatted: Message = {
               id: newMsg.id,
               channelId: newMsg.channel_id,
+              parentId: newMsg.parent_id || null,
+              threadCount: newMsg.reply_count || 0,
+              lastReplyAt: newMsg.last_reply_at || null,
+              isPinned: newMsg.is_pinned || false,
+              isEdited: newMsg.is_edited || false,
+              isDeleted: newMsg.is_deleted || false,
               sender: {
                 id: newMsg.sender_id || `user-anon`,
                 name: newMsg.sender_name || "Colleague",
@@ -412,6 +480,36 @@ export default function KaelixoApp() {
               return {
                 ...prev,
                 [newMsg.channel_id]: [...currentList, formatted],
+              };
+            });
+          }
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "messages" },
+        (payload) => {
+          const updatedRow = payload.new as any;
+          if (updatedRow && updatedRow.id) {
+            setMessagesByChannel((prev) => {
+              const chId = updatedRow.channel_id;
+              const list = prev[chId];
+              if (!list) return prev;
+              return {
+                ...prev,
+                [chId]: list.map((m) =>
+                  m.id === updatedRow.id
+                    ? {
+                        ...m,
+                        content: updatedRow.content,
+                        isPinned: updatedRow.is_pinned,
+                        isEdited: updatedRow.is_edited,
+                        isDeleted: updatedRow.is_deleted,
+                        threadCount: updatedRow.reply_count,
+                        lastReplyAt: updatedRow.last_reply_at,
+                      }
+                    : m
+                ),
               };
             });
           }
@@ -512,6 +610,8 @@ export default function KaelixoApp() {
       : channels[0] || INITIAL_CHANNELS[0]);
 
   const activeMessages = messagesByChannel[activeChannelId] || [];
+  const mainFeedMessages = activeMessages.filter((m) => !m.parentId);
+  const threadReplies = activeMessages.filter((m) => m.parentId === activeThreadParent?.id);
 
   // Send message
   const handleSendMessage = async (content: string, attachments?: Attachment[]) => {
@@ -655,6 +755,166 @@ export default function KaelixoApp() {
     }
   };
 
+  // Thread Reply
+  const handleSendThreadReply = async (
+    content: string,
+    parentId: string,
+    attachments?: Attachment[]
+  ) => {
+    const now = new Date();
+    const timeString = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    const localId = `reply-${Date.now()}`;
+
+    const newReply: Message = {
+      id: localId,
+      channelId: activeChannelId,
+      parentId,
+      sender: currentUser,
+      content,
+      attachments: attachments || [],
+      createdAt: timeString,
+      reactions: createReactionsArray([]),
+    };
+
+    setMessagesByChannel((prev) => {
+      const channelMsgs = prev[activeChannelId] || [];
+      const updated = channelMsgs.map((m) => {
+        if (m.id === parentId) {
+          return {
+            ...m,
+            threadCount: (m.threadCount || 0) + 1,
+            lastReplyAt: now.toISOString(),
+          };
+        }
+        return m;
+      });
+      return {
+        ...prev,
+        [activeChannelId]: [...updated, newReply],
+      };
+    });
+
+    setActiveThreadParent((prev) => {
+      if (prev && prev.id === parentId) {
+        return {
+          ...prev,
+          threadCount: (prev.threadCount || 0) + 1,
+          lastReplyAt: now.toISOString(),
+        };
+      }
+      return prev;
+    });
+
+    try {
+      await supabase.from("messages").insert({
+        channel_id: activeChannelId,
+        parent_id: parentId,
+        content: content || "",
+        sender_name: currentUser.name,
+        sender_avatar: currentUser.avatar,
+        sender_role: currentUser.role,
+        sender_department: currentUser.department,
+        attachments: attachments || [],
+      });
+    } catch (err) {
+      console.warn("Thread reply insert note:", err);
+    }
+  };
+
+  // Toggle Message Pin
+  const handleTogglePin = async (messageId: string, currentPinStatus: boolean) => {
+    const nextStatus = !currentPinStatus;
+    setMessagesByChannel((prev) => {
+      const list = prev[activeChannelId] || [];
+      return {
+        ...prev,
+        [activeChannelId]: list.map((m) =>
+          m.id === messageId ? { ...m, isPinned: nextStatus } : m
+        ),
+      };
+    });
+
+    if (UUID_REGEX.test(messageId)) {
+      try {
+        await supabase
+          .from("messages")
+          .update({
+            is_pinned: nextStatus,
+            pinned_at: nextStatus ? new Date().toISOString() : null,
+            pinned_by_name: nextStatus ? currentUser.name : null,
+            pinned_by_id: nextStatus ? currentUser.id : null,
+          })
+          .eq("id", messageId);
+      } catch (e) {
+        console.warn("Toggle pin error:", e);
+      }
+    }
+  };
+
+  // Edit Message
+  const handleEditMessage = async (messageId: string, newContent: string) => {
+    setMessagesByChannel((prev) => {
+      const list = prev[activeChannelId] || [];
+      return {
+        ...prev,
+        [activeChannelId]: list.map((m) =>
+          m.id === messageId
+            ? { ...m, content: newContent, isEdited: true, editedAt: new Date().toISOString() }
+            : m
+        ),
+      };
+    });
+
+    if (UUID_REGEX.test(messageId)) {
+      try {
+        await supabase
+          .from("messages")
+          .update({
+            content: newContent,
+            is_edited: true,
+            edited_at: new Date().toISOString(),
+          })
+          .eq("id", messageId);
+      } catch (e) {
+        console.warn("Edit message error:", e);
+      }
+    }
+  };
+
+  // Delete Message (Soft delete)
+  const handleDeleteMessage = async (messageId: string) => {
+    setMessagesByChannel((prev) => {
+      const list = prev[activeChannelId] || [];
+      return {
+        ...prev,
+        [activeChannelId]: list.map((m) =>
+          m.id === messageId
+            ? {
+                ...m,
+                isDeleted: true,
+                content: "This message was deleted.",
+                deletedAt: new Date().toISOString(),
+              }
+            : m
+        ),
+      };
+    });
+
+    if (UUID_REGEX.test(messageId)) {
+      try {
+        await supabase
+          .from("messages")
+          .update({
+            is_deleted: true,
+            deleted_at: new Date().toISOString(),
+          })
+          .eq("id", messageId);
+      } catch (e) {
+        console.warn("Delete message error:", e);
+      }
+    }
+  };
+
   // Create Channel
   const handleCreateChannel = async (data: {
     name: string;
@@ -686,7 +946,7 @@ export default function KaelixoApp() {
             data.topic ? `**ഉദ്ദേശ്യം:** ${data.topic}` : ""
           }`,
           createdAt: "Just now",
-          reactions: [{ emoji: "🎉", count: 1, users: [currentUser.id] }],
+          reactions: createReactionsArray([{ emoji: "🎉", count: 1, users: [currentUser.id] }]),
         },
       ],
     }));
@@ -781,6 +1041,7 @@ export default function KaelixoApp() {
         currentUser={currentUser}
         onOpenNewChannelModal={() => setIsNewChannelModalOpen(true)}
         onOpenAuthModal={() => setIsAuthModalOpen(true)}
+        onOpenInviteModal={() => setIsInviteModalOpen(true)}
         onSelectDirectMessage={handleSelectDirectMessage}
         isMobileOpen={isMobileSidebarOpen}
         onCloseMobile={() => setIsMobileSidebarOpen(false)}
@@ -860,6 +1121,29 @@ export default function KaelixoApp() {
               <span>{isLiveConnected ? "Supabase Live" : "Connected"}</span>
             </div>
 
+            {/* Search Trigger (Cmd+K) */}
+            <button
+              onClick={() => setIsSearchModalOpen(true)}
+              className="flex items-center space-x-1.5 text-xs text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white bg-neutral-100 dark:bg-neutral-800/80 px-2.5 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-700/60 transition"
+              title="Search messages & channels (Ctrl+K)"
+            >
+              <Search className="w-3.5 h-3.5 text-neutral-400" />
+              <span className="hidden sm:inline">Search</span>
+              <kbd className="hidden sm:inline text-[10px] bg-white dark:bg-neutral-700 px-1 py-0.5 rounded border border-neutral-300 dark:border-neutral-600 font-mono text-neutral-400">
+                ⌘K
+              </kbd>
+            </button>
+
+            {/* Invite Team Button */}
+            <button
+              onClick={() => setIsInviteModalOpen(true)}
+              className="flex items-center space-x-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 px-2.5 py-1.5 rounded-xl border border-indigo-200 dark:border-indigo-800/50 transition shadow-sm"
+              title="Invite Team Members (Generate Link & Code)"
+            >
+              <Share2 className="w-3.5 h-3.5 text-indigo-500" />
+              <span className="hidden sm:inline">Invite</span>
+            </button>
+
             {/* User Profile Switch Button */}
             <button
               onClick={() => setIsAuthModalOpen(true)}
@@ -894,10 +1178,14 @@ export default function KaelixoApp() {
 
         {/* Message Feed */}
         <MessageFeed
-          messages={activeMessages}
+          messages={mainFeedMessages}
           currentUser={currentUser}
           onAddReaction={handleAddReaction}
           members={TEAM_MEMBERS}
+          onOpenThread={(msg) => setActiveThreadParent(msg)}
+          onTogglePin={handleTogglePin}
+          onEditMessage={handleEditMessage}
+          onDeleteMessage={handleDeleteMessage}
         />
 
         {/* Input Composer */}
@@ -997,6 +1285,23 @@ export default function KaelixoApp() {
         </aside>
       )}
 
+      {/* Thread Side Panel */}
+      {activeThreadParent && (
+        <div className="w-80 md:w-96 border-l border-neutral-200 dark:border-neutral-800 flex-shrink-0 h-screen overflow-hidden bg-white dark:bg-neutral-900 z-30 shadow-xl">
+          <ThreadPanel
+            parentMessage={activeThreadParent}
+            replies={threadReplies}
+            currentUser={currentUser}
+            channelName={activeChannel.name}
+            isDm={activeChannel.isDm}
+            onClose={() => setActiveThreadParent(null)}
+            onSendReply={handleSendThreadReply}
+            onAddReaction={handleAddReaction}
+            members={TEAM_MEMBERS}
+          />
+        </div>
+      )}
+
       {/* Modals */}
       <NewChannelModal
         isOpen={isNewChannelModalOpen}
@@ -1017,12 +1322,30 @@ export default function KaelixoApp() {
         onCreateDepartment={handleCreateDepartment}
       />
 
+      <InviteTeamModal
+        isOpen={isInviteModalOpen}
+        onClose={() => setIsInviteModalOpen(false)}
+        activeOrg={activeOrg}
+        currentUser={currentUser}
+        onUpdateOrgInviteCode={handleUpdateOrgInviteCode}
+      />
+
       <SlackAuthModal
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
         departments={departments}
         currentUser={currentUser}
+        organizations={organizations}
+        initialInviteCode={initialInviteCode}
         onLoginSuccess={handleLoginSuccess}
+      />
+
+      <SearchModal
+        isOpen={isSearchModalOpen}
+        onClose={() => setIsSearchModalOpen(false)}
+        channels={channels}
+        messagesByChannel={messagesByChannel}
+        onSelectResult={handleSelectSearchResult}
       />
     </div>
   );

@@ -19,6 +19,8 @@ import {
   FolderPlus,
   MessageCircle,
   X,
+  Share2,
+  UserPlus,
 } from "lucide-react";
 import { DepartmentCode, Channel, WorkspaceMember, Department, Organization } from "@/types";
 
@@ -38,6 +40,7 @@ interface SidebarProps {
   currentUser: WorkspaceMember;
   onOpenNewChannelModal: () => void;
   onOpenAuthModal: () => void;
+  onOpenInviteModal?: () => void;
   onSelectDirectMessage: (member: WorkspaceMember) => void;
   isMobileOpen?: boolean;
   onCloseMobile?: () => void;
@@ -59,6 +62,7 @@ export function Sidebar({
   currentUser,
   onOpenNewChannelModal,
   onOpenAuthModal,
+  onOpenInviteModal,
   onSelectDirectMessage,
   isMobileOpen = false,
   onCloseMobile,
@@ -161,24 +165,39 @@ export function Sidebar({
             </button>
           </div>
 
-        {/* Invite Code Bar */}
-        {activeOrg.invite_code && (
-          <div className="mt-2 flex items-center justify-between px-2.5 py-1 rounded-lg bg-neutral-800/70 border border-neutral-700/60 text-[11px]">
-            <span className="text-neutral-400 font-medium">Invite Code:</span>
+        {/* Invite Code Bar & Invite Team Trigger */}
+        <div className="mt-2.5 flex items-center space-x-1.5">
+          <button
+            onClick={onOpenInviteModal}
+            className="flex-1 flex items-center justify-between px-2.5 py-1.5 rounded-xl bg-neutral-800/80 hover:bg-neutral-800 border border-neutral-700/60 text-xs transition group"
+            title="Open Team Invite Modal (Generate link & invite code)"
+          >
+            <div className="flex items-center space-x-1.5 min-w-0">
+              <Share2 className="w-3.5 h-3.5 text-indigo-400 group-hover:text-indigo-300" />
+              <span className="text-[11px] font-semibold text-neutral-300 truncate">
+                Invite Team
+              </span>
+            </div>
+            {activeOrg.invite_code && (
+              <span className="font-mono text-[10px] text-indigo-400 font-bold bg-indigo-950/60 px-1.5 py-0.5 rounded border border-indigo-800/50">
+                {activeOrg.invite_code}
+              </span>
+            )}
+          </button>
+          {activeOrg.invite_code && (
             <button
               onClick={handleCopyInvite}
-              className="flex items-center space-x-1 font-mono font-bold text-indigo-400 hover:text-indigo-300 transition"
-              title="Click to copy invite code"
+              className="p-1.5 rounded-xl bg-neutral-800/80 hover:bg-neutral-800 border border-neutral-700/60 text-neutral-400 hover:text-white transition flex-shrink-0"
+              title="Copy Invite Code"
             >
-              <span>{activeOrg.invite_code}</span>
               {copiedCode ? (
-                <Check className="w-3 h-3 text-emerald-400" />
+                <Check className="w-3.5 h-3.5 text-emerald-400" />
               ) : (
-                <Copy className="w-3 h-3" />
+                <Copy className="w-3.5 h-3.5" />
               )}
             </button>
-          </div>
-        )}
+          )}
+        </div>
 
         {/* Company Switcher Dropdown */}
         {showOrgDropdown && (

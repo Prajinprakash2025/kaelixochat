@@ -88,12 +88,14 @@ export interface ReactionRecord {
 export interface MessageReactionSummary {
   count: number;
   users: string[]; // user IDs or names who reacted
+  userNames?: string[];
 }
 
 export interface MessageReaction {
   emoji: string;
   count: number;
   users: string[]; // User IDs or names who reacted
+  userNames?: string[];
 }
 
 export interface MessageReactionsArray extends Array<MessageReaction> {
@@ -220,6 +222,7 @@ export function reactionsMapToArray(reactions?: MessageReactions | ReactionsMap)
     emoji,
     count: data.count,
     users: data.users,
+    userNames: (data as any).userNames,
   }));
 }
 
@@ -230,4 +233,27 @@ export function reactionListToMap(reactions?: MessageReaction[] | MessageReactio
     map[r.emoji] = { count: r.count, users: r.users };
   }
   return map;
+}
+
+/**
+ * Wraps an array or map of reactions into a dual Array/Record structure (MessageReactionsArray).
+ * Satisfies both Array iteration (.map(), .filter(), .length) and dictionary access (reactions["🚀"]).
+ */
+export function createReactionsArray(
+  items: MessageReaction[] | ReactionsMap = []
+): MessageReactionsArray {
+  const list: MessageReaction[] = Array.isArray(items)
+    ? items
+    : reactionsMapToArray(items);
+  const arr = [...list] as MessageReactionsArray;
+  for (const item of list) {
+    if (item && item.emoji) {
+      (arr as any)[item.emoji] = {
+        count: item.count,
+        users: item.users,
+        userNames: item.userNames,
+      };
+    }
+  }
+  return arr;
 }
