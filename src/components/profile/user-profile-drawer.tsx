@@ -42,16 +42,16 @@ export function UserProfileDrawer({
   };
 
   const getStatusColor = (status: WorkspaceMember["status"], isOnline?: boolean) => {
-    if (isOnline || status === "online") return "bg-emerald-500 ring-4 ring-white dark:ring-neutral-900";
-    if (status === "away") return "bg-amber-500 ring-4 ring-white dark:ring-neutral-900";
-    if (status === "in_call") return "bg-rose-500 ring-4 ring-white dark:ring-neutral-900 animate-pulse";
-    return "bg-neutral-400 ring-4 ring-white dark:ring-neutral-900";
+    if (status === "in_call") return "bg-rose-500 ring-2 ring-white dark:ring-neutral-900 animate-pulse";
+    if (status === "away") return "bg-amber-500 ring-2 ring-white dark:ring-neutral-900";
+    if (isOnline || status === "online") return "bg-emerald-500 ring-2 ring-white dark:ring-neutral-900";
+    return "bg-neutral-400 ring-2 ring-white dark:ring-neutral-900";
   };
 
   const getStatusLabel = (status: WorkspaceMember["status"], isOnline?: boolean) => {
-    if (isOnline || status === "online") return "Active now";
-    if (status === "away") return "Away";
     if (status === "in_call") return "In a call";
+    if (status === "away") return "Away";
+    if (isOnline || status === "online") return "Active now";
     return "Offline";
   };
 
@@ -98,7 +98,7 @@ export function UserProfileDrawer({
           </h2>
           {member.displayName && (
             <p className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
-              @{member.displayName}
+              {`@${member.displayName}`}
             </p>
           )}
 

@@ -641,7 +641,7 @@ export default function KaelixoApp() {
           const currentReactions = reactionsMapToArray(msg.reactions);
           const existingIdx = currentReactions.findIndex((r) => r.emoji === emoji);
 
-          let updatedReactions = [...currentReactions];
+          const updatedReactions = [...currentReactions];
           if (action === "add") {
             if (existingIdx > -1) {
               const r = updatedReactions[existingIdx];
@@ -691,7 +691,7 @@ export default function KaelixoApp() {
         if (msg.id !== messageId) return msg;
         const currentReactions = reactionsMapToArray(msg.reactions);
         const existingIdx = currentReactions.findIndex((r) => r.emoji === emoji);
-        let updatedReactions = [...currentReactions];
+        const updatedReactions = [...currentReactions];
 
         if (action === "add") {
           if (existingIdx > -1) {
@@ -2378,12 +2378,12 @@ export default function KaelixoApp() {
                       />
                       <span
                         className={`absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full ${
-                          m.online || m.status === "online"
-                            ? "bg-emerald-500"
+                          m.status === "in_call"
+                            ? "bg-rose-500 animate-pulse"
                             : m.status === "away"
                             ? "bg-amber-500"
-                            : m.status === "in_call"
-                            ? "bg-rose-500"
+                            : m.online || m.status === "online"
+                            ? "bg-emerald-500"
                             : "bg-neutral-400"
                         }`}
                       />

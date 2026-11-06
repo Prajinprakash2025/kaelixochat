@@ -85,9 +85,9 @@ export function MemberDirectoryModal({
   const userCanAdd = canAddMember(currentUser);
 
   const getStatusColor = (status: WorkspaceMember["status"], isOnline?: boolean) => {
-    if (isOnline || status === "online") return "bg-emerald-500 ring-2 ring-white dark:ring-neutral-900";
-    if (status === "away") return "bg-amber-500 ring-2 ring-white dark:ring-neutral-900";
     if (status === "in_call") return "bg-rose-500 ring-2 ring-white dark:ring-neutral-900 animate-pulse";
+    if (status === "away") return "bg-amber-500 ring-2 ring-white dark:ring-neutral-900";
+    if (isOnline || status === "online") return "bg-emerald-500 ring-2 ring-white dark:ring-neutral-900";
     return "bg-neutral-400 ring-2 ring-white dark:ring-neutral-900";
   };
 
