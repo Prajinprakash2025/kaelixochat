@@ -8,6 +8,21 @@ import {
   Code,
   Bold,
   Italic,
+  Underline,
+  Strikethrough,
+  Pilcrow,
+  Link2,
+  ListOrdered,
+  List,
+  Quote,
+  SquareCode,
+  Plus,
+  Type,
+  AtSign,
+  Mic,
+  Slash,
+  ChevronDown,
+  SendHorizontal,
   Sparkles,
   X,
   File as FileIcon,
@@ -67,12 +82,69 @@ export function ChatInput({
   const [stagedFiles, setStagedFiles] = useState<StagedFile[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showFormatting, setShowFormatting] = useState(true);
+  const [showHeadingMenu, setShowHeadingMenu] = useState(false);
+  const [isRecordingVoice, setIsRecordingVoice] = useState(false);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
   const dragCounterRef = useRef<number>(0);
   const stagedFilesRef = useRef<StagedFile[]>([]);
   stagedFilesRef.current = stagedFiles;
+
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const recordTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const startVoiceRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+
+      mediaRecorder.onstop = async () => {
+        stream.getTracks().forEach((track) => track.stop());
+        if (audioChunksRef.current.length > 0) {
+          const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+          const audioFile = new File(
+            [audioBlob],
+            `voice-note-${Date.now()}.webm`,
+            { type: "audio/webm" }
+          );
+          await processAndUploadFile(audioFile);
+        }
+      };
+
+      mediaRecorder.start();
+      setIsRecordingVoice(true);
+      setRecordingSeconds(0);
+      recordTimerRef.current = setInterval(() => {
+        setRecordingSeconds((s) => s + 1);
+      }, 1000);
+    } catch (err) {
+      console.warn("Microphone access unavailable or denied:", err);
+      alert("Microphone access could not be initialized. Please check browser microphone permissions.");
+    }
+  };
+
+  const stopVoiceRecording = (cancel = false) => {
+    if (recordTimerRef.current) clearInterval(recordTimerRef.current);
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      if (cancel) {
+        audioChunksRef.current = [];
+      }
+      mediaRecorderRef.current.stop();
+    }
+    setIsRecordingVoice(false);
+    setRecordingSeconds(0);
+  };
 
   // Cleanup object URLs on unmount to prevent memory leaks
   useEffect(() => {
@@ -281,15 +353,20 @@ export function ChatInput({
     }
   };
 
-  const insertFormatting = (wrapper: string) => {
+  const insertFormatting = (
+    prefix: string,
+    suffix: string = prefix,
+    defaultPlaceholder: string = "text"
+  ) => {
     const textarea = textareaRef.current;
     if (!textarea) return;
 
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
     const selected = content.substring(start, end);
+    const textToWrap = selected || defaultPlaceholder;
 
-    const replacement = `${wrapper}${selected || "text"}${wrapper}`;
+    const replacement = `${prefix}${textToWrap}${suffix}`;
     const newContent =
       content.substring(0, start) + replacement + content.substring(end);
 
@@ -297,10 +374,17 @@ export function ChatInput({
     setTimeout(() => {
       textarea.focus();
       textarea.setSelectionRange(
-        start + wrapper.length,
-        start + wrapper.length + (selected.length || 4)
+        start + prefix.length,
+        start + prefix.length + textToWrap.length
       );
     }, 50);
+  };
+
+  const handleInsertLink = () => {
+    const url = prompt("Enter link URL (e.g. https://example.com):", "https://");
+    if (url) {
+      insertFormatting("[", `](${url})`, "link title");
+    }
   };
 
   const handleInsertEmoji = (emoji: string) => {
@@ -342,7 +426,7 @@ export function ChatInput({
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
-      {/* Hidden file input */}
+      {/* Hidden file inputs */}
       <input
         type="file"
         ref={fileInputRef}
@@ -351,6 +435,14 @@ export function ChatInput({
         className="hidden"
         accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv,.json,.zip,.md,.py,.js,.ts"
         aria-label="Upload file attachments"
+      />
+      <input
+        type="file"
+        ref={videoInputRef}
+        onChange={handleFileInputChange}
+        className="hidden"
+        accept="video/*"
+        aria-label="Upload video attachment"
       />
 
       {/* Drag & Drop Overlay */}
@@ -367,44 +459,161 @@ export function ChatInput({
       )}
 
       <div className="relative rounded-2xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50/50 dark:bg-neutral-800/50 focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-transparent transition shadow-xs">
-        {/* Formatting Bar */}
-        <div className="flex items-center justify-between px-3 py-1.5 border-b border-neutral-200 dark:border-neutral-700/60 text-neutral-500 dark:text-neutral-400">
-          <div className="flex items-center space-x-1">
-            <button
-              type="button"
-              onClick={() => insertFormatting("**")}
-              className="p-1 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded-md transition cursor-pointer"
-              title="Bold (**text**)"
-            >
-              <Bold className="w-3.5 h-3.5" />
-            </button>
-            <button
-              type="button"
-              onClick={() => insertFormatting("*")}
-              className="p-1 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded-md transition cursor-pointer"
-              title="Italic (*text*)"
-            >
-              <Italic className="w-3.5 h-3.5" />
-            </button>
-            <button
-              type="button"
-              onClick={() => insertFormatting("```\n")}
-              className="p-1 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded-md transition cursor-pointer"
-              title="Code Block"
-            >
-              <Code className="w-3.5 h-3.5" />
-            </button>
-            <span className="hidden sm:inline h-3 w-[1px] bg-neutral-300 dark:bg-neutral-700 mx-1" />
-            <span className="hidden sm:inline text-[11px] text-neutral-400 font-medium">
-              Markdown ready
-            </span>
-          </div>
+        {/* Slack-Grade Top Rich Text Formatting Toolbar */}
+        {showFormatting && (
+          <div className="flex items-center justify-between px-3 py-1.5 border-b border-neutral-200 dark:border-neutral-700/60 text-neutral-500 dark:text-neutral-400 bg-neutral-100/40 dark:bg-neutral-800/40 rounded-t-2xl">
+            <div className="flex items-center space-x-0.5 sm:space-x-1 overflow-x-auto no-scrollbar">
+              {/* Bold */}
+              <button
+                type="button"
+                onClick={() => insertFormatting("**", "**", "bold text")}
+                className="p-1 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded transition cursor-pointer text-neutral-600 dark:text-neutral-300 hover:text-black dark:hover:text-white"
+                title="Bold (Ctrl+B)"
+              >
+                <Bold className="w-4 h-4" />
+              </button>
 
-          <div className="hidden sm:flex text-[11px] text-neutral-400 items-center space-x-1">
-            <Sparkles className="w-3 h-3 text-indigo-500" />
-            <span>Kaelixo Instant</span>
+              {/* Italic */}
+              <button
+                type="button"
+                onClick={() => insertFormatting("*", "*", "italic text")}
+                className="p-1 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded transition cursor-pointer text-neutral-600 dark:text-neutral-300 hover:text-black dark:hover:text-white"
+                title="Italic (Ctrl+I)"
+              >
+                <Italic className="w-4 h-4" />
+              </button>
+
+              {/* Underline */}
+              <button
+                type="button"
+                onClick={() => insertFormatting("<u>", "</u>", "underline text")}
+                className="p-1 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded transition cursor-pointer text-neutral-600 dark:text-neutral-300 hover:text-black dark:hover:text-white"
+                title="Underline (Ctrl+U)"
+              >
+                <Underline className="w-4 h-4" />
+              </button>
+
+              {/* Strikethrough */}
+              <button
+                type="button"
+                onClick={() => insertFormatting("~", "~", "strikethrough text")}
+                className="p-1 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded transition cursor-pointer text-neutral-600 dark:text-neutral-300 hover:text-black dark:hover:text-white"
+                title="Strikethrough"
+              >
+                <Strikethrough className="w-4 h-4" />
+              </button>
+
+              {/* Heading / Paragraph */}
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setShowHeadingMenu(!showHeadingMenu)}
+                  className="flex items-center space-x-0.5 p-1 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded transition cursor-pointer text-neutral-600 dark:text-neutral-300 hover:text-black dark:hover:text-white"
+                  title="Headings & Paragraph (¶)"
+                >
+                  <Pilcrow className="w-4 h-4" />
+                  <ChevronDown className="w-2.5 h-2.5" />
+                </button>
+                {showHeadingMenu && (
+                  <div className="absolute top-full left-0 mt-1 z-50 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl shadow-xl py-1 w-36 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        insertFormatting("# ", "", "Large Heading");
+                        setShowHeadingMenu(false);
+                      }}
+                      className="w-full text-left px-3 py-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-700 font-bold"
+                    >
+                      Heading 1
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        insertFormatting("## ", "", "Medium Heading");
+                        setShowHeadingMenu(false);
+                      }}
+                      className="w-full text-left px-3 py-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-700 font-semibold"
+                    >
+                      Heading 2
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        insertFormatting("### ", "", "Small Heading");
+                        setShowHeadingMenu(false);
+                      }}
+                      className="w-full text-left px-3 py-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-700 font-medium"
+                    >
+                      Heading 3
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <span className="h-4 w-[1px] bg-neutral-300 dark:bg-neutral-700 mx-1" />
+
+              {/* Link */}
+              <button
+                type="button"
+                onClick={handleInsertLink}
+                className="p-1 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded transition cursor-pointer text-neutral-600 dark:text-neutral-300 hover:text-black dark:hover:text-white"
+                title="Add link"
+              >
+                <Link2 className="w-4 h-4" />
+              </button>
+
+              {/* Numbered List */}
+              <button
+                type="button"
+                onClick={() => insertFormatting("1. ", "", "List item")}
+                className="p-1 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded transition cursor-pointer text-neutral-600 dark:text-neutral-300 hover:text-black dark:hover:text-white"
+                title="Ordered list"
+              >
+                <ListOrdered className="w-4 h-4" />
+              </button>
+
+              {/* Bulleted List */}
+              <button
+                type="button"
+                onClick={() => insertFormatting("• ", "", "List item")}
+                className="p-1 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded transition cursor-pointer text-neutral-600 dark:text-neutral-300 hover:text-black dark:hover:text-white"
+                title="Bulleted list"
+              >
+                <List className="w-4 h-4" />
+              </button>
+
+              {/* Blockquote */}
+              <button
+                type="button"
+                onClick={() => insertFormatting("> ", "", "Quote text")}
+                className="p-1 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded transition cursor-pointer text-neutral-600 dark:text-neutral-300 hover:text-black dark:hover:text-white"
+                title="Quote"
+              >
+                <Quote className="w-4 h-4" />
+              </button>
+
+              {/* Inline Code */}
+              <button
+                type="button"
+                onClick={() => insertFormatting("`", "`", "code")}
+                className="p-1 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded transition cursor-pointer text-neutral-600 dark:text-neutral-300 hover:text-black dark:hover:text-white"
+                title="Inline code"
+              >
+                <Code className="w-4 h-4" />
+              </button>
+
+              {/* Code Block */}
+              <button
+                type="button"
+                onClick={() => insertFormatting("```\n", "\n```", "code block")}
+                className="p-1 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded transition cursor-pointer text-neutral-600 dark:text-neutral-300 hover:text-black dark:hover:text-white"
+                title="Code block"
+              >
+                <SquareCode className="w-4 h-4" />
+              </button>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Text Area */}
         <textarea
@@ -413,7 +622,7 @@ export function ChatInput({
           onChange={(e) => setContent(e.target.value)}
           onKeyDown={handleKeyDown}
           onPaste={handlePaste}
-          placeholder={`Message #${channelName}...`}
+          placeholder={channelName.startsWith("#") ? `Message ${channelName}...` : `Message #${channelName}...`}
           rows={2}
           disabled={disabled}
           className="w-full bg-transparent p-2.5 sm:p-3 text-sm text-neutral-900 dark:text-neutral-100 placeholder-neutral-400 focus:outline-none resize-none font-sans"
@@ -504,9 +713,34 @@ export function ChatInput({
           </div>
         )}
 
-        {/* Bottom Actions Bar */}
+        {/* Slack-Grade Bottom Actions Bar */}
         <div className="flex items-center justify-between px-3 py-2 border-t border-neutral-200/50 dark:border-neutral-700/40">
-          <div className="relative flex items-center space-x-1.5">
+          <div className="relative flex items-center space-x-1 sm:space-x-1.5">
+            {/* + Add Attachment / Media */}
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="p-1.5 rounded-full hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-500 hover:text-neutral-800 dark:hover:text-white transition cursor-pointer"
+              title="Add attachment, photo, or document (+)"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+
+            {/* Aa Toggle Formatting Bar */}
+            <button
+              type="button"
+              onClick={() => setShowFormatting(!showFormatting)}
+              className={`p-1.5 rounded-lg transition cursor-pointer ${
+                showFormatting
+                  ? "bg-neutral-200 dark:bg-neutral-700 text-indigo-600 dark:text-indigo-400 font-bold"
+                  : "text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-white hover:bg-neutral-200/60 dark:hover:bg-neutral-700/60"
+              }`}
+              title="Hide / show text formatting (Aa)"
+            >
+              <Type className="w-4 h-4" />
+            </button>
+
+            {/* Emoji Picker */}
             <button
               type="button"
               onClick={() => setShowEmojiPicker(!showEmojiPicker)}
@@ -519,13 +753,78 @@ export function ChatInput({
             >
               <Smile className="w-4 h-4" />
             </button>
+
+            {/* @ Mention */}
             <button
               type="button"
-              onClick={() => fileInputRef.current?.click()}
+              onClick={() => {
+                insertFormatting("@", "", "colleague");
+              }}
               className="p-1.5 text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-white hover:bg-neutral-200/60 dark:hover:bg-neutral-700/60 rounded-lg transition cursor-pointer"
-              title="Attach Files or Images"
+              title="Mention a colleague (@)"
             >
-              <Paperclip className="w-4 h-4" />
+              <AtSign className="w-4 h-4" />
+            </button>
+
+            {/* 📹 Video Clip */}
+            <button
+              type="button"
+              onClick={() => videoInputRef.current?.click()}
+              className="p-1.5 text-neutral-500 hover:text-purple-600 dark:text-neutral-400 dark:hover:text-purple-400 hover:bg-neutral-200/60 dark:hover:bg-neutral-700/60 rounded-lg transition cursor-pointer"
+              title="Record or upload video clip"
+            >
+              <VideoIcon className="w-4 h-4" />
+            </button>
+
+            {/* 🎙️ Voice Recording */}
+            {isRecordingVoice ? (
+              <div className="flex items-center space-x-2 bg-rose-50 dark:bg-rose-950/60 border border-rose-300 dark:border-rose-800 px-2.5 py-1 rounded-xl">
+                <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping" />
+                <span className="text-xs font-mono font-semibold text-rose-600 dark:text-rose-300">
+                  {Math.floor(recordingSeconds / 60)}:
+                  {String(recordingSeconds % 60).padStart(2, "0")}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => stopVoiceRecording(false)}
+                  className="p-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition cursor-pointer"
+                  title="Send voice note"
+                >
+                  <Check className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => stopVoiceRecording(true)}
+                  className="p-1 bg-neutral-200 dark:bg-neutral-700 hover:bg-rose-600 text-neutral-600 dark:text-neutral-300 hover:text-white rounded-lg transition cursor-pointer"
+                  title="Cancel voice recording"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={startVoiceRecording}
+                className="p-1.5 text-neutral-500 hover:text-rose-500 dark:text-neutral-400 dark:hover:text-rose-400 hover:bg-neutral-200/60 dark:hover:bg-neutral-700/60 rounded-lg transition cursor-pointer"
+                title="Record audio voice note"
+              >
+                <Mic className="w-4 h-4" />
+              </button>
+            )}
+
+            <span className="h-4 w-[1px] bg-neutral-300 dark:bg-neutral-700 mx-0.5" />
+
+            {/* [/] Slash Commands */}
+            <button
+              type="button"
+              onClick={() => {
+                setContent((prev) => (prev.startsWith("/") ? prev : "/" + prev));
+                textareaRef.current?.focus();
+              }}
+              className="p-1.5 text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-white hover:bg-neutral-200/60 dark:hover:bg-neutral-700/60 rounded-lg transition cursor-pointer"
+              title="Run a shortcut or slash command (/)"
+            >
+              <Slash className="w-4 h-4" />
             </button>
 
             {/* Categorized Emoji Popover */}
@@ -539,29 +838,44 @@ export function ChatInput({
             )}
           </div>
 
-          {/* Send Button */}
-          <button
-            type="button"
-            onClick={handleSend}
-            disabled={!canSend}
-            className={`flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl font-medium text-xs transition shadow-xs ${
-              canSend
-                ? "bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-500/20 active:scale-95 cursor-pointer"
-                : "bg-neutral-200 dark:bg-neutral-700 text-neutral-400 cursor-not-allowed"
-            }`}
-          >
-            {isAnyUploading ? (
-              <>
-                <Loader2 className="w-3.5 h-3.5 animate-spin text-neutral-400" />
-                <span>Uploading...</span>
-              </>
-            ) : (
-              <>
-                <span>Send</span>
-                <Send className="w-3.5 h-3.5" />
-              </>
-            )}
-          </button>
+          {/* Right Side: Slack-Grade Send Button with Dropdown Chevron */}
+          <div className="flex items-center">
+            <button
+              type="button"
+              onClick={handleSend}
+              disabled={!canSend}
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-l-xl font-medium text-xs transition shadow-xs ${
+                canSend
+                  ? "bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/20 active:scale-95 cursor-pointer"
+                  : "bg-neutral-200 dark:bg-neutral-700 text-neutral-400 cursor-not-allowed"
+              }`}
+              title="Send message (Enter)"
+            >
+              {isAnyUploading ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
+                  <span>Uploading...</span>
+                </>
+              ) : (
+                <>
+                  <SendHorizontal className="w-3.5 h-3.5" />
+                </>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={handleSend}
+              disabled={!canSend}
+              className={`p-1.5 rounded-r-xl border-l border-emerald-700/40 text-xs transition ${
+                canSend
+                  ? "bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer"
+                  : "bg-neutral-200 dark:bg-neutral-700 text-neutral-400 cursor-not-allowed"
+              }`}
+              title="Send options"
+            >
+              <ChevronDown className="w-3 h-3" />
+            </button>
+          </div>
         </div>
       </div>
     </div>

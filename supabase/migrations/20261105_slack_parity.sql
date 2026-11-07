@@ -176,18 +176,7 @@ VALUES (
     'kaelixo-attachments',
     true,
     52428800, -- 50 MB
-    ARRAY[
-        'image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp', 'image/svg+xml',
-        'application/pdf',
-        'text/plain', 'text/markdown', 'text/csv', 'text/html', 'text/css', 'text/javascript',
-        'application/json',
-        'application/zip', 'application/x-zip-compressed',
-        'application/msword',
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        'application/vnd.ms-excel',
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        'application/octet-stream'
-    ]
+    NULL -- Allows all media and documents (validated client-side against dangerous executables)
 )
 ON CONFLICT (id) DO UPDATE SET
     public = EXCLUDED.public,

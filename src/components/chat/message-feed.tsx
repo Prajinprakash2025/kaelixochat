@@ -238,9 +238,38 @@ export function MessageFeed({
     );
   };
 
-  // Markdown formatter for bold, code blocks, lists
+  // Markdown formatter for bold, italic, underline, code blocks, lists, links
   const formatContent = (content: string) => {
     if (!content) return null;
+
+    const parseLine = (raw: string): string => {
+      let out = raw;
+      if (out.startsWith("### ")) {
+        return `<h3 class="text-sm font-bold text-white mt-1">${out.slice(4)}</h3>`;
+      }
+      if (out.startsWith("## ")) {
+        return `<h2 class="text-base font-bold text-white mt-1.5">${out.slice(3)}</h2>`;
+      }
+      if (out.startsWith("# ")) {
+        return `<h1 class="text-lg font-extrabold text-white mt-2">${out.slice(2)}</h1>`;
+      }
+      if (out.startsWith("> ")) {
+        return `<blockquote class="border-l-2 border-indigo-500 pl-2.5 my-1 text-neutral-400 italic">${out.slice(2)}</blockquote>`;
+      }
+      // Bold **text**
+      out = out.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+      // Italic *text*
+      out = out.replace(/\*(.*?)\*/g, "<em>$1</em>");
+      // Underline <u>text</u>
+      out = out.replace(/<u>(.*?)<\/u>/g, "<u>$1</u>");
+      // Strikethrough ~text~
+      out = out.replace(/~(.*?)~/g, "<del class='line-through text-neutral-400'>$1</del>");
+      // Inline code `code`
+      out = out.replace(/`([^`]+)`/g, "<code class='px-1.5 py-0.5 rounded bg-neutral-200 dark:bg-neutral-800 text-rose-500 dark:text-rose-400 font-mono text-xs'>$1</code>");
+      // Links [text](url)
+      out = out.replace(/\[(.*?)\]\((https?:\/\/[^\s)]+)\)/g, "<a href='$2' target='_blank' rel='noopener noreferrer' class='text-indigo-400 hover:underline'>$1</a>");
+      return out;
+    };
 
     if (content.includes("```")) {
       const parts = content.split("```");
@@ -264,27 +293,23 @@ export function MessageFeed({
           );
         }
         return (
-          <p key={index} className="whitespace-pre-wrap leading-relaxed">
-            {part}
-          </p>
+          <div key={index} className="whitespace-pre-wrap leading-relaxed space-y-1">
+            {part.split("\n").map((line, li) => (
+              <div key={li} dangerouslySetInnerHTML={{ __html: parseLine(line) }} />
+            ))}
+          </div>
         );
       });
     }
 
     return (
       <div className="whitespace-pre-wrap leading-relaxed space-y-1">
-        {content.split("\n").map((line, i) => {
-          const boldFormatted = line.replace(
-            /\*\*(.*?)\*\*/g,
-            "<strong>$1</strong>"
-          );
-          return (
-            <div
-              key={i}
-              dangerouslySetInnerHTML={{ __html: boldFormatted }}
-            />
-          );
-        })}
+        {content.split("\n").map((line, i) => (
+          <div
+            key={i}
+            dangerouslySetInnerHTML={{ __html: parseLine(line) }}
+          />
+        ))}
       </div>
     );
   };
