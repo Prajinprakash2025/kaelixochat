@@ -17,6 +17,9 @@ import {
   ChevronLeft,
   ChevronRight,
   Flame,
+  Bot,
+  User,
+  Sparkles,
 } from "lucide-react";
 import { WorkspaceMember } from "@/types";
 import { createClient } from "@/lib/supabase/client";
@@ -47,7 +50,7 @@ export function GamesModal({
   onShareToChannel,
   activeChannelName = "general",
 }: GamesModalProps) {
-  const [activeTab, setActiveTab] = useState<"snake" | "tictactoe" | "reflex">("snake");
+  const [activeTab, setActiveTab] = useState<"snake_duel" | "snake_solo" | "tictactoe" | "reflex">("snake_duel");
   const [leaderboard, setLeaderboard] = useState<ScoreRecord[]>([]);
   const [sharedToast, setSharedToast] = useState(false);
   const supabase = createClient();
@@ -66,7 +69,7 @@ export function GamesModal({
         setLeaderboard(data);
       }
     } catch {
-      // Fallback local memory leaderboard if offline
+      // Fallback
     }
   }, [supabase]);
 
@@ -103,26 +106,26 @@ export function GamesModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 md:p-6 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
       <div
-        className="w-full max-w-4xl bg-neutral-900 border border-neutral-800 rounded-2xl sm:rounded-3xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden"
+        className="w-full max-w-4xl bg-neutral-900 border border-neutral-800 rounded-2xl sm:rounded-3xl shadow-2xl flex flex-col max-h-[94vh] overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-800 bg-neutral-900/80">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 border-b border-neutral-800 bg-neutral-900/90">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20 text-white">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 via-indigo-600 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20 text-white">
               <Gamepad2 className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center space-x-2">
                 <h3 className="text-base font-bold text-white">Kaelixo Team Arcade</h3>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-950 text-emerald-400 border border-emerald-800">
-                  Live
+                  DUO & TEAM
                 </span>
               </div>
               <p className="text-xs text-neutral-400">
-                Play retro Snake, challenge colleagues to Duo battles, and climb the company board
+                Compete head-to-head in 2-Player Snake battles, Duo Tic-Tac-Toe, or reflex challenges
               </p>
             </div>
           </div>
@@ -144,34 +147,49 @@ export function GamesModal({
         </div>
 
         {/* Tab Selection Navigation */}
-        <div className="flex items-center space-x-2 px-5 py-2.5 bg-neutral-950/60 border-b border-neutral-800/80 overflow-x-auto no-scrollbar">
+        <div className="flex items-center space-x-2 px-4 sm:px-6 py-2.5 bg-neutral-950/70 border-b border-neutral-800 overflow-x-auto no-scrollbar">
           <button
-            onClick={() => setActiveTab("snake")}
-            className={`flex items-center space-x-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer ${
-              activeTab === "snake"
+            onClick={() => setActiveTab("snake_duel")}
+            className={`flex items-center space-x-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer shrink-0 ${
+              activeTab === "snake_duel"
+                ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md shadow-emerald-600/30 ring-1 ring-emerald-400/30"
+                : "text-neutral-400 hover:text-white hover:bg-neutral-800/70"
+            }`}
+          >
+            <Swords className="w-3.5 h-3.5 text-emerald-300" />
+            <span>2-Player Snake Duel</span>
+            <span className="bg-emerald-950 text-emerald-300 text-[9px] px-1.5 py-0.2 rounded-full border border-emerald-700 font-mono">
+              HOT
+            </span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab("snake_solo")}
+            className={`flex items-center space-x-2 px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer shrink-0 ${
+              activeTab === "snake_solo"
                 ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30"
                 : "text-neutral-400 hover:text-white hover:bg-neutral-800/70"
             }`}
           >
             <span>🐍</span>
-            <span>Snake Arena</span>
+            <span>Classic Solo Snake</span>
           </button>
 
           <button
             onClick={() => setActiveTab("tictactoe")}
-            className={`flex items-center space-x-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer ${
+            className={`flex items-center space-x-2 px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer shrink-0 ${
               activeTab === "tictactoe"
                 ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30"
                 : "text-neutral-400 hover:text-white hover:bg-neutral-800/70"
             }`}
           >
-            <Swords className="w-3.5 h-3.5" />
+            <Users className="w-3.5 h-3.5" />
             <span>Duo Tic-Tac-Toe</span>
           </button>
 
           <button
             onClick={() => setActiveTab("reflex")}
-            className={`flex items-center space-x-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer ${
+            className={`flex items-center space-x-2 px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer shrink-0 ${
               activeTab === "reflex"
                 ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30"
                 : "text-neutral-400 hover:text-white hover:bg-neutral-800/70"
@@ -187,10 +205,19 @@ export function GamesModal({
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Game Screen Viewport */}
             <div className="lg:col-span-2 flex flex-col items-center">
-              {activeTab === "snake" && (
-                <SnakeGame
+              {activeTab === "snake_duel" && (
+                <TwoPlayerSnakeDuel
                   currentUser={currentUser}
-                  onSaveScore={(score) => handleSaveScore("snake", score)}
+                  teamMembers={teamMembers}
+                  onSaveScore={(score) => handleSaveScore("snake_duel", score)}
+                  onShareResult={handleShareResult}
+                />
+              )}
+
+              {activeTab === "snake_solo" && (
+                <ClassicSnakeGame
+                  currentUser={currentUser}
+                  onSaveScore={(score) => handleSaveScore("snake_solo", score)}
                   onShareResult={handleShareResult}
                 />
               )}
@@ -214,7 +241,7 @@ export function GamesModal({
             </div>
 
             {/* Live Leaderboard Rail */}
-            <div className="rounded-2xl border border-neutral-800 bg-neutral-950/70 p-4 flex flex-col">
+            <div className="rounded-2xl border border-neutral-800 bg-neutral-950/70 p-4 flex flex-col h-full">
               <div className="flex items-center justify-between pb-3 border-b border-neutral-800/80 mb-3">
                 <div className="flex items-center space-x-2">
                   <Trophy className="w-4 h-4 text-amber-400" />
@@ -223,7 +250,7 @@ export function GamesModal({
                   </h4>
                 </div>
                 <span className="text-[10px] text-neutral-400 font-mono">
-                  {activeTab.toUpperCase()}
+                  {activeTab.replace("_", " ").toUpperCase()}
                 </span>
               </div>
 
@@ -305,10 +332,846 @@ export function GamesModal({
 }
 
 // =============================================================================
-// 1. CLASSIC RETRO SNAKE GAME
+// 1. 2-PLAYER SIMULTANEOUS SNAKE DUEL (MATCH WITH TAIL BITING & BATTLES)
 // =============================================================================
 
-function SnakeGame({
+interface Point {
+  x: number;
+  y: number;
+}
+
+function TwoPlayerSnakeDuel({
+  currentUser,
+  teamMembers,
+  onSaveScore,
+  onShareResult,
+}: {
+  currentUser: WorkspaceMember;
+  teamMembers: WorkspaceMember[];
+  onSaveScore: (score: number) => void;
+  onShareResult: (text: string) => void;
+}) {
+  const GRID_SIZE = 20;
+
+  const INITIAL_P1: Point[] = [
+    { x: 4, y: 10 },
+    { x: 3, y: 10 },
+    { x: 2, y: 10 },
+    { x: 1, y: 10 },
+  ];
+
+  const INITIAL_P2: Point[] = [
+    { x: 15, y: 10 },
+    { x: 16, y: 10 },
+    { x: 17, y: 10 },
+    { x: 18, y: 10 },
+  ];
+
+  const [snake1, setSnake1] = useState<Point[]>(INITIAL_P1);
+  const [snake2, setSnake2] = useState<Point[]>(INITIAL_P2);
+  const [dir1, setDir1] = useState<"UP" | "DOWN" | "LEFT" | "RIGHT">("RIGHT");
+  const [dir2, setDir2] = useState<"UP" | "DOWN" | "LEFT" | "RIGHT">("LEFT");
+  const [food, setFood] = useState<Point>({ x: 10, y: 5 });
+  const [goldenStar, setGoldenStar] = useState<Point | null>({ x: 10, y: 14 });
+
+  const [scores, setScores] = useState({ p1: 0, p2: 0 });
+  const [roundsWon, setRoundsWon] = useState({ p1: 0, p2: 0 });
+  const [roundNumber, setRoundNumber] = useState(1);
+
+  const [opponentType, setOpponentType] = useState<"local" | "ai">("ai");
+  const [selectedOpponentName, setSelectedOpponentName] = useState<string>("Smart Colleague AI");
+  const [matchState, setMatchState] = useState<"IDLE" | "PLAYING" | "ROUND_END" | "MATCH_OVER">("IDLE");
+  const [roundEndText, setRoundEndText] = useState<string>("");
+  const [matchWinner, setMatchWinner] = useState<string | null>(null);
+  const [biteAlert, setBiteAlert] = useState<string | null>(null);
+
+  // References to keep game loop synchronized
+  const s1Ref = useRef<Point[]>(INITIAL_P1);
+  const s2Ref = useRef<Point[]>(INITIAL_P2);
+  const dir1Ref = useRef(dir1);
+  const dir2Ref = useRef(dir2);
+  const scoresRef = useRef(scores);
+  const roundsWonRef = useRef(roundsWon);
+
+  s1Ref.current = snake1;
+  s2Ref.current = snake2;
+  dir1Ref.current = dir1;
+  dir2Ref.current = dir2;
+  scoresRef.current = scores;
+  roundsWonRef.current = roundsWon;
+
+  const generateFood = useCallback(
+    (s1: Point[], s2: Point[]): Point => {
+      let candidate: Point = { x: 0, y: 0 };
+      let collision = true;
+      let attempts = 0;
+      while (collision && attempts < 100) {
+        attempts++;
+        candidate = {
+          x: Math.floor(Math.random() * (GRID_SIZE - 2)) + 1,
+          y: Math.floor(Math.random() * (GRID_SIZE - 2)) + 1,
+        };
+        const inS1 = s1.some((p) => p.x === candidate.x && p.y === candidate.y);
+        const inS2 = s2.some((p) => p.x === candidate.x && p.y === candidate.y);
+        collision = inS1 || inS2;
+      }
+      return candidate;
+    },
+    [GRID_SIZE]
+  );
+
+  const startNextRound = useCallback(() => {
+    setSnake1(INITIAL_P1);
+    setSnake2(INITIAL_P2);
+    s1Ref.current = INITIAL_P1;
+    s2Ref.current = INITIAL_P2;
+    setDir1("RIGHT");
+    setDir2("LEFT");
+    dir1Ref.current = "RIGHT";
+    dir2Ref.current = "LEFT";
+    setFood(generateFood(INITIAL_P1, INITIAL_P2));
+    setGoldenStar(Math.random() > 0.4 ? { x: 10, y: Math.floor(Math.random() * 16) + 2 } : null);
+    setRoundEndText("");
+    setBiteAlert(null);
+    setMatchState("PLAYING");
+  }, [generateFood]);
+
+  const startNewMatch = () => {
+    setScores({ p1: 0, p2: 0 });
+    setRoundsWon({ p1: 0, p2: 0 });
+    scoresRef.current = { p1: 0, p2: 0 };
+    roundsWonRef.current = { p1: 0, p2: 0 };
+    setRoundNumber(1);
+    setMatchWinner(null);
+    startNextRound();
+  };
+
+  // Keyboard controls
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (matchState !== "PLAYING") return;
+
+      // Player 1 (Arrow keys)
+      const c1 = dir1Ref.current;
+      if (e.key === "ArrowUp" && c1 !== "DOWN") {
+        e.preventDefault();
+        setDir1("UP");
+        dir1Ref.current = "UP";
+      } else if (e.key === "ArrowDown" && c1 !== "UP") {
+        e.preventDefault();
+        setDir1("DOWN");
+        dir1Ref.current = "DOWN";
+      } else if (e.key === "ArrowLeft" && c1 !== "RIGHT") {
+        e.preventDefault();
+        setDir1("LEFT");
+        dir1Ref.current = "LEFT";
+      } else if (e.key === "ArrowRight" && c1 !== "LEFT") {
+        e.preventDefault();
+        setDir1("RIGHT");
+        dir1Ref.current = "RIGHT";
+      }
+
+      // Player 2 (W, A, S, D in local mode)
+      if (opponentType === "local") {
+        const c2 = dir2Ref.current;
+        const key = e.key.toLowerCase();
+        if ((key === "w" || e.code === "KeyW") && c2 !== "DOWN") {
+          e.preventDefault();
+          setDir2("UP");
+          dir2Ref.current = "UP";
+        } else if ((key === "s" || e.code === "KeyS") && c2 !== "UP") {
+          e.preventDefault();
+          setDir2("DOWN");
+          dir2Ref.current = "DOWN";
+        } else if ((key === "a" || e.code === "KeyA") && c2 !== "RIGHT") {
+          e.preventDefault();
+          setDir2("LEFT");
+          dir2Ref.current = "LEFT";
+        } else if ((key === "d" || e.code === "KeyD") && c2 !== "LEFT") {
+          e.preventDefault();
+          setDir2("RIGHT");
+          dir2Ref.current = "RIGHT";
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [matchState, opponentType]);
+
+  // Smart AI Snake Logic for Player 2 (Pathfinding, Food Hunting & Tail Biting)
+  const computeAiMove = useCallback(
+    (head: Point, target: Point, curDir: string, s1: Point[], s2: Point[]) => {
+      const moves: { dir: "UP" | "DOWN" | "LEFT" | "RIGHT"; pos: Point }[] = [
+        { dir: "UP", pos: { x: head.x, y: head.y - 1 } },
+        { dir: "DOWN", pos: { x: head.x, y: head.y + 1 } },
+        { dir: "LEFT", pos: { x: head.x - 1, y: head.y } },
+        { dir: "RIGHT", pos: { x: head.x + 1, y: head.y } },
+      ];
+
+      // Exclude reverse
+      const valid = moves.filter((m) => {
+        if (curDir === "UP" && m.dir === "DOWN") return false;
+        if (curDir === "DOWN" && m.dir === "UP") return false;
+        if (curDir === "LEFT" && m.dir === "RIGHT") return false;
+        if (curDir === "RIGHT" && m.dir === "LEFT") return false;
+
+        // Wall check
+        if (m.pos.x < 0 || m.pos.x >= GRID_SIZE || m.pos.y < 0 || m.pos.y >= GRID_SIZE)
+          return false;
+
+        // Collision check with snake2 body
+        if (s2.some((seg) => seg.x === m.pos.x && seg.y === m.pos.y)) return false;
+
+        // If s1 is larger and heading to same square, avoid head-to-head
+        if (m.pos.x === s1[0].x && m.pos.y === s1[0].y && s1.length >= s2.length) return false;
+
+        return true;
+      });
+
+      if (valid.length === 0) return curDir as "UP" | "DOWN" | "LEFT" | "RIGHT";
+
+      // If AI is longer than P1 or sees P1's tail within reach, target P1's tail to bite!
+      let preferredTarget = target;
+      if (s1.length > 2 && Math.random() > 0.4) {
+        preferredTarget = s1[s1.length - 1]; // target P1's tail to bite!
+      }
+
+      valid.sort((a, b) => {
+        const distA = Math.abs(a.pos.x - preferredTarget.x) + Math.abs(a.pos.y - preferredTarget.y);
+        const distB = Math.abs(b.pos.x - preferredTarget.x) + Math.abs(b.pos.y - preferredTarget.y);
+        return distA - distB;
+      });
+
+      return valid[0].dir;
+    },
+    [GRID_SIZE]
+  );
+
+  // Main Dual-Snake Simultaneous Game Loop with Tail Biting Mechanics
+  useEffect(() => {
+    if (matchState !== "PLAYING") return;
+
+    const interval = setInterval(() => {
+      const curS1 = [...s1Ref.current];
+      const curS2 = [...s2Ref.current];
+      const p1Name = currentUser.name.split(" ")[0];
+      const p2Name = selectedOpponentName;
+
+      // 1. AI Decision
+      let nextDir2 = dir2Ref.current;
+      if (opponentType === "ai") {
+        const target = goldenStar || food;
+        nextDir2 = computeAiMove(curS2[0], target, dir2Ref.current, curS1, curS2);
+        setDir2(nextDir2);
+        dir2Ref.current = nextDir2;
+      }
+
+      // 2. Advance Next Heads
+      const head1: Point = { ...curS1[0] };
+      const d1 = dir1Ref.current;
+      if (d1 === "UP") head1.y -= 1;
+      if (d1 === "DOWN") head1.y += 1;
+      if (d1 === "LEFT") head1.x -= 1;
+      if (d1 === "RIGHT") head1.x += 1;
+
+      const head2: Point = { ...curS2[0] };
+      const d2 = dir2Ref.current;
+      if (d2 === "UP") head2.y -= 1;
+      if (d2 === "DOWN") head2.y += 1;
+      if (d2 === "LEFT") head2.x -= 1;
+      if (d2 === "RIGHT") head2.x += 1;
+
+      let p1Died = false;
+      let p2Died = false;
+      let roundReason = "";
+
+      // 3. Wall Collisions
+      if (head1.x < 0 || head1.x >= GRID_SIZE || head1.y < 0 || head1.y >= GRID_SIZE) {
+        p1Died = true;
+        roundReason = `${p1Name} crashed into the perimeter barrier!`;
+      }
+      if (head2.x < 0 || head2.x >= GRID_SIZE || head2.y < 0 || head2.y >= GRID_SIZE) {
+        p2Died = true;
+        roundReason = `${p2Name} crashed into the perimeter barrier!`;
+      }
+
+      // 4. Self Collision
+      if (curS1.slice(1).some((s) => s.x === head1.x && s.y === head1.y)) {
+        p1Died = true;
+        roundReason = `${p1Name} self-collided!`;
+      }
+      if (curS2.slice(1).some((s) => s.x === head2.x && s.y === head2.y)) {
+        p2Died = true;
+        roundReason = `${p2Name} self-collided!`;
+      }
+
+      // 5. Head-on Clash
+      if (head1.x === head2.x && head1.y === head2.y) {
+        if (curS1.length > curS2.length) {
+          p2Died = true;
+          roundReason = `💥 HEAD CLASH! ${p1Name} (${curS1.length}) overpowered ${p2Name} (${curS2.length})!`;
+        } else if (curS2.length > curS1.length) {
+          p1Died = true;
+          roundReason = `💥 HEAD CLASH! ${p2Name} (${curS2.length}) overpowered ${p1Name} (${curS1.length})!`;
+        } else {
+          p1Died = true;
+          p2Died = true;
+          roundReason = "💥 Mutual Head Clash! Draw!";
+        }
+      }
+
+      // Check if Round is already over due to walls or head clash
+      if (p1Died || p2Died) {
+        clearInterval(interval);
+        setRoundEndText(roundReason);
+        if (p1Died && !p2Died) {
+          // P2 wins round
+          const newRounds = roundsWonRef.current.p2 + 1;
+          setScores((sc) => ({ ...sc, p2: sc.p2 + 50 }));
+          setRoundsWon((rw) => ({ ...rw, p2: newRounds }));
+          if (newRounds >= 3) {
+            setMatchWinner(p2Name);
+            setMatchState("MATCH_OVER");
+          } else {
+            setMatchState("ROUND_END");
+          }
+        } else if (p2Died && !p1Died) {
+          // P1 wins round
+          const newRounds = roundsWonRef.current.p1 + 1;
+          const finalScore = scoresRef.current.p1 + 50;
+          setScores((sc) => ({ ...sc, p1: finalScore }));
+          setRoundsWon((rw) => ({ ...rw, p1: newRounds }));
+          if (newRounds >= 3) {
+            setMatchWinner(currentUser.name);
+            onSaveScore(finalScore + 100);
+            setMatchState("MATCH_OVER");
+          } else {
+            setMatchState("ROUND_END");
+          }
+        } else {
+          setMatchState("ROUND_END");
+        }
+        return;
+      }
+
+      // 6. TAIL BITING MECHANICS (Snake bites other's tail -> Biter GROWS & steals score, Bitten snake LOSES segments!)
+      let nextS1 = [head1, ...curS1];
+      let nextS2 = [head2, ...curS2];
+      let s1GrewByTail = 0;
+      let s2GrewByTail = 0;
+
+      // Check if P1's head bit any body/tail segment of P2 (from index 1 onwards)
+      const p2BittenIdx = curS2.findIndex((seg, idx) => idx > 0 && seg.x === head1.x && seg.y === head1.y);
+      if (p2BittenIdx !== -1) {
+        // P1 bit P2's tail!
+        const choppedCount = Math.max(1, curS2.length - p2BittenIdx);
+        // P2 shrinks
+        nextS2 = nextS2.slice(0, Math.max(1, nextS2.length - choppedCount));
+        // P1 grows and scores points!
+        s1GrewByTail = choppedCount;
+        setScores((sc) => ({ ...sc, p1: sc.p1 + choppedCount * 25 }));
+        setBiteAlert(`⚔️ CHOMP! ${p1Name} bit ${p2Name}'s tail! (+${choppedCount * 25} pts & +${choppedCount} length)`);
+
+        // If P2's body is decimated below 2 segments, P1 KOs P2!
+        if (nextS2.length < 2) {
+          clearInterval(interval);
+          setRoundEndText(`🏆 ${p1Name} bit off all of ${p2Name}'s tail and devoured them!`);
+          const newRounds = roundsWonRef.current.p1 + 1;
+          setRoundsWon((rw) => ({ ...rw, p1: newRounds }));
+          if (newRounds >= 3) {
+            setMatchWinner(currentUser.name);
+            onSaveScore(scoresRef.current.p1 + 100);
+            setMatchState("MATCH_OVER");
+          } else {
+            setMatchState("ROUND_END");
+          }
+          return;
+        }
+      }
+
+      // Check if P2's head bit any body/tail segment of P1 (from index 1 onwards)
+      const p1BittenIdx = curS1.findIndex((seg, idx) => idx > 0 && seg.x === head2.x && seg.y === head2.y);
+      if (p1BittenIdx !== -1) {
+        // P2 bit P1's tail!
+        const choppedCount = Math.max(1, curS1.length - p1BittenIdx);
+        // P1 shrinks
+        nextS1 = nextS1.slice(0, Math.max(1, nextS1.length - choppedCount));
+        // P2 grows and scores points!
+        s2GrewByTail = choppedCount;
+        setScores((sc) => ({ ...sc, p2: sc.p2 + choppedCount * 25 }));
+        setBiteAlert(`⚔️ CHOMP! ${p2Name} bit ${p1Name}'s tail! (+${choppedCount * 25} pts & +${choppedCount} length)`);
+
+        // If P1's body is decimated below 2 segments, P2 KOs P1!
+        if (nextS1.length < 2) {
+          clearInterval(interval);
+          setRoundEndText(`🏆 ${p2Name} bit off all of ${p1Name}'s tail and devoured them!`);
+          const newRounds = roundsWonRef.current.p2 + 1;
+          setRoundsWon((rw) => ({ ...rw, p2: newRounds }));
+          if (newRounds >= 3) {
+            setMatchWinner(p2Name);
+            setMatchState("MATCH_OVER");
+          } else {
+            setMatchState("ROUND_END");
+          }
+          return;
+        }
+      }
+
+      // 7. Food & Golden Star Ingestion
+      let p1AteFood = false;
+      let p2AteFood = false;
+
+      if (head1.x === food.x && head1.y === food.y) {
+        p1AteFood = true;
+        setScores((sc) => ({ ...sc, p1: sc.p1 + 10 }));
+      }
+      if (head2.x === food.x && head2.y === food.y) {
+        p2AteFood = true;
+        setScores((sc) => ({ ...sc, p2: sc.p2 + 10 }));
+      }
+
+      if (goldenStar && head1.x === goldenStar.x && head1.y === goldenStar.y) {
+        setScores((sc) => ({ ...sc, p1: sc.p1 + 25 }));
+        setGoldenStar(null);
+        s1GrewByTail += 1;
+      }
+      if (goldenStar && head2.x === goldenStar.x && head2.y === goldenStar.y) {
+        setScores((sc) => ({ ...sc, p2: sc.p2 + 25 }));
+        setGoldenStar(null);
+        s2GrewByTail += 1;
+      }
+
+      // If didn't eat food and didn't grow by tail bite, pop end to keep length
+      if (!p1AteFood && s1GrewByTail === 0) {
+        nextS1.pop();
+      }
+      if (!p2AteFood && s2GrewByTail === 0) {
+        nextS2.pop();
+      }
+
+      if (p1AteFood || p2AteFood) {
+        setFood(generateFood(nextS1, nextS2));
+      }
+
+      // Commit synchronized positions
+      setSnake1(nextS1);
+      setSnake2(nextS2);
+      s1Ref.current = nextS1;
+      s2Ref.current = nextS2;
+    }, 115);
+
+    return () => clearInterval(interval);
+  }, [
+    matchState,
+    food,
+    goldenStar,
+    opponentType,
+    selectedOpponentName,
+    currentUser.name,
+    computeAiMove,
+    generateFood,
+    onSaveScore,
+    GRID_SIZE,
+  ]);
+
+  // Auto clear bite notification after 1.8 seconds
+  useEffect(() => {
+    if (biteAlert) {
+      const timer = setTimeout(() => setBiteAlert(null), 1800);
+      return () => clearTimeout(timer);
+    }
+  }, [biteAlert]);
+
+  return (
+    <div className="w-full flex flex-col items-center select-none">
+      {/* Top Match Scoreboard */}
+      <div className="w-full max-w-md bg-neutral-950 border border-neutral-800 rounded-2xl p-3 mb-3 shadow-lg">
+        <div className="flex items-center justify-between">
+          {/* Player 1 (Emerald) */}
+          <div className="flex items-center space-x-2">
+            <div className="w-3.5 h-3.5 rounded-full bg-emerald-400 ring-2 ring-emerald-500/40" />
+            <div>
+              <div className="flex items-center space-x-1.5">
+                <span className="font-bold text-xs text-white">
+                  {currentUser.name.split(" ")[0]}
+                </span>
+                <span className="text-[10px] bg-emerald-950 text-emerald-400 font-mono font-bold px-1.5 py-0.2 rounded border border-emerald-800">
+                  {roundsWon.p1} WINS
+                </span>
+              </div>
+              <div className="flex items-center space-x-2 font-mono text-[11px]">
+                <span className="text-emerald-300 font-bold">{scores.p1} pts</span>
+                <span className="text-neutral-500">•</span>
+                <span className="text-emerald-400/90 text-[10px]">Len: {snake1.length}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="text-center px-2">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">
+              ROUND {roundNumber}
+            </span>
+            <div className="text-xs font-mono font-black text-amber-400">FIRST TO 3</div>
+          </div>
+
+          {/* Player 2 (Rose/Purple) */}
+          <div className="flex items-center space-x-2 text-right">
+            <div>
+              <div className="flex items-center space-x-1.5 justify-end">
+                <span className="text-[10px] bg-rose-950 text-rose-400 font-mono font-bold px-1.5 py-0.2 rounded border border-rose-800">
+                  {roundsWon.p2} WINS
+                </span>
+                <span className="font-bold text-xs text-white truncate max-w-[90px]">
+                  {selectedOpponentName}
+                </span>
+              </div>
+              <div className="flex items-center justify-end space-x-2 font-mono text-[11px]">
+                <span className="text-rose-400/90 text-[10px]">Len: {snake2.length}</span>
+                <span className="text-neutral-500">•</span>
+                <span className="text-rose-300 font-bold">{scores.p2} pts</span>
+              </div>
+            </div>
+            <div className="w-3.5 h-3.5 rounded-full bg-rose-500 ring-2 ring-rose-500/40" />
+          </div>
+        </div>
+      </div>
+
+      {/* Opponent Selection Bar */}
+      {matchState === "IDLE" && (
+        <div className="w-full max-w-md flex items-center justify-between gap-2 p-2 bg-neutral-950/80 border border-neutral-800 rounded-xl mb-3 text-xs">
+          <div className="flex items-center space-x-1">
+            <button
+              onClick={() => {
+                setOpponentType("ai");
+                setSelectedOpponentName("Smart Colleague AI");
+              }}
+              className={`flex items-center space-x-1 px-2.5 py-1 rounded-lg font-semibold transition cursor-pointer ${
+                opponentType === "ai"
+                  ? "bg-purple-600 text-white shadow-xs"
+                  : "text-neutral-400 hover:text-white"
+              }`}
+            >
+              <Bot className="w-3.5 h-3.5" />
+              <span>Vs AI Bot</span>
+            </button>
+            <button
+              onClick={() => {
+                setOpponentType("local");
+                setSelectedOpponentName("Colleague (P2)");
+              }}
+              className={`flex items-center space-x-1 px-2.5 py-1 rounded-lg font-semibold transition cursor-pointer ${
+                opponentType === "local"
+                  ? "bg-purple-600 text-white shadow-xs"
+                  : "text-neutral-400 hover:text-white"
+              }`}
+            >
+              <Users className="w-3.5 h-3.5" />
+              <span>Pass & Play (Local Duo)</span>
+            </button>
+          </div>
+
+          <div className="text-[10px] text-neutral-400 hidden sm:block">
+            {opponentType === "local" ? "P1: Arrows | P2: WASD" : "P1: Arrow Keys"}
+          </div>
+        </div>
+      )}
+
+      {/* 20x20 Neon Grid Arena Canvas */}
+      <div className="relative w-[310px] h-[310px] sm:w-[360px] sm:h-[360px] bg-neutral-950 border-2 border-neutral-800 rounded-3xl overflow-hidden shadow-2xl flex items-center justify-center">
+        {/* Floating Tail-Bite Notification */}
+        {biteAlert && matchState === "PLAYING" && (
+          <div className="absolute top-3 z-30 px-3 py-1 rounded-full text-[10px] font-black bg-gradient-to-r from-amber-500 to-rose-500 text-white shadow-lg animate-bounce ring-1 ring-white/40">
+            {biteAlert}
+          </div>
+        )}
+
+        {matchState === "IDLE" && (
+          <div className="text-center p-6 space-y-3 z-20">
+            <div className="flex items-center justify-center space-x-2 text-3xl">
+              <span className="text-emerald-400">🐍</span>
+              <span className="text-amber-400 text-lg font-black">VS</span>
+              <span className="text-rose-500">🐍</span>
+            </div>
+            <h4 className="text-sm font-extrabold text-white">2-Player Snake Tail-Duel</h4>
+            <p className="text-xs text-neutral-400 max-w-[250px] leading-relaxed">
+              Two snakes slither simultaneously! Hunt and bite the other snake&apos;s tail to steal length and points while growing longer! First to 3 round wins takes the championship!
+            </p>
+            <button
+              onClick={startNewMatch}
+              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs shadow-lg shadow-emerald-600/30 transition transform hover:scale-105 cursor-pointer flex items-center space-x-2 mx-auto"
+            >
+              <Play className="w-3.5 h-3.5 fill-current" />
+              <span>Start Match</span>
+            </button>
+          </div>
+        )}
+
+        {/* Round Over Modal Banner */}
+        {matchState === "ROUND_END" && (
+          <div className="absolute inset-0 bg-neutral-950/90 backdrop-blur-xs flex flex-col items-center justify-center p-6 text-center space-y-3 z-30 animate-in fade-in">
+            <span className="text-2xl font-bold text-amber-400">ROUND OVER</span>
+            <p className="text-xs text-white font-semibold max-w-[220px]">{roundEndText}</p>
+            <div className="text-xs text-neutral-300 font-mono">
+              Score: {currentUser.name.split(" ")[0]} ({roundsWon.p1}) — {selectedOpponentName} (
+              {roundsWon.p2})
+            </div>
+            <button
+              onClick={() => {
+                setRoundNumber((r) => r + 1);
+                startNextRound();
+              }}
+              className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition cursor-pointer flex items-center space-x-1.5 shadow-md shadow-emerald-600/30"
+            >
+              <Play className="w-3.5 h-3.5 fill-current" />
+              <span>Next Round ({roundNumber + 1})</span>
+            </button>
+          </div>
+        )}
+
+        {/* Match Championship Over */}
+        {matchState === "MATCH_OVER" && (
+          <div className="absolute inset-0 bg-neutral-950/95 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center space-y-3.5 z-30 animate-in fade-in">
+            <span className="text-4xl animate-bounce">🏆</span>
+            <h4 className="text-base font-black text-amber-400 uppercase tracking-wider">
+              {matchWinner} WINS THE DUEL!
+            </h4>
+            <p className="text-xs text-neutral-300">
+              Championship Winner:{" "}
+              <span className="text-white font-bold">
+                {roundsWon.p1} vs {roundsWon.p2}
+              </span>
+            </p>
+            <div className="flex flex-col sm:flex-row gap-2 pt-2">
+              <button
+                onClick={startNewMatch}
+                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition cursor-pointer flex items-center justify-center space-x-1.5"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>Rematch</span>
+              </button>
+              <button
+                onClick={() =>
+                  onShareResult(
+                    `⚔️ 2-Player Snake Tail Duel: ${matchWinner} won the championship (${roundsWon.p1} vs ${roundsWon.p2})! 🐍 Tail bites and epic clashes in the Team Arcade!`
+                  )
+                }
+                className="px-3.5 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-200 font-semibold text-xs border border-neutral-700 transition cursor-pointer flex items-center justify-center space-x-1.5"
+              >
+                <Share2 className="w-3.5 h-3.5 text-indigo-400" />
+                <span>Share in Channel</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Dual Snakes & Items Rendering */}
+        {matchState !== "IDLE" && (
+          <div
+            className="w-full h-full grid"
+            style={{
+              gridTemplateColumns: `repeat(${GRID_SIZE}, minmax(0, 1fr))`,
+              gridTemplateRows: `repeat(${GRID_SIZE}, minmax(0, 1fr))`,
+            }}
+          >
+            {Array.from({ length: GRID_SIZE * GRID_SIZE }).map((_, idx) => {
+              const x = idx % GRID_SIZE;
+              const y = Math.floor(idx / GRID_SIZE);
+
+              const isHead1 = snake1[0]?.x === x && snake1[0]?.y === y;
+              const isBody1 = snake1.slice(1).some((s) => s.x === x && s.y === y);
+
+              const isHead2 = snake2[0]?.x === x && snake2[0]?.y === y;
+              const isBody2 = snake2.slice(1).some((s) => s.x === x && s.y === y);
+
+              const isFood = food.x === x && food.y === y;
+              const isStar = goldenStar && goldenStar.x === x && goldenStar.y === y;
+
+              // Player 1 (Emerald)
+              if (isHead1) {
+                return (
+                  <div
+                    key={idx}
+                    className="bg-emerald-400 rounded-sm m-[1px] shadow-sm shadow-emerald-400/80 ring-1 ring-white/60"
+                  />
+                );
+              }
+              if (isBody1) {
+                return (
+                  <div
+                    key={idx}
+                    className="bg-emerald-600 rounded-xs m-[1px] opacity-90"
+                  />
+                );
+              }
+
+              // Player 2 (Rose/Purple)
+              if (isHead2) {
+                return (
+                  <div
+                    key={idx}
+                    className="bg-rose-400 rounded-sm m-[1px] shadow-sm shadow-rose-400/80 ring-1 ring-white/60"
+                  />
+                );
+              }
+              if (isBody2) {
+                return (
+                  <div
+                    key={idx}
+                    className="bg-rose-600 rounded-xs m-[1px] opacity-90"
+                  />
+                );
+              }
+
+              // Food & Powerups
+              if (isFood) {
+                return (
+                  <div
+                    key={idx}
+                    className="bg-amber-400 rounded-full m-[2px] animate-pulse shadow-sm shadow-amber-400/80"
+                  />
+                );
+              }
+              if (isStar) {
+                return (
+                  <div
+                    key={idx}
+                    className="bg-yellow-300 rounded-full m-[1px] animate-bounce shadow-md shadow-yellow-300"
+                  />
+                );
+              }
+
+              return (
+                <div
+                  key={idx}
+                  className="border border-neutral-900/40"
+                />
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Cross-Platform On-Screen Touch Controls */}
+      <div className="w-full max-w-md mt-4 flex items-center justify-between px-2">
+        {/* Left Side: Player 2 (WASD) Controls in Local Mode */}
+        {opponentType === "local" ? (
+          <div className="flex flex-col items-center">
+            <span className="text-[10px] font-bold text-rose-400 mb-1">P2 (W,A,S,D)</span>
+            <button
+              onClick={() => {
+                if (dir2Ref.current !== "DOWN") {
+                  setDir2("UP");
+                  dir2Ref.current = "UP";
+                }
+              }}
+              className="w-8 h-8 bg-neutral-800 hover:bg-neutral-700 active:bg-rose-600 rounded-lg flex items-center justify-center text-white text-xs font-bold mb-1"
+            >
+              W
+            </button>
+            <div className="flex space-x-1">
+              <button
+                onClick={() => {
+                  if (dir2Ref.current !== "RIGHT") {
+                    setDir2("LEFT");
+                    dir2Ref.current = "LEFT";
+                  }
+                }}
+                className="w-8 h-8 bg-neutral-800 hover:bg-neutral-700 active:bg-rose-600 rounded-lg flex items-center justify-center text-white text-xs font-bold"
+              >
+                A
+              </button>
+              <button
+                onClick={() => {
+                  if (dir2Ref.current !== "UP") {
+                    setDir2("DOWN");
+                    dir2Ref.current = "DOWN";
+                  }
+                }}
+                className="w-8 h-8 bg-neutral-800 hover:bg-neutral-700 active:bg-rose-600 rounded-lg flex items-center justify-center text-white text-xs font-bold"
+              >
+                S
+              </button>
+              <button
+                onClick={() => {
+                  if (dir2Ref.current !== "LEFT") {
+                    setDir2("RIGHT");
+                    dir2Ref.current = "RIGHT";
+                  }
+                }}
+                className="w-8 h-8 bg-neutral-800 hover:bg-neutral-700 active:bg-rose-600 rounded-lg flex items-center justify-center text-white text-xs font-bold"
+              >
+                D
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="text-xs text-neutral-500 font-mono flex items-center space-x-1.5">
+            <Bot className="w-4 h-4 text-purple-400" />
+            <span>AI Bot hunting & fighting</span>
+          </div>
+        )}
+
+        {/* Right Side: Player 1 (Arrow Keys) Touch D-Pad */}
+        <div className="flex flex-col items-center">
+          <span className="text-[10px] font-bold text-emerald-400 mb-1">P1 (Arrows)</span>
+          <button
+            onClick={() => {
+              if (dir1Ref.current !== "DOWN") {
+                setDir1("UP");
+                dir1Ref.current = "UP";
+              }
+            }}
+            className="w-8 h-8 bg-neutral-800 hover:bg-neutral-700 active:bg-emerald-600 rounded-lg flex items-center justify-center text-white mb-1"
+          >
+            <ChevronUp className="w-4 h-4" />
+          </button>
+          <div className="flex space-x-1">
+            <button
+              onClick={() => {
+                if (dir1Ref.current !== "RIGHT") {
+                  setDir1("LEFT");
+                  dir1Ref.current = "LEFT";
+                }
+              }}
+              className="w-8 h-8 bg-neutral-800 hover:bg-neutral-700 active:bg-emerald-600 rounded-lg flex items-center justify-center text-white"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => {
+                if (dir1Ref.current !== "UP") {
+                  setDir1("DOWN");
+                  dir1Ref.current = "DOWN";
+                }
+              }}
+              className="w-8 h-8 bg-neutral-800 hover:bg-neutral-700 active:bg-emerald-600 rounded-lg flex items-center justify-center text-white"
+            >
+              <ChevronDown className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => {
+                if (dir1Ref.current !== "LEFT") {
+                  setDir1("RIGHT");
+                  dir1Ref.current = "RIGHT";
+                }
+              }}
+              className="w-8 h-8 bg-neutral-800 hover:bg-neutral-700 active:bg-emerald-600 rounded-lg flex items-center justify-center text-white"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// =============================================================================
+// 2. CLASSIC RETRO SOLO SNAKE
+// =============================================================================
+
+function ClassicSnakeGame({
   currentUser,
   onSaveScore,
   onShareResult,
@@ -357,10 +1220,7 @@ function SnakeGame({
 
   const handleGameOver = useCallback(() => {
     setGameState("GAMEOVER");
-    setHighScore((prev) => {
-      const best = Math.max(prev, score);
-      return best;
-    });
+    setHighScore((prev) => Math.max(prev, score));
     if (score > 0) {
       onSaveScore(score);
     }
@@ -454,7 +1314,7 @@ function SnakeGame({
         {gameState === "IDLE" && (
           <div className="text-center p-6 space-y-3">
             <span className="text-4xl animate-bounce inline-block">🐍</span>
-            <h4 className="text-sm font-bold text-white">Classic Snake Arena</h4>
+            <h4 className="text-sm font-bold text-white">Classic Solo Snake</h4>
             <p className="text-xs text-neutral-400 max-w-[200px]">
               Use Arrow keys or On-screen controls to eat food and grow!
             </p>
@@ -486,7 +1346,7 @@ function SnakeGame({
               <button
                 onClick={() =>
                   onShareResult(
-                    `🐍 I just scored ${score} points in Snake Arena! Beat my score in the Team Arcade!`
+                    `🐍 I just scored ${score} points in Classic Snake Arena! Beat my score in the Team Arcade!`
                   )
                 }
                 className="px-3.5 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-200 font-semibold text-xs border border-neutral-700 transition cursor-pointer flex items-center justify-center space-x-1.5"
@@ -545,7 +1405,7 @@ function SnakeGame({
         )}
       </div>
 
-      {/* Touch D-Pad for Mobile & Quick Controls */}
+      {/* Touch D-Pad for Mobile */}
       <div className="mt-4 flex flex-col items-center">
         <button
           onClick={() => directionRef.current !== "DOWN" && setDirection("UP")}
@@ -579,7 +1439,7 @@ function SnakeGame({
 }
 
 // =============================================================================
-// 2. DUO TIC-TAC-TOE (PASS & PLAY OR REALTIME ONLINE DUO)
+// 3. DUO TIC-TAC-TOE (PASS & PLAY OR REALTIME ONLINE DUO)
 // =============================================================================
 
 function DuoTicTacToe({
@@ -761,7 +1621,7 @@ function DuoTicTacToe({
 }
 
 // =============================================================================
-// 3. TEAM REFLEX DUEL (SPEED REACTION CHALLENGE)
+// 4. TEAM REFLEX DUEL
 // =============================================================================
 
 function ReflexDuel({
