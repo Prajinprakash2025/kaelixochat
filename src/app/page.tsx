@@ -125,7 +125,13 @@ export default function KaelixoApp() {
     if (typeof window !== "undefined") {
       try {
         const saved = localStorage.getItem("kaelixo_user");
-        if (saved) return JSON.parse(saved);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed && typeof parsed.avatar === "string" && parsed.avatar.startsWith("blob:")) {
+            parsed.avatar = `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(parsed.name || "user")}`;
+          }
+          return parsed;
+        }
       } catch {}
     }
     return DEFAULT_USER;
@@ -147,7 +153,17 @@ export default function KaelixoApp() {
         const saved = localStorage.getItem("kaelixo_team_members");
         if (saved) {
           const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            return parsed.map((m: any) => {
+              if (m.avatar && typeof m.avatar === "string" && m.avatar.startsWith("blob:")) {
+                return {
+                  ...m,
+                  avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(m.name || "member")}`,
+                };
+              }
+              return m;
+            });
+          }
         }
       } catch {}
     }
@@ -723,6 +739,27 @@ export default function KaelixoApp() {
               }
               return merged;
             });
+
+            // If currentUser profile exists in Supabase with a valid avatar, sync it
+            const currentDbProfile = dbMembers.find(
+              (m: any) => m.name === currentUser.name || m.user_id === currentUser.id
+            );
+            if (
+              currentDbProfile &&
+              currentDbProfile.avatar &&
+              currentUser.avatar !== currentDbProfile.avatar
+            ) {
+              setCurrentUser((prev) => {
+                const updated = {
+                  ...prev,
+                  avatar: currentDbProfile.avatar,
+                };
+                try {
+                  localStorage.setItem("kaelixo_user", JSON.stringify(updated));
+                } catch {}
+                return updated;
+              });
+            }
           }
         } catch (memberErr) {
           console.warn("User presence fetch note:", memberErr);
@@ -2460,6 +2497,7 @@ export default function KaelixoApp() {
             setActiveProfileMember(member);
             setRightPanelMode("profile");
           }}
+          channelId={activeChannelId}
         />
 
         {/* Input Composer */}

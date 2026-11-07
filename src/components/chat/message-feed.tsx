@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Message, WorkspaceMember, reactionsMapToArray } from "@/types";
-import { Pin, MessageSquare, MoreHorizontal, Check, SmilePlus, Pencil, Trash2 } from "lucide-react";
+import { Pin, MessageSquare, MoreHorizontal, Check, SmilePlus, Pencil, Trash2, ArrowDown } from "lucide-react";
 import { AttachmentPreview } from "./attachment-preview";
 import { EmojiPicker } from "./emoji-picker";
 import { DeleteMessageModal } from "@/components/modals/delete-message-modal";
@@ -17,6 +17,7 @@ interface MessageFeedProps {
   onEditMessage?: (messageId: string, newContent: string) => void;
   onDeleteMessage?: (messageId: string) => void;
   onOpenProfile?: (member: WorkspaceMember) => void;
+  channelId?: string;
 }
 
 export function formatReactorsTooltip(
@@ -93,6 +94,7 @@ export function MessageFeed({
   onEditMessage,
   onDeleteMessage,
   onOpenProfile,
+  channelId,
 }: MessageFeedProps) {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [activeHoverPickerId, setActiveHoverPickerId] = useState<string | null>(null);
@@ -100,6 +102,105 @@ export function MessageFeed({
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState("");
   const [messageToDelete, setMessageToDelete] = useState<Message | null>(null);
+
+  const containerRef = useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [showScrollBottom, setShowScrollBottom] = useState(false);
+  const [unreadBelowCount, setUnreadBelowCount] = useState(0);
+  const isNearBottomRef = useRef(true);
+  const prevChannelIdRef = useRef<string | undefined>(channelId);
+  const prevMessagesLengthRef = useRef(messages.length);
+  const isInitialMountRef = useRef(true);
+
+  const scrollToBottom = (behavior: ScrollBehavior = "smooth") => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior });
+    }
+    if (containerRef.current) {
+      if (behavior === "auto") {
+        containerRef.current.scrollTop = containerRef.current.scrollHeight;
+      } else {
+        containerRef.current.scrollTo({
+          top: containerRef.current.scrollHeight,
+          behavior: "smooth",
+        });
+      }
+    }
+    setShowScrollBottom(false);
+    setUnreadBelowCount(0);
+    isNearBottomRef.current = true;
+  };
+
+  const handleScroll = () => {
+    const el = containerRef.current;
+    if (!el) return;
+    const threshold = 120;
+    const distanceToBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    const isClose = distanceToBottom <= threshold;
+    isNearBottomRef.current = isClose;
+
+    if (isClose) {
+      setShowScrollBottom(false);
+      setUnreadBelowCount(0);
+    } else if (distanceToBottom > 200) {
+      setShowScrollBottom(true);
+    }
+  };
+
+  // Scroll to bottom on channel change or initial mount
+  useEffect(() => {
+    if (isInitialMountRef.current || prevChannelIdRef.current !== channelId) {
+      isInitialMountRef.current = false;
+      prevChannelIdRef.current = channelId;
+      prevMessagesLengthRef.current = messages.length;
+      setShowScrollBottom(false);
+      setUnreadBelowCount(0);
+      isNearBottomRef.current = true;
+
+      const timer = setTimeout(() => {
+        scrollToBottom("auto");
+      }, 30);
+      return () => clearTimeout(timer);
+    }
+
+    // New messages added to active channel
+    if (messages.length > prevMessagesLengthRef.current) {
+      const diff = messages.length - prevMessagesLengthRef.current;
+      const lastMessage = messages[messages.length - 1];
+      const isSentByMe = Boolean(
+        (lastMessage?.senderId && lastMessage.senderId === currentUser.id) ||
+        (lastMessage?.sender?.id && lastMessage.sender.id === currentUser.id) ||
+        (lastMessage?.senderName && lastMessage.senderName === currentUser.name) ||
+        (lastMessage?.sender?.name && lastMessage.sender.name === currentUser.name)
+      );
+
+      if (isSentByMe || isNearBottomRef.current) {
+        requestAnimationFrame(() => {
+          scrollToBottom("smooth");
+        });
+      } else {
+        setShowScrollBottom(true);
+        setUnreadBelowCount((c) => c + diff);
+      }
+    }
+
+    prevMessagesLengthRef.current = messages.length;
+  }, [messages, channelId, currentUser]);
+
+  // Keep pinned to bottom when content/images resize if user was already at bottom
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+
+    const ro = new ResizeObserver(() => {
+      if (isNearBottomRef.current) {
+        el.scrollTop = el.scrollHeight;
+      }
+    });
+
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   const handleCopy = (id: string, text: string) => {
     navigator.clipboard.writeText(text);
@@ -189,7 +290,11 @@ export function MessageFeed({
   };
 
   return (
-    <div className="flex-1 overflow-y-auto px-6 py-6 space-y-5 custom-scrollbar">
+    <div
+      ref={containerRef}
+      onScroll={handleScroll}
+      className="relative flex-1 overflow-y-auto px-6 py-6 space-y-5 custom-scrollbar"
+    >
       {messages.length === 0 ? (
         <div className="h-full flex flex-col items-center justify-center text-center text-neutral-400 py-16">
           <div className="w-16 h-16 rounded-2xl bg-indigo-50 dark:bg-neutral-800 flex items-center justify-center text-indigo-500 mb-3 text-2xl">
@@ -612,6 +717,27 @@ export function MessageFeed({
             </div>
           );
         })
+      )}
+
+      {/* Auto-scroll Bottom Anchor */}
+      <div ref={messagesEndRef} className="h-px w-full pointer-events-none" />
+
+      {/* Floating Slack-grade Scroll to Bottom Pill */}
+      {showScrollBottom && (
+        <div className="sticky bottom-2 left-0 right-0 flex justify-center z-30 pointer-events-none">
+          <button
+            type="button"
+            onClick={() => scrollToBottom("smooth")}
+            className="pointer-events-auto flex items-center space-x-2 px-4 py-2 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white shadow-xl text-xs font-semibold cursor-pointer transition-all transform hover:scale-105 active:scale-95 border border-indigo-400/40"
+          >
+            <ArrowDown className="w-3.5 h-3.5 animate-bounce" />
+            <span>
+              {unreadBelowCount > 0
+                ? `${unreadBelowCount} new ${unreadBelowCount === 1 ? "message" : "messages"}`
+                : "Scroll to latest"}
+            </span>
+          </button>
+        </div>
       )}
 
       {/* Delete Confirmation Modal (Feature 17) */}

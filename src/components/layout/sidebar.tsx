@@ -390,7 +390,13 @@ export function Sidebar({
                         <img
                           src={member.avatar}
                           alt={member.name}
-                          className="w-6 h-6 rounded-lg bg-neutral-800"
+                          className="w-6 h-6 rounded-lg bg-neutral-800 object-cover"
+                          onError={(e) => {
+                            e.currentTarget.onerror = null;
+                            e.currentTarget.src = `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(
+                              member.name
+                            )}`;
+                          }}
                         />
                         <span
                           className={`absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full ${getStatusColor(
@@ -430,7 +436,13 @@ export function Sidebar({
             <img
               src={currentUser.avatar}
               alt={currentUser.name}
-              className="w-8 h-8 rounded-xl bg-neutral-800 ring-1 ring-neutral-700 group-hover:ring-indigo-500 transition"
+              className="w-8 h-8 rounded-xl bg-neutral-800 ring-1 ring-neutral-700 group-hover:ring-indigo-500 transition object-cover"
+              onError={(e) => {
+                e.currentTarget.onerror = null;
+                e.currentTarget.src = `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(
+                  currentUser.name
+                )}`;
+              }}
             />
             <span
               className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full ${getStatusColor(
