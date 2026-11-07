@@ -16,6 +16,12 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Kaelixo — Enterprise Team Collaboration & Chat",
   description: "Real-time enterprise team collaboration and modern Slack-grade communication platform",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Kaelixo",
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

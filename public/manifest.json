@@ -1,0 +1,21 @@
+{
+  "name": "Kaelixo — Enterprise Workspace",
+  "short_name": "Kaelixo",
+  "description": "Enterprise team collaboration, messaging and workspace software",
+  "start_url": "/",
+  "id": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0a0a0a",
+  "theme_color": "#10b981",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["business", "productivity", "social"]
+}

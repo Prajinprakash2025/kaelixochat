@@ -44,6 +44,7 @@ import { UserProfileDrawer } from "@/components/profile/user-profile-drawer";
 import { EditProfileModal } from "@/components/profile/edit-profile-modal";
 import { GamesModal } from "@/components/games/games-modal";
 import { PreferencesModal } from "@/components/preferences/preferences-modal";
+import { InstallPwaButton } from "@/components/layout/install-pwa-button";
 import { usePreferences } from "@/context/preferences-context";
 import {
   Hash,
@@ -2500,6 +2501,9 @@ export default function KaelixoApp() {
               <Share2 className="w-3.5 h-3.5 text-indigo-500" />
               <span>Invite</span>
             </button>
+
+            {/* PWA App Install Button (Hides automatically once installed) */}
+            <InstallPwaButton />
 
             {/* Quick Light / Dark Mode Toggle */}
             <button
