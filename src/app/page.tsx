@@ -42,6 +42,8 @@ import { AddMemberModal } from "@/components/directory/add-member-modal";
 import { UserProfileDrawer } from "@/components/profile/user-profile-drawer";
 import { EditProfileModal } from "@/components/profile/edit-profile-modal";
 import { GamesModal } from "@/components/games/games-modal";
+import { PreferencesModal } from "@/components/preferences/preferences-modal";
+import { usePreferences } from "@/context/preferences-context";
 import {
   Hash,
   Lock,
@@ -55,6 +57,9 @@ import {
   Users,
   Gamepad2,
   X as CloseIcon,
+  Sun,
+  Moon,
+  Settings,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
@@ -236,6 +241,17 @@ export default function KaelixoApp() {
   const [_isThreadLoading, setIsThreadLoading] = useState(false);
 
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+
+  // Appearance & Preferences
+  const {
+    colorMode,
+    resolvedMode,
+    toggleColorMode,
+    isPreferencesOpen,
+    openPreferences,
+    closePreferences,
+    initialTab,
+  } = usePreferences();
 
   const realtimeChannelRef = useRef<any>(null);
 
@@ -2255,6 +2271,7 @@ export default function KaelixoApp() {
         onOpenInviteModal={() => setIsInviteModalOpen(true)}
         onOpenMemberDirectory={() => setIsMemberDirectoryOpen(true)}
         onOpenGamesModal={() => setIsGamesModalOpen(true)}
+        onOpenPreferences={() => openPreferences("appearance")}
         onOpenUserProfile={(member) => {
           setActiveProfileMember(member);
           setRightPanelMode("profile");
@@ -2452,6 +2469,31 @@ export default function KaelixoApp() {
             >
               <Share2 className="w-3.5 h-3.5 text-indigo-500" />
               <span>Invite</span>
+            </button>
+
+            {/* Quick Light / Dark Mode Toggle */}
+            <button
+              type="button"
+              onClick={toggleColorMode}
+              title={`Switch to ${resolvedMode === "dark" ? "Light" : "Dark"} Mode`}
+              className="flex items-center justify-center p-2 rounded-xl text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white bg-neutral-100 dark:bg-neutral-800/80 hover:bg-neutral-200 dark:hover:bg-neutral-700/80 border border-neutral-200 dark:border-neutral-700/60 transition cursor-pointer"
+            >
+              {resolvedMode === "dark" ? (
+                <Sun className="w-4 h-4 sm:w-3.5 sm:h-3.5 text-amber-400" />
+              ) : (
+                <Moon className="w-4 h-4 sm:w-3.5 sm:h-3.5 text-indigo-500" />
+              )}
+            </button>
+
+            {/* Slack Preferences Modal Trigger */}
+            <button
+              type="button"
+              onClick={() => openPreferences("appearance")}
+              title="Preferences (Appearance, Themes, Dark/Light mode) [Ctrl+,]"
+              className="flex items-center space-x-1.5 p-2 sm:px-2.5 sm:py-1.5 rounded-xl text-xs font-semibold text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white bg-neutral-100 dark:bg-neutral-800/80 hover:bg-neutral-200 dark:hover:bg-neutral-700/80 border border-neutral-200 dark:border-neutral-700/60 transition cursor-pointer"
+            >
+              <Settings className="w-4 h-4 sm:w-3.5 sm:h-3.5 text-neutral-500 dark:text-neutral-400" />
+              <span className="hidden xl:inline">Preferences</span>
             </button>
 
             {/* User Profile Drawer Trigger */}
@@ -2818,6 +2860,13 @@ export default function KaelixoApp() {
         teamMembers={membersWithPresence}
         onShareToChannel={(text) => handleSendMessage(text)}
         activeChannelName={activeChannel.name}
+      />
+
+      {/* Slack Preferences & Appearance Modal */}
+      <PreferencesModal
+        isOpen={isPreferencesOpen}
+        onClose={closePreferences}
+        defaultTab={initialTab}
       />
     </div>
   );

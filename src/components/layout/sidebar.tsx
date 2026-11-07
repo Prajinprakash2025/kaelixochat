@@ -23,6 +23,7 @@ import {
   LogOut,
   Users,
   Gamepad2,
+  Settings,
 } from "lucide-react";
 import { DepartmentCode, Channel, WorkspaceMember, Department, Organization } from "@/types";
 
@@ -45,6 +46,7 @@ interface SidebarProps {
   onOpenInviteModal?: () => void;
   onOpenMemberDirectory?: () => void;
   onOpenGamesModal?: () => void;
+  onOpenPreferences?: () => void;
   onOpenUserProfile?: (member: WorkspaceMember) => void;
   onSelectDirectMessage: (member: WorkspaceMember) => void;
   onLogout?: () => void;
@@ -71,6 +73,7 @@ export function Sidebar({
   onOpenInviteModal,
   onOpenMemberDirectory,
   onOpenGamesModal,
+  onOpenPreferences,
   onOpenUserProfile,
   onSelectDirectMessage,
   onLogout,
@@ -278,7 +281,22 @@ export function Sidebar({
               </button>
             ))}
 
-            <div className="pt-1.5 border-t border-neutral-800">
+            <div className="pt-1.5 border-t border-neutral-800 space-y-0.5">
+              {onOpenPreferences && (
+                <button
+                  onClick={() => {
+                    setShowOrgDropdown(false);
+                    onOpenPreferences();
+                  }}
+                  className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs font-semibold text-neutral-300 hover:text-white hover:bg-neutral-800 transition cursor-pointer"
+                >
+                  <div className="flex items-center space-x-2">
+                    <Settings className="w-3.5 h-3.5 text-neutral-400" />
+                    <span>Preferences</span>
+                  </div>
+                  <span className="text-[10px] text-neutral-500 font-mono">Ctrl + ,</span>
+                </button>
+              )}
               <button
                 onClick={() => {
                   setShowOrgDropdown(false);
@@ -486,10 +504,19 @@ export function Sidebar({
         </div>
 
         <div className="flex items-center space-x-1 flex-shrink-0">
+          {onOpenPreferences && (
+            <button
+              onClick={onOpenPreferences}
+              title="Preferences (Appearance, Themes, Dark/Light mode) [Ctrl+,]"
+              className="text-neutral-400 hover:text-white p-1.5 rounded-lg hover:bg-neutral-800 transition cursor-pointer"
+            >
+              <Settings className="w-4 h-4" />
+            </button>
+          )}
           <button
             onClick={onOpenAuthModal}
             title="Switch Account / Edit Profile"
-            className="text-neutral-400 hover:text-white p-1.5 rounded-lg hover:bg-neutral-800 transition"
+            className="text-neutral-400 hover:text-white p-1.5 rounded-lg hover:bg-neutral-800 transition cursor-pointer"
           >
             <Smile className="w-4 h-4" />
           </button>
