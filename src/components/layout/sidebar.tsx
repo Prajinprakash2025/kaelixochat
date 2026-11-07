@@ -22,6 +22,7 @@ import {
   Share2,
   LogOut,
   Users,
+  Gamepad2,
 } from "lucide-react";
 import { DepartmentCode, Channel, WorkspaceMember, Department, Organization } from "@/types";
 
@@ -43,6 +44,7 @@ interface SidebarProps {
   onOpenAuthModal: () => void;
   onOpenInviteModal?: () => void;
   onOpenMemberDirectory?: () => void;
+  onOpenGamesModal?: () => void;
   onOpenUserProfile?: (member: WorkspaceMember) => void;
   onSelectDirectMessage: (member: WorkspaceMember) => void;
   onLogout?: () => void;
@@ -68,6 +70,7 @@ export function Sidebar({
   onOpenAuthModal,
   onOpenInviteModal,
   onOpenMemberDirectory,
+  onOpenGamesModal,
   onOpenUserProfile,
   onSelectDirectMessage,
   onLogout,
@@ -222,6 +225,27 @@ export function Sidebar({
               </div>
               <span className="font-mono text-[10px] text-neutral-400 font-bold bg-neutral-800 px-1.5 py-0.5 rounded border border-neutral-700">
                 {teamMembers.length}
+              </span>
+            </button>
+          </div>
+        )}
+
+        {/* Team Arcade & Games Navigation Trigger */}
+        {onOpenGamesModal && (
+          <div className="mt-1.5">
+            <button
+              onClick={onOpenGamesModal}
+              className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl bg-neutral-800/60 hover:bg-neutral-800 border border-neutral-700/60 text-xs transition group cursor-pointer"
+              title="Open Team Arcade (Snake, Duo Tic-Tac-Toe, Reflex Duel)"
+            >
+              <div className="flex items-center space-x-1.5 min-w-0">
+                <Gamepad2 className="w-3.5 h-3.5 text-emerald-400 group-hover:text-emerald-300" />
+                <span className="text-[11px] font-semibold text-neutral-300 group-hover:text-white truncate">
+                  Team Arcade
+                </span>
+              </div>
+              <span className="font-mono text-[9px] text-emerald-400 font-extrabold bg-emerald-950/80 px-1.5 py-0.2 rounded border border-emerald-800/70">
+                PLAY
               </span>
             </button>
           </div>

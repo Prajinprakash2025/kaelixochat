@@ -41,6 +41,7 @@ import { MemberDirectoryModal } from "@/components/directory/member-directory-mo
 import { AddMemberModal } from "@/components/directory/add-member-modal";
 import { UserProfileDrawer } from "@/components/profile/user-profile-drawer";
 import { EditProfileModal } from "@/components/profile/edit-profile-modal";
+import { GamesModal } from "@/components/games/games-modal";
 import {
   Hash,
   Lock,
@@ -52,6 +53,7 @@ import {
   Share2,
   Pin,
   Users,
+  Gamepad2,
   X as CloseIcon,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -202,6 +204,7 @@ export default function KaelixoApp() {
   const [isMemberDirectoryOpen, setIsMemberDirectoryOpen] = useState(false);
   const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
   const [isEditProfileModalOpen, setIsEditProfileModalOpen] = useState(false);
+  const [isGamesModalOpen, setIsGamesModalOpen] = useState(false);
   const [activeProfileMember, setActiveProfileMember] = useState<WorkspaceMember | null>(null);
 
   const [initialInviteCode] = useState(() => {
@@ -2251,6 +2254,7 @@ export default function KaelixoApp() {
         onOpenAuthModal={() => setIsAuthModalOpen(true)}
         onOpenInviteModal={() => setIsInviteModalOpen(true)}
         onOpenMemberDirectory={() => setIsMemberDirectoryOpen(true)}
+        onOpenGamesModal={() => setIsGamesModalOpen(true)}
         onOpenUserProfile={(member) => {
           setActiveProfileMember(member);
           setRightPanelMode("profile");
@@ -2398,6 +2402,17 @@ export default function KaelixoApp() {
               onMarkAllAsRead={handleMarkAllNotificationsAsRead}
               onSelectNotification={handleSelectNotification}
             />
+
+            {/* Team Arcade Trigger Button */}
+            <button
+              type="button"
+              onClick={() => setIsGamesModalOpen(true)}
+              className="flex items-center space-x-1.5 p-2 sm:px-2.5 sm:py-1.5 rounded-xl text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60 transition cursor-pointer shadow-xs"
+              title="Team Arcade: Snake, Duo Tic-Tac-Toe, Reflex Duel"
+            >
+              <Gamepad2 className="w-4 h-4 sm:w-3.5 sm:h-3.5 text-emerald-500" />
+              <span className="hidden md:inline">Games</span>
+            </button>
 
             {/* Feature 18: Pinned Messages Trigger with Count Badge */}
             <button
@@ -2793,6 +2808,16 @@ export default function KaelixoApp() {
         currentUser={currentUser}
         departments={departments}
         onSaveProfile={handleSaveProfile}
+      />
+
+      {/* Team Arcade & Duo Games Modal */}
+      <GamesModal
+        isOpen={isGamesModalOpen}
+        onClose={() => setIsGamesModalOpen(false)}
+        currentUser={currentUser}
+        teamMembers={membersWithPresence}
+        onShareToChannel={(text) => handleSendMessage(text)}
+        activeChannelName={activeChannel.name}
       />
     </div>
   );
