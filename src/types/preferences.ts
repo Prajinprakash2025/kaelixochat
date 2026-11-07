@@ -10,6 +10,8 @@ export interface SlackTheme {
   accentColor: string; // Hex for primary buttons & active state
   headerTintLight: string; // Light mode header wash
   headerTintDark: string; // Dark mode header wash
+  sidebarBgLight?: string;
+  sidebarBgDark?: string;
 }
 
 export const SLACK_THEMES: SlackTheme[] = [
@@ -22,6 +24,8 @@ export const SLACK_THEMES: SlackTheme[] = [
     accentColor: "#2563eb",
     headerTintLight: "#eff6ff",
     headerTintDark: "#172554",
+    sidebarBgLight: "#f0f7ff",
+    sidebarBgDark: "#0f172a",
   },
   {
     id: "funky-fresh",
@@ -31,6 +35,8 @@ export const SLACK_THEMES: SlackTheme[] = [
     accentColor: "#06b6d4",
     headerTintLight: "#ecfeff",
     headerTintDark: "#083344",
+    sidebarBgLight: "#f0fdfa",
+    sidebarBgDark: "#0e1a24",
   },
   {
     id: "jazz-club",
@@ -40,6 +46,8 @@ export const SLACK_THEMES: SlackTheme[] = [
     accentColor: "#9f1239",
     headerTintLight: "#fff1f2",
     headerTintDark: "#4c0519",
+    sidebarBgLight: "#fff1f2",
+    sidebarBgDark: "#26060f",
   },
   {
     id: "electric-fusion",
@@ -49,6 +57,8 @@ export const SLACK_THEMES: SlackTheme[] = [
     accentColor: "#84cc16",
     headerTintLight: "#f7fee7",
     headerTintDark: "#14532d",
+    sidebarBgLight: "#f7fee7",
+    sidebarBgDark: "#0d2012",
   },
   {
     id: "brassy",
@@ -58,6 +68,8 @@ export const SLACK_THEMES: SlackTheme[] = [
     accentColor: "#d97706",
     headerTintLight: "#fffbeb",
     headerTintDark: "#451a03",
+    sidebarBgLight: "#fffbeb",
+    sidebarBgDark: "#221104",
   },
   {
     id: "sunglasses-inside",
@@ -67,6 +79,8 @@ export const SLACK_THEMES: SlackTheme[] = [
     accentColor: "#7e22ce",
     headerTintLight: "#faf5ff",
     headerTintDark: "#3b0764",
+    sidebarBgLight: "#faf5ff",
+    sidebarBgDark: "#1e0833",
   },
 
   // Single colour
@@ -78,6 +92,8 @@ export const SLACK_THEMES: SlackTheme[] = [
     accentColor: "#611f69",
     headerTintLight: "#fdf4ff",
     headerTintDark: "#371038",
+    sidebarBgLight: "#3F0E40",
+    sidebarBgDark: "#3F0E40",
   },
   {
     id: "clementine",
@@ -87,6 +103,8 @@ export const SLACK_THEMES: SlackTheme[] = [
     accentColor: "#ea580c",
     headerTintLight: "#fff7ed",
     headerTintDark: "#431407",
+    sidebarBgLight: "#fff7ed",
+    sidebarBgDark: "#260c04",
   },
   {
     id: "banana",
@@ -96,6 +114,8 @@ export const SLACK_THEMES: SlackTheme[] = [
     accentColor: "#ca8a04",
     headerTintLight: "#fefce8",
     headerTintDark: "#422006",
+    sidebarBgLight: "#fefce8",
+    sidebarBgDark: "#201303",
   },
   {
     id: "gray",
@@ -105,6 +125,8 @@ export const SLACK_THEMES: SlackTheme[] = [
     accentColor: "#64748b",
     headerTintLight: "#f8fafc",
     headerTintDark: "#0f172a",
+    sidebarBgLight: "#f8fafc",
+    sidebarBgDark: "#0f172a",
   },
   {
     id: "mood-indigo",
@@ -114,6 +136,8 @@ export const SLACK_THEMES: SlackTheme[] = [
     accentColor: "#2563eb",
     headerTintLight: "#eff6ff",
     headerTintDark: "#172554",
+    sidebarBgLight: "#eff6ff",
+    sidebarBgDark: "#0b1329",
   },
 
   // Fun and new
@@ -125,6 +149,8 @@ export const SLACK_THEMES: SlackTheme[] = [
     accentColor: "#10b981",
     headerTintLight: "#dcfce7",
     headerTintDark: "#064e3b",
+    sidebarBgLight: "#eef8f1",
+    sidebarBgDark: "#0a1d15",
   },
   {
     id: "raspberry-beret",

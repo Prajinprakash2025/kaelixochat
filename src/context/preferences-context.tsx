@@ -128,6 +128,26 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
       resolvedMode === "dark" ? currentTheme.headerTintDark : currentTheme.headerTintLight
     );
     root.style.setProperty("--theme-sidebar-active", currentTheme.accentColor);
+
+    const isDark = resolvedMode === "dark";
+    const sidebarBg = isDark
+      ? currentTheme.sidebarBgDark || "#111217"
+      : currentTheme.sidebarBgLight || "#f8fafc";
+
+    // For Aubergine, text stays white even in light mode
+    const isSpecialDarkSidebar = !isDark && currentTheme.id === "aubergine";
+    const sidebarText = isDark || isSpecialDarkSidebar ? "#f4f4f5" : "#0f172a";
+    const sidebarMuted = isDark || isSpecialDarkSidebar ? "#a1a1aa" : "#64748b";
+    const sidebarBorder = isDark || isSpecialDarkSidebar ? "rgba(255,255,255,0.12)" : "#e2e8f0";
+    const sidebarHover = isDark || isSpecialDarkSidebar ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)";
+    const sidebarCard = isDark || isSpecialDarkSidebar ? "rgba(255,255,255,0.06)" : "#f1f5f9";
+
+    root.style.setProperty("--theme-sidebar-bg", sidebarBg);
+    root.style.setProperty("--theme-sidebar-text", sidebarText);
+    root.style.setProperty("--theme-sidebar-muted", sidebarMuted);
+    root.style.setProperty("--theme-sidebar-border", sidebarBorder);
+    root.style.setProperty("--theme-sidebar-hover", sidebarHover);
+    root.style.setProperty("--theme-sidebar-card", sidebarCard);
   }, [themeId, currentTheme, resolvedMode]);
 
   // Apply font family

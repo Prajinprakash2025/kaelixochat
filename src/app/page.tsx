@@ -7,6 +7,7 @@ import { MessageFeed } from "@/components/chat/message-feed";
 import { ChatInput } from "@/components/chat/chat-input";
 import { NewChannelModal } from "@/components/modals/new-channel-modal";
 import { NewCompanyModal } from "@/components/modals/new-company-modal";
+import { EditCompanyModal } from "@/components/modals/edit-company-modal";
 import { NewDepartmentModal } from "@/components/modals/new-department-modal";
 import { SlackAuthModal } from "@/components/modals/slack-auth-modal";
 import { InviteTeamModal } from "@/components/modals/invite-team-modal";
@@ -194,6 +195,7 @@ export default function KaelixoApp() {
   // Modals state
   const [isNewChannelModalOpen, setIsNewChannelModalOpen] = useState(false);
   const [isNewCompanyModalOpen, setIsNewCompanyModalOpen] = useState(false);
+  const [isEditCompanyModalOpen, setIsEditCompanyModalOpen] = useState(false);
   const [isNewDepartmentModalOpen, setIsNewDepartmentModalOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(() => {
     if (typeof window !== "undefined") {
@@ -2213,6 +2215,33 @@ export default function KaelixoApp() {
     }
   };
 
+  // Update Company (Name & Logo managed by manager)
+  const handleUpdateCompany = async (
+    orgId: string,
+    updates: { name: string; logo_url?: string | null }
+  ) => {
+    const updatedOrg = { ...activeOrg, ...updates };
+    setActiveOrg(updatedOrg);
+    setOrganizations((prev) =>
+      prev.map((o) => (o.id === orgId ? { ...o, ...updates } : o))
+    );
+    try {
+      localStorage.setItem("kaelixo_org", JSON.stringify(updatedOrg));
+    } catch {}
+
+    try {
+      await supabase
+        .from("organizations")
+        .update({
+          name: updates.name,
+          logo_url: updates.logo_url ?? null,
+        })
+        .eq("id", orgId);
+    } catch (err) {
+      console.error("Failed to update organization in Supabase:", err);
+    }
+  };
+
   // Create Department
   const handleCreateDepartment = async (dept: {
     name: string;
@@ -2257,6 +2286,7 @@ export default function KaelixoApp() {
         activeOrg={activeOrg}
         onSelectOrg={setActiveOrg}
         onOpenNewCompanyModal={() => setIsNewCompanyModalOpen(true)}
+        onOpenEditCompanyModal={() => setIsEditCompanyModalOpen(true)}
         departments={departments}
         selectedDepartment={selectedDepartment}
         onSelectDepartment={setSelectedDepartment}
@@ -2772,6 +2802,13 @@ export default function KaelixoApp() {
         isOpen={isNewCompanyModalOpen}
         onClose={() => setIsNewCompanyModalOpen(false)}
         onCreateCompany={handleCreateCompany}
+      />
+
+      <EditCompanyModal
+        isOpen={isEditCompanyModalOpen}
+        onClose={() => setIsEditCompanyModalOpen(false)}
+        activeOrg={activeOrg}
+        onUpdateCompany={handleUpdateCompany}
       />
 
       <NewDepartmentModal
