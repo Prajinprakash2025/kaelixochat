@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { Message, WorkspaceMember, reactionsMapToArray } from "@/types";
-import { Pin, MessageSquare, MoreHorizontal, Check, SmilePlus, Pencil, Trash2, ArrowDown } from "lucide-react";
+import { Pin, MessageSquare, MoreHorizontal, Check, SmilePlus, Pencil, Trash2, ArrowDown, ChevronDown } from "lucide-react";
 import { AttachmentPreview } from "./attachment-preview";
 import { EmojiPicker } from "./emoji-picker";
 import { DeleteMessageModal } from "@/components/modals/delete-message-modal";
@@ -82,6 +82,53 @@ export function formatLastReplyTime(isoString?: string | null): string {
   } catch {
     return "";
   }
+}
+
+export function formatSlackDateDivider(dateInput?: string | null): string {
+  if (!dateInput) return "Today";
+  try {
+    const date = new Date(dateInput);
+    if (isNaN(date.getTime())) return "Today";
+
+    const today = new Date();
+    const isToday =
+      date.getFullYear() === today.getFullYear() &&
+      date.getMonth() === today.getMonth() &&
+      date.getDate() === today.getDate();
+    if (isToday) return "Today";
+
+    const yesterday = new Date();
+    yesterday.setDate(today.getDate() - 1);
+    const isYesterday =
+      date.getFullYear() === yesterday.getFullYear() &&
+      date.getMonth() === yesterday.getMonth() &&
+      date.getDate() === yesterday.getDate();
+    if (isYesterday) return "Yesterday";
+
+    return date.toLocaleDateString("en-US", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+    });
+  } catch {
+    return "Today";
+  }
+}
+
+export function getMessageDateKey(msg: Message): string {
+  if (msg.rawTimestamp) {
+    const d = new Date(msg.rawTimestamp);
+    if (!isNaN(d.getTime())) {
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    }
+  }
+  if (msg.updatedAt) {
+    const d = new Date(msg.updatedAt);
+    if (!isNaN(d.getTime())) {
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    }
+  }
+  return "today";
 }
 
 export function MessageFeed({
@@ -333,7 +380,12 @@ export function MessageFeed({
           </p>
         </div>
       ) : (
-        messages.map((msg) => {
+        messages.map((msg, index) => {
+          const prevMsg = index > 0 ? messages[index - 1] : null;
+          const currentDateKey = getMessageDateKey(msg);
+          const prevDateKey = prevMsg ? getMessageDateKey(prevMsg) : null;
+          const showDateDivider = index === 0 || currentDateKey !== prevDateKey;
+
           const senderId = msg.sender?.id || msg.senderId || `user-${msg.id}`;
           const matchedMember = members.find(
             (m) =>
@@ -354,9 +406,23 @@ export function MessageFeed({
           const reactionList = reactionsMapToArray(msg.reactions);
 
           return (
-            <div
-              key={msg.id}
-              id={`message-${msg.id}`}
+            <React.Fragment key={msg.id}>
+              {showDateDivider && (
+                <div className="relative flex items-center justify-center my-6 select-none" role="separator">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-neutral-200 dark:border-neutral-800" />
+                  </div>
+                  <button
+                    type="button"
+                    className="relative z-10 px-3.5 py-1 rounded-full text-xs font-semibold bg-white dark:bg-neutral-850 text-neutral-700 dark:text-neutral-200 border border-neutral-200 dark:border-neutral-700 shadow-xs hover:bg-neutral-50 dark:hover:bg-neutral-800 transition flex items-center space-x-1.5 cursor-pointer"
+                  >
+                    <span>{formatSlackDateDivider(msg.rawTimestamp || msg.updatedAt)}</span>
+                    <ChevronDown className="w-3.5 h-3.5 text-neutral-400" />
+                  </button>
+                </div>
+              )}
+              <div
+                id={`message-${msg.id}`}
               className={`group relative flex items-start space-x-3.5 p-3 rounded-2xl transition duration-200 hover:bg-neutral-100/70 dark:hover:bg-neutral-900/60 ${
                 msg.isPinned
                   ? "bg-amber-50/40 dark:bg-amber-950/20 border-l-4 border-l-amber-500 border-t border-r border-b border-amber-200/50 dark:border-amber-900/30 shadow-xs"
@@ -740,6 +806,7 @@ export function MessageFeed({
                 </div>
               )}
             </div>
+            </React.Fragment>
           );
         })
       )}

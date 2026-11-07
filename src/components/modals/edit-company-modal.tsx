@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { Building2, X, Upload, Sparkles, Image as ImageIcon, Check } from "lucide-react";
+import { X, Upload, Check } from "lucide-react";
 import { Organization } from "@/types";
 import { uploadAttachment } from "@/utils/storage";
 
@@ -51,8 +51,7 @@ export function EditCompanyModal({
       if (attachment?.url) {
         setLogoUrl(attachment.url);
       }
-    } catch (err: any) {
-      // Fallback: use FileReader for data URL preview
+    } catch {
       const reader = new FileReader();
       reader.onload = () => {
         setLogoUrl(reader.result as string);
@@ -75,8 +74,9 @@ export function EditCompanyModal({
         logo_url: logoUrl.trim() || null,
       });
       onClose();
-    } catch (err: any) {
-      setError(err?.message || "Failed to update company profile");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to update company profile";
+      setError(msg);
     } finally {
       setSaving(false);
     }
@@ -91,51 +91,66 @@ export function EditCompanyModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-150"
       onClick={onClose}
     >
       <div
-        className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl text-neutral-900 dark:text-neutral-100"
+        className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl text-neutral-900 dark:text-neutral-100 flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="p-5 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between bg-neutral-50/50 dark:bg-neutral-900/50">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-600 text-white flex items-center justify-center shadow-md">
-              <Building2 className="w-5 h-5" />
-            </div>
-            <div>
-              <h2 className="font-bold text-base">Company & Workspace Settings</h2>
-              <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                Custom brand identity managed by company manager
-              </p>
-            </div>
+        <div className="px-6 py-5 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between">
+          <div>
+            <h2 className="font-extrabold text-xl text-neutral-900 dark:text-neutral-100 tracking-tight">
+              Edit workspace details
+            </h2>
+            <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+              Update company name and branding across your team
+            </p>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-xl text-neutral-400 hover:text-neutral-700 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition cursor-pointer"
+            className="p-1.5 rounded-lg text-neutral-400 hover:text-neutral-700 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition cursor-pointer"
           >
-            <X className="w-4 h-4" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
           {error && (
-            <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900/50 text-xs text-rose-600 dark:text-rose-400">
+            <div className="p-3 rounded-lg bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900/50 text-xs text-rose-600 dark:text-rose-400">
               {error}
             </div>
           )}
 
-          {/* Logo Preview & Upload */}
+          {/* Company Name Input */}
           <div>
-            <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 uppercase tracking-wider mb-2">
-              Company Logo
+            <label className="block text-sm font-bold text-neutral-900 dark:text-neutral-100 mb-1.5">
+              Company name
+            </label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. Acme Corp"
+              required
+              className="w-full px-3 py-2 text-sm rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition shadow-xs"
+            />
+            <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
+              This is the primary name shown in your workspace header and navigation rail.
+            </p>
+          </div>
+
+          {/* Logo Section */}
+          <div>
+            <label className="block text-sm font-bold text-neutral-900 dark:text-neutral-100 mb-1.5">
+              Company logo
             </label>
 
-            <div className="flex items-center space-x-4">
+            <div className="grid grid-cols-[100px_1fr] gap-4 items-center">
               {/* Logo Preview Box */}
-              <div className="relative w-16 h-16 rounded-2xl bg-neutral-100 dark:bg-neutral-800 border-2 border-neutral-200 dark:border-neutral-700 flex items-center justify-center overflow-hidden shadow-sm flex-shrink-0 group">
+              <div className="w-24 h-24 rounded-lg bg-neutral-100 dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 flex items-center justify-center overflow-hidden shadow-xs flex-shrink-0">
                 {logoUrl ? (
                   <img
                     src={logoUrl}
@@ -144,14 +159,14 @@ export function EditCompanyModal({
                     onError={() => setLogoUrl("")}
                   />
                 ) : (
-                  <span className="font-black text-xl text-neutral-600 dark:text-neutral-300">
+                  <span className="font-extrabold text-2xl text-neutral-600 dark:text-neutral-300">
                     {name.charAt(0).toUpperCase() || "C"}
                   </span>
                 )}
               </div>
 
               {/* Upload Controls */}
-              <div className="flex-1 space-y-1.5">
+              <div className="space-y-2">
                 <input
                   type="file"
                   ref={fileInputRef}
@@ -163,21 +178,30 @@ export function EditCompanyModal({
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={uploading}
-                  className="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center space-x-1.5 shadow-sm transition cursor-pointer disabled:opacity-50"
+                  className="w-full py-2 px-3 border border-neutral-300 dark:border-neutral-700 rounded-lg text-sm font-semibold text-neutral-800 dark:text-neutral-200 bg-white dark:bg-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-750 transition text-center cursor-pointer shadow-xs flex items-center justify-center space-x-1.5 disabled:opacity-50"
                 >
-                  <Upload className="w-3.5 h-3.5" />
-                  <span>{uploading ? "Uploading..." : "Upload Logo"}</span>
+                  <Upload className="w-4 h-4" />
+                  <span>{uploading ? "Uploading..." : "Upload photo"}</span>
                 </button>
-                <p className="text-[11px] text-neutral-500">
+                {logoUrl && (
+                  <button
+                    type="button"
+                    onClick={() => setLogoUrl("")}
+                    className="text-xs font-medium text-sky-600 dark:text-sky-400 hover:underline cursor-pointer block"
+                  >
+                    Remove photo
+                  </button>
+                )}
+                <p className="text-xs text-neutral-500 dark:text-neutral-400">
                   Recommended: Square PNG, SVG or JPG (min 128x128px)
                 </p>
               </div>
             </div>
 
             {/* Logo Presets */}
-            <div className="mt-3">
-              <span className="text-[10px] text-neutral-400 font-semibold uppercase tracking-wider block mb-1.5">
-                Or choose a brand gradient preset:
+            <div className="mt-4">
+              <span className="text-xs text-neutral-500 dark:text-neutral-400 font-semibold block mb-2">
+                Or select a preset logo:
               </span>
               <div className="flex items-center space-x-2">
                 {presetLogos.map((preset, idx) => (
@@ -185,62 +209,38 @@ export function EditCompanyModal({
                     key={idx}
                     type="button"
                     onClick={() => setLogoUrl(preset)}
-                    className={`w-9 h-9 rounded-xl overflow-hidden border-2 transition cursor-pointer ${
-                      logoUrl === preset ? "border-indigo-600 ring-2 ring-indigo-500/40" : "border-neutral-200 dark:border-neutral-700 hover:opacity-80"
+                    className={`w-9 h-9 rounded-lg overflow-hidden border-2 transition cursor-pointer ${
+                      logoUrl === preset ? "border-emerald-600 ring-2 ring-emerald-500/40" : "border-neutral-300 dark:border-neutral-700 hover:opacity-80"
                     }`}
                   >
                     <img src={preset} alt={`Preset ${idx + 1}`} className="w-full h-full object-cover" />
                   </button>
                 ))}
-                {logoUrl && (
-                  <button
-                    type="button"
-                    onClick={() => setLogoUrl("")}
-                    className="text-[11px] text-neutral-400 hover:text-rose-500 ml-2 transition cursor-pointer"
-                  >
-                    Remove
-                  </button>
-                )}
               </div>
             </div>
           </div>
 
-          {/* Company Name Input */}
-          <div>
-            <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 uppercase tracking-wider mb-1.5">
-              Company Name
-            </label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Dream Home, Acme Corp"
-              required
-              className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition shadow-xs"
-            />
-          </div>
-
           {/* Action Buttons */}
-          <div className="pt-3 border-t border-neutral-200 dark:border-neutral-800 flex items-center justify-end space-x-3">
+          <div className="pt-4 border-t border-neutral-200 dark:border-neutral-800 flex items-center justify-end space-x-3">
             <button
               type="button"
               onClick={onClose}
               disabled={saving}
-              className="px-4 py-2 text-xs font-semibold text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-800 cursor-pointer"
+              className="px-4 py-2 text-sm font-bold text-neutral-700 dark:text-neutral-300 border border-neutral-300 dark:border-neutral-700 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={saving || !name.trim()}
-              className="px-5 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 rounded-xl shadow-md shadow-indigo-600/30 transition cursor-pointer disabled:opacity-50 flex items-center space-x-1.5"
+              className="px-5 py-2 text-sm font-bold text-white bg-[#007a5a] hover:bg-[#006a4e] rounded-lg shadow-sm transition cursor-pointer disabled:opacity-50 flex items-center space-x-1.5"
             >
               {saving ? (
                 <span>Saving...</span>
               ) : (
                 <>
-                  <Check className="w-3.5 h-3.5" />
-                  <span>Save Company Profile</span>
+                  <Check className="w-4 h-4" />
+                  <span>Save changes</span>
                 </>
               )}
             </button>

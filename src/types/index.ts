@@ -160,6 +160,7 @@ export interface Message {
   // Timestamps
   createdAt: string;
   updatedAt?: string;
+  rawTimestamp?: string;
 }
 
 // ------------------------------------------------------------------------------

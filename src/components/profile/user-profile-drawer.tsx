@@ -1,16 +1,20 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   X,
   MessageCircle,
-  Pencil,
   Mail,
   Phone,
   Clock,
-  Building,
   Check,
   Copy,
+  ChevronDown,
+  MoreHorizontal,
+  Smile,
+  Calendar,
+  Shield,
+  Building,
 } from "lucide-react";
 import { WorkspaceMember } from "@/types";
 import { formatRoleLabel } from "@/utils/permissions";
@@ -31,7 +35,20 @@ export function UserProfileDrawer({
   onOpenEditProfile,
 }: UserProfileDrawerProps) {
   const [copiedEmail, setCopiedEmail] = useState(false);
+  const [localTime, setLocalTime] = useState("");
   const isSelf = currentUser.id === member.id;
+
+  useEffect(() => {
+    const updateTime = () => {
+      const now = new Date();
+      setLocalTime(
+        now.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) + " local time"
+      );
+    };
+    updateTime();
+    const interval = setInterval(updateTime, 60000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleCopyEmail = () => {
     if (member.email) {
@@ -41,198 +58,270 @@ export function UserProfileDrawer({
     }
   };
 
-  const getStatusColor = (status: WorkspaceMember["status"], isOnline?: boolean) => {
-    if (status === "in_call") return "bg-rose-500 ring-2 ring-white dark:ring-neutral-900 animate-pulse";
-    if (status === "away") return "bg-amber-500 ring-2 ring-white dark:ring-neutral-900";
-    if (isOnline || status === "online") return "bg-emerald-500 ring-2 ring-white dark:ring-neutral-900";
-    return "bg-neutral-400 ring-2 ring-white dark:ring-neutral-900";
-  };
-
-  const getStatusLabel = (status: WorkspaceMember["status"], isOnline?: boolean) => {
-    if (status === "in_call") return "In a call";
-    if (status === "away") return "Away";
-    if (isOnline || status === "online") return "Active now";
-    return "Offline";
-  };
+  const isOnline = member.online || member.status === "online";
 
   return (
-    <aside className="fixed inset-0 z-50 sm:static sm:inset-auto sm:z-auto w-full sm:w-80 md:w-96 border-l border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 flex flex-col h-full flex-shrink-0 animate-in slide-in-from-right duration-200 overflow-hidden">
+    <aside className="fixed inset-0 z-50 sm:static sm:inset-auto sm:z-auto w-full sm:w-80 md:w-96 border-l border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 flex flex-col h-full flex-shrink-0 animate-in slide-in-from-right duration-200 overflow-hidden shadow-xl sm:shadow-none">
       {/* Top Header */}
-      <div className="p-4 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between">
-        <h3 className="font-bold text-sm text-neutral-900 dark:text-neutral-100">
+      <div className="px-5 py-4 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between">
+        <h3 className="font-extrabold text-base text-neutral-900 dark:text-neutral-100">
           Profile
         </h3>
         <button
           onClick={onClose}
-          className="p-1.5 rounded-xl text-neutral-400 hover:text-neutral-700 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition"
+          className="p-1 rounded-lg text-neutral-400 hover:text-neutral-700 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition cursor-pointer"
           title="Close Profile (Esc)"
         >
-          <X className="w-4 h-4" />
+          <X className="w-5 h-5" />
         </button>
       </div>
 
-      {/* Profile Body */}
+      {/* Scrollable Profile Body */}
       <div className="flex-1 overflow-y-auto p-5 space-y-5 custom-scrollbar">
-        {/* Large Avatar Hero */}
-        <div className="flex flex-col items-center text-center">
-          <div className="relative mb-3">
-            <img
-              src={
-                member.avatar ||
-                `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(member.name)}`
-              }
-              alt={member.name}
-              className="w-44 h-44 rounded-3xl object-cover bg-neutral-100 dark:bg-neutral-800 shadow-md ring-1 ring-neutral-200 dark:ring-neutral-700"
-            />
-            <span
-              className={`absolute bottom-2 right-2 w-5 h-5 rounded-full ${getStatusColor(
-                member.status,
-                member.online
-              )}`}
-              title={getStatusLabel(member.status, member.online)}
-            />
+        {/* Full-width Cover Photo Preview */}
+        <div className="w-full aspect-[4/3] rounded-lg overflow-hidden border border-neutral-200 dark:border-neutral-800 bg-neutral-100 dark:bg-neutral-800 shadow-xs">
+          <img
+            src={
+              member.avatar ||
+              `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(member.name)}`
+            }
+            alt={member.name}
+            className="w-full h-full object-cover"
+          />
+        </div>
+
+        {/* Identity & Header Row */}
+        <div>
+          <div className="flex items-baseline justify-between">
+            <h2 className="font-extrabold text-2xl text-neutral-900 dark:text-neutral-100 tracking-tight">
+              {member.name}
+            </h2>
+            {isSelf && (
+              <button
+                type="button"
+                onClick={onOpenEditProfile}
+                className="text-sm font-semibold text-sky-600 dark:text-sky-400 hover:underline cursor-pointer"
+              >
+                Edit
+              </button>
+            )}
           </div>
 
-          <h2 className="font-bold text-lg text-neutral-900 dark:text-neutral-100">
-            {member.name}
-          </h2>
-          {member.displayName && (
-            <p className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
-              {`@${member.displayName}`}
+          {member.title && (
+            <p className="text-sm font-medium text-neutral-800 dark:text-neutral-200 mt-0.5">
+              {member.title}
             </p>
           )}
 
-          <div className="flex items-center space-x-2 mt-2">
-            <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200/60 dark:border-indigo-800/60 uppercase">
-              {formatRoleLabel(member.role)}
-            </span>
-            <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-700 uppercase">
-              {member.department}
+          <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+            {member.displayName ? `@${member.displayName}` : member.name.toLowerCase().replace(/\s+/g, "")}
+          </p>
+
+          {/* Status Indicator */}
+          <div className="flex items-center space-x-2 mt-2 text-xs text-neutral-600 dark:text-neutral-300">
+            <span
+              className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                isOnline ? "bg-emerald-500" : "bg-neutral-400"
+              }`}
+            />
+            <span className="truncate">
+              {member.statusText || (isOnline ? "Active, notifications snoozed" : "Away")}
             </span>
           </div>
 
-          <p className="text-xs text-neutral-400 mt-1">
-            {getStatusLabel(member.status, member.online)}
-          </p>
+          {/* Local Time */}
+          {localTime && (
+            <div className="flex items-center space-x-1.5 text-xs text-neutral-500 dark:text-neutral-400 mt-1.5">
+              <Clock className="w-3.5 h-3.5" />
+              <span>{localTime}</span>
+            </div>
+          )}
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex items-center space-x-2">
+        {/* Action Buttons Row */}
+        <div className="flex items-center space-x-2 pt-1">
           {isSelf ? (
-            <button
-              onClick={onOpenEditProfile}
-              className="w-full flex items-center justify-center space-x-1.5 py-2 px-3 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-sm transition cursor-pointer"
-            >
-              <Pencil className="w-3.5 h-3.5" />
-              <span>Edit Profile</span>
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={onOpenEditProfile}
+                className="flex-1 py-1.5 px-3 text-sm font-semibold text-neutral-800 dark:text-neutral-200 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-750 transition cursor-pointer shadow-xs text-center"
+              >
+                Set a status
+              </button>
+              <button
+                type="button"
+                onClick={onOpenEditProfile}
+                className="py-1.5 px-3 text-sm font-semibold text-neutral-800 dark:text-neutral-200 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-750 transition cursor-pointer shadow-xs flex items-center space-x-1"
+              >
+                <span>View as</span>
+                <ChevronDown className="w-3.5 h-3.5 text-neutral-400" />
+              </button>
+              <button
+                type="button"
+                onClick={onOpenEditProfile}
+                className="p-1.5 text-neutral-700 dark:text-neutral-300 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-750 transition cursor-pointer shadow-xs"
+                title="More options"
+              >
+                <MoreHorizontal className="w-4 h-4" />
+              </button>
+            </>
           ) : (
             <>
               <button
+                type="button"
                 onClick={() => onStartDm(member)}
-                className="flex-1 flex items-center justify-center space-x-1.5 py-2 px-3 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-sm transition cursor-pointer"
+                className="flex-1 flex items-center justify-center space-x-1.5 py-2 px-3 text-sm font-bold text-white bg-[#007a5a] hover:bg-[#006a4e] rounded-lg shadow-sm transition cursor-pointer"
               >
-                <MessageCircle className="w-3.5 h-3.5" />
+                <MessageCircle className="w-4 h-4" />
                 <span>Message</span>
               </button>
               <button
+                type="button"
                 onClick={handleCopyEmail}
-                className="flex items-center justify-center space-x-1 py-2 px-3 text-xs font-semibold text-neutral-700 dark:text-neutral-300 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-750 rounded-xl transition cursor-pointer"
-                title="Copy email address"
+                className="py-2 px-3 text-sm font-semibold text-neutral-700 dark:text-neutral-300 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-750 rounded-lg transition cursor-pointer shadow-xs"
+                title="Copy email"
               >
-                {copiedEmail ? (
-                  <>
-                    <Check className="w-3.5 h-3.5 text-emerald-500" />
-                    <span>Copied</span>
-                  </>
-                ) : (
-                  <>
-                    <Copy className="w-3.5 h-3.5" />
-                    <span>Email</span>
-                  </>
-                )}
+                {copiedEmail ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
               </button>
             </>
           )}
         </div>
 
-        {/* Status Card */}
-        {(member.statusText || member.statusEmoji) && (
-          <div className="p-3.5 rounded-2xl bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-200 dark:border-neutral-800 flex items-center space-x-2.5 text-xs text-neutral-700 dark:text-neutral-300">
-            <span className="text-base">{member.statusEmoji || "💬"}</span>
-            <span className="italic">{member.statusText}</span>
-          </div>
-        )}
+        <div className="border-t border-neutral-200 dark:border-neutral-800" />
 
-        {/* Contact Information */}
-        <div className="space-y-3 pt-2 border-t border-neutral-200 dark:border-neutral-800">
-          <h4 className="text-xs font-bold text-neutral-900 dark:text-neutral-100 uppercase tracking-wider">
-            Contact Information
-          </h4>
-
-          {/* Email */}
-          <div className="flex items-start space-x-3 text-xs">
-            <div className="p-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-500">
-              <Mail className="w-4 h-4" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <span className="text-neutral-400 block text-[11px]">Email Address</span>
-              <a
-                href={`mailto:${member.email}`}
-                className="text-indigo-600 dark:text-indigo-400 font-medium truncate hover:underline block"
+        {/* Contact Information Section */}
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="font-bold text-sm text-neutral-900 dark:text-neutral-100">
+              Contact Information
+            </h4>
+            {isSelf && (
+              <button
+                type="button"
+                onClick={onOpenEditProfile}
+                className="text-xs font-semibold text-sky-600 dark:text-sky-400 hover:underline cursor-pointer"
               >
-                {member.email}
-              </a>
-            </div>
+                Edit
+              </button>
+            )}
           </div>
 
-          {/* Phone */}
-          <div className="flex items-start space-x-3 text-xs">
-            <div className="p-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-500">
-              <Phone className="w-4 h-4" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <span className="text-neutral-400 block text-[11px]">Phone</span>
-              {member.phone ? (
+          <div className="space-y-3 text-xs">
+            {/* Email Address */}
+            <div className="flex items-start space-x-3">
+              <div className="w-8 h-8 rounded-lg bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <Mail className="w-4 h-4 text-neutral-600 dark:text-neutral-300" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold text-neutral-500 dark:text-neutral-400">
+                  Email address
+                </p>
                 <a
-                  href={`tel:${member.phone}`}
-                  className="text-neutral-900 dark:text-white font-medium hover:underline block"
+                  href={`mailto:${member.email || "colleague@kaelixo.com"}`}
+                  className="font-medium text-sky-600 dark:text-sky-400 hover:underline break-all"
                 >
-                  {member.phone}
+                  {member.email || "colleague@kaelixo.com"}
                 </a>
-              ) : (
-                <span className="text-neutral-400 italic">Not specified</span>
-              )}
+              </div>
             </div>
-          </div>
 
-          {/* Local Time */}
-          <div className="flex items-start space-x-3 text-xs">
-            <div className="p-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-500">
-              <Clock className="w-4 h-4" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <span className="text-neutral-400 block text-[11px]">Local Time</span>
-              <span className="text-neutral-900 dark:text-white font-medium">
-                {new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-              </span>
+            {/* Phone */}
+            <div className="flex items-start space-x-3">
+              <div className="w-8 h-8 rounded-lg bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <Phone className="w-4 h-4 text-neutral-600 dark:text-neutral-300" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold text-neutral-500 dark:text-neutral-400">
+                  Phone
+                </p>
+                {member.phone ? (
+                  <a
+                    href={`tel:${member.phone}`}
+                    className="font-medium text-sky-600 dark:text-sky-400 hover:underline"
+                  >
+                    {member.phone}
+                  </a>
+                ) : isSelf ? (
+                  <button
+                    type="button"
+                    onClick={onOpenEditProfile}
+                    className="font-medium text-sky-600 dark:text-sky-400 hover:underline cursor-pointer"
+                  >
+                    + Add Phone
+                  </button>
+                ) : (
+                  <span className="text-neutral-400">Not provided</span>
+                )}
+              </div>
             </div>
           </div>
         </div>
 
-        {/* About Me Section */}
-        <div className="space-y-2 pt-2 border-t border-neutral-200 dark:border-neutral-800">
-          <h4 className="text-xs font-bold text-neutral-900 dark:text-neutral-100 uppercase tracking-wider">
-            About Me
-          </h4>
-          <p className="text-xs text-neutral-600 dark:text-neutral-400 leading-relaxed">
-            {member.bio ||
-              `${member.name} is a member of the ${member.department.toUpperCase()} team at Kaelixo.`}
-          </p>
+        <div className="border-t border-neutral-200 dark:border-neutral-800" />
 
-          <div className="flex items-center space-x-2 text-xs text-neutral-500 pt-1">
-            <Building className="w-3.5 h-3.5 text-neutral-400" />
-            <span className="capitalize">{member.department} Department</span>
+        {/* About Me Section */}
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="font-bold text-sm text-neutral-900 dark:text-neutral-100">
+              About me
+            </h4>
+            {isSelf && (
+              <button
+                type="button"
+                onClick={onOpenEditProfile}
+                className="text-xs font-semibold text-sky-600 dark:text-sky-400 hover:underline cursor-pointer"
+              >
+                Edit
+              </button>
+            )}
+          </div>
+
+          <div className="space-y-3 text-xs">
+            {/* Start Date */}
+            <div className="flex items-start space-x-3">
+              <div className="w-8 h-8 rounded-lg bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <Calendar className="w-4 h-4 text-neutral-600 dark:text-neutral-300" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold text-neutral-500 dark:text-neutral-400">
+                  Start Date
+                </p>
+                <p className="font-medium text-neutral-800 dark:text-neutral-200">
+                  Joined October 2026
+                </p>
+              </div>
+            </div>
+
+            {/* Department */}
+            <div className="flex items-start space-x-3">
+              <div className="w-8 h-8 rounded-lg bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <Building className="w-4 h-4 text-neutral-600 dark:text-neutral-300" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold text-neutral-500 dark:text-neutral-400">
+                  Department
+                </p>
+                <p className="font-medium text-neutral-800 dark:text-neutral-200 uppercase">
+                  {member.department || "General"}
+                </p>
+              </div>
+            </div>
+
+            {/* Role */}
+            <div className="flex items-start space-x-3">
+              <div className="w-8 h-8 rounded-lg bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <Shield className="w-4 h-4 text-neutral-600 dark:text-neutral-300" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold text-neutral-500 dark:text-neutral-400">
+                  Role
+                </p>
+                <p className="font-medium text-neutral-800 dark:text-neutral-200">
+                  {formatRoleLabel(member.role)}
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </div>

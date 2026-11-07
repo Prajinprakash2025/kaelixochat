@@ -80,6 +80,7 @@ export function formatDbMessage(row: any): Message {
     isDeleted: Boolean(row.is_deleted),
     deletedAt: row.deleted_at || null,
     updatedAt: row.updated_at || row.created_at,
+    rawTimestamp: row.created_at,
   };
 }
 

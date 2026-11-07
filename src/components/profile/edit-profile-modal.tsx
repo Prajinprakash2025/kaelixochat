@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useId } from "react";
-import { X, Camera, Upload, Trash2, User, Phone, Briefcase, FileText } from "lucide-react";
+import { X, Mic, MicOff, Check } from "lucide-react";
 import { WorkspaceMember, Department } from "@/types";
 import { uploadAvatar } from "@/utils/storage";
 
@@ -11,7 +11,22 @@ export interface EditProfileModalProps {
   currentUser: WorkspaceMember;
   departments: Department[];
   onSaveProfile: (updatedData: Partial<WorkspaceMember>) => Promise<void> | void;
+  companyName?: string;
 }
+
+const COMMON_TIMEZONES = [
+  { value: "Asia/Kolkata", label: "(UTC+05:30) Chennai, Kolkata, Mumbai, New Delhi" },
+  { value: "UTC", label: "(UTC+00:00) UTC" },
+  { value: "Europe/London", label: "(UTC+00:00) Dublin, Edinburgh, Lisbon, London" },
+  { value: "Europe/Paris", label: "(UTC+01:00) Amsterdam, Berlin, Bern, Rome, Stockholm, Vienna" },
+  { value: "Asia/Dubai", label: "(UTC+04:00) Abu Dhabi, Muscat, Dubai" },
+  { value: "Asia/Singapore", label: "(UTC+08:00) Beijing, Perth, Singapore, Hong Kong" },
+  { value: "Asia/Tokyo", label: "(UTC+09:00) Osaka, Sapporo, Tokyo" },
+  { value: "America/New_York", label: "(UTC-05:00) Eastern Time (US & Canada)" },
+  { value: "America/Chicago", label: "(UTC-06:00) Central Time (US & Canada)" },
+  { value: "America/Denver", label: "(UTC-07:00) Mountain Time (US & Canada)" },
+  { value: "America/Los_Angeles", label: "(UTC-08:00) Pacific Time (US & Canada)" },
+];
 
 export function EditProfileModal({
   isOpen,
@@ -19,26 +34,27 @@ export function EditProfileModal({
   currentUser,
   departments: _departments,
   onSaveProfile,
+  companyName = "Kaelixo",
 }: EditProfileModalProps) {
   const nameInputId = useId();
   const displayNameInputId = useId();
   const titleInputId = useId();
+  const pronunciationInputId = useId();
+  const timezoneInputId = useId();
   const phoneInputId = useId();
-  const statusEmojiInputId = useId();
-  const statusTextInputId = useId();
-  const bioInputId = useId();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [name, setName] = useState(currentUser.name || "");
-  const [displayName, setDisplayName] = useState(currentUser.displayName || "");
+  const [displayName, setDisplayName] = useState(currentUser.displayName || currentUser.name?.toLowerCase().replace(/\s+/g, "") || "");
   const [title, setTitle] = useState(currentUser.title || "");
+  const [pronunciation, setPronunciation] = useState(currentUser.displayName || currentUser.name || "");
+  const [timezone, setTimezone] = useState("Asia/Kolkata");
   const [phone, setPhone] = useState(currentUser.phone || "");
-  const [statusEmoji, setStatusEmoji] = useState(currentUser.statusEmoji || "💬");
-  const [statusText, setStatusText] = useState(currentUser.statusText || "");
-  const [bio, setBio] = useState(currentUser.bio || "");
   const [avatar, setAvatar] = useState(currentUser.avatar || "");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [hasRecording, setHasRecording] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -61,7 +77,6 @@ export function EditProfileModal({
     setError(null);
     setSelectedFile(file);
 
-    // Read as Data URL so image is permanent and portable across clients
     const reader = new FileReader();
     reader.onload = () => {
       if (typeof reader.result === "string") {
@@ -79,13 +94,26 @@ export function EditProfileModal({
     setAvatar(defaultAvatar);
   };
 
+  const toggleRecording = () => {
+    if (isRecording) {
+      setIsRecording(false);
+      setHasRecording(true);
+    } else {
+      setIsRecording(true);
+      setTimeout(() => {
+        setIsRecording(false);
+        setHasRecording(true);
+      }, 3000);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
     const trimmedName = name.trim();
     if (!trimmedName) {
-      setError("Full Name cannot be empty.");
+      setError("Full name cannot be empty.");
       return;
     }
 
@@ -93,7 +121,6 @@ export function EditProfileModal({
     try {
       let finalAvatar = avatar || currentUser.avatar;
 
-      // If user uploaded a new image file, upload to Supabase Storage for permanent CDN URL
       if (selectedFile) {
         try {
           const uploadedUrl = await uploadAvatar(selectedFile, currentUser.id);
@@ -102,18 +129,14 @@ export function EditProfileModal({
           }
         } catch (uploadErr) {
           console.warn("Storage upload fallback to base64 data URL:", uploadErr);
-          // finalAvatar remains the portable base64 data URL from reader.readAsDataURL
         }
       }
 
       await onSaveProfile({
         name: trimmedName,
-        displayName: displayName.trim() || trimmedName.toLowerCase().replace(/\s+/g, "."),
+        displayName: displayName.trim() || trimmedName.toLowerCase().replace(/\s+/g, ""),
         title: title.trim(),
         phone: phone.trim(),
-        statusEmoji: statusEmoji.trim() || "💬",
-        statusText: statusText.trim(),
-        bio: bio.trim(),
         avatar: finalAvatar,
       });
       onClose();
@@ -126,22 +149,17 @@ export function EditProfileModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-150">
-      <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+      <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col max-h-[92vh]">
         {/* Header */}
-        <div className="p-5 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between">
-          <div>
-            <h2 className="font-bold text-base text-neutral-900 dark:text-neutral-100">
-              Edit Your Profile
-            </h2>
-            <p className="text-xs text-neutral-500 dark:text-neutral-400">
-              Update your photo, contact details, and status.
-            </p>
-          </div>
+        <div className="px-6 py-5 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between">
+          <h2 className="font-extrabold text-xl text-neutral-900 dark:text-neutral-100 tracking-tight">
+            Edit your profile
+          </h2>
 
           <button
             onClick={onClose}
-            className="p-1.5 rounded-xl text-neutral-400 hover:text-neutral-700 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition"
+            className="p-1.5 rounded-lg text-neutral-400 hover:text-neutral-700 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition cursor-pointer"
             title="Close"
           >
             <X className="w-5 h-5" />
@@ -149,35 +167,194 @@ export function EditProfileModal({
         </div>
 
         {/* Scrollable Form Body */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 custom-scrollbar">
           {error && (
-            <div className="p-3 rounded-2xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900/60 text-rose-700 dark:text-rose-300 text-xs">
+            <div className="mb-4 p-3 rounded-lg bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900/60 text-rose-700 dark:text-rose-300 text-xs">
               {error}
             </div>
           )}
 
-          {/* Profile Photo Section */}
-          <div className="p-4 rounded-2xl bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-200 dark:border-neutral-800 flex items-center space-x-4">
-            <div className="relative">
-              <img
-                src={
-                  avatar ||
-                  `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(name || "User")}`
-                }
-                alt="Profile Preview"
-                className="w-16 h-16 rounded-2xl object-cover bg-neutral-200 dark:bg-neutral-700 ring-2 ring-neutral-300 dark:ring-neutral-700"
-              />
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="absolute -bottom-1 -right-1 p-1 bg-indigo-600 text-white rounded-full shadow hover:bg-indigo-700 transition"
-                title="Change Photo"
-              >
-                <Camera className="w-3.5 h-3.5" />
-              </button>
+          <div className="grid grid-cols-1 md:grid-cols-[1fr_180px] gap-6 items-start">
+            {/* Left Column: Form Fields */}
+            <div className="space-y-4">
+              {/* Full name */}
+              <div>
+                <label
+                  htmlFor={nameInputId}
+                  className="block text-sm font-bold text-neutral-900 dark:text-neutral-100 mb-1.5"
+                >
+                  Full name
+                </label>
+                <input
+                  id={nameInputId}
+                  type="text"
+                  required
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="e.g. Prajin Prakash"
+                  className="w-full px-3 py-2 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 rounded-lg text-sm text-neutral-900 dark:text-white focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition"
+                />
+              </div>
+
+              {/* Display name */}
+              <div>
+                <label
+                  htmlFor={displayNameInputId}
+                  className="block text-sm font-bold text-neutral-900 dark:text-neutral-100 mb-1.5"
+                >
+                  Display name
+                </label>
+                <input
+                  id={displayNameInputId}
+                  type="text"
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  placeholder="e.g. prajin"
+                  className="w-full px-3 py-2 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 rounded-lg text-sm text-neutral-900 dark:text-white focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition"
+                />
+                <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
+                  This could be your first name or a nickname — the name you&apos;d like people to use to refer to you in Slack.
+                </p>
+              </div>
+
+              {/* Title */}
+              <div>
+                <label
+                  htmlFor={titleInputId}
+                  className="block text-sm font-bold text-neutral-900 dark:text-neutral-100 mb-1.5"
+                >
+                  Title
+                </label>
+                <input
+                  id={titleInputId}
+                  type="text"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="e.g. developer"
+                  className="w-full px-3 py-2 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 rounded-lg text-sm text-neutral-900 dark:text-white focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition"
+                />
+                <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
+                  Let people know what you do at {companyName}.
+                </p>
+              </div>
+
+              {/* Name recording */}
+              <div>
+                <label className="block text-sm font-bold text-neutral-900 dark:text-neutral-100 mb-1.5">
+                  Name recording
+                </label>
+                <button
+                  type="button"
+                  onClick={toggleRecording}
+                  className={`px-3 py-1.5 rounded-lg border text-xs font-semibold flex items-center space-x-1.5 transition cursor-pointer ${
+                    isRecording
+                      ? "bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border-rose-300 dark:border-rose-800 animate-pulse"
+                      : hasRecording
+                      ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border-emerald-300 dark:border-emerald-800"
+                      : "bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-200 border-neutral-300 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-750"
+                  }`}
+                >
+                  {isRecording ? (
+                    <>
+                      <MicOff className="w-3.5 h-3.5" />
+                      <span>Recording... (click to stop)</span>
+                    </>
+                  ) : hasRecording ? (
+                    <>
+                      <Check className="w-3.5 h-3.5" />
+                      <span>Audio clip recorded (click to re-record)</span>
+                    </>
+                  ) : (
+                    <>
+                      <Mic className="w-3.5 h-3.5" />
+                      <span>Record audio clip</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* Name pronunciation */}
+              <div>
+                <label
+                  htmlFor={pronunciationInputId}
+                  className="block text-sm font-bold text-neutral-900 dark:text-neutral-100 mb-1.5"
+                >
+                  Name pronunciation
+                </label>
+                <input
+                  id={pronunciationInputId}
+                  type="text"
+                  value={pronunciation}
+                  onChange={(e) => setPronunciation(e.target.value)}
+                  placeholder="e.g. prah-jin"
+                  className="w-full px-3 py-2 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 rounded-lg text-sm text-neutral-900 dark:text-white focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition"
+                />
+                <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
+                  This could be a phonetic pronunciation, or an example of something that your name sounds like.
+                </p>
+              </div>
+
+              {/* Time zone */}
+              <div>
+                <label
+                  htmlFor={timezoneInputId}
+                  className="block text-sm font-bold text-neutral-900 dark:text-neutral-100 mb-1.5"
+                >
+                  Time zone
+                </label>
+                <select
+                  id={timezoneInputId}
+                  value={timezone}
+                  onChange={(e) => setTimezone(e.target.value)}
+                  className="w-full px-3 py-2 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 rounded-lg text-sm text-neutral-900 dark:text-white focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition cursor-pointer"
+                >
+                  {COMMON_TIMEZONES.map((tz) => (
+                    <option key={tz.value} value={tz.value}>
+                      {tz.label}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
+                  Your current time zone. Used to send summary and notification emails, for times in your activity feeds, and for reminders.
+                </p>
+              </div>
+
+              {/* Phone number */}
+              <div>
+                <label
+                  htmlFor={phoneInputId}
+                  className="block text-sm font-bold text-neutral-900 dark:text-neutral-100 mb-1.5"
+                >
+                  Phone number
+                </label>
+                <input
+                  id={phoneInputId}
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="+91 98765 43210"
+                  className="w-full px-3 py-2 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 rounded-lg text-sm text-neutral-900 dark:text-white focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition"
+                />
+              </div>
             </div>
 
-            <div className="flex-1 space-y-1.5">
+            {/* Right Column: Profile Photo Section */}
+            <div className="flex flex-col items-start w-full">
+              <label className="block text-sm font-bold text-neutral-900 dark:text-neutral-100 mb-1.5">
+                Profile photo
+              </label>
+
+              <div className="w-full aspect-square max-w-[180px] rounded-lg overflow-hidden border border-neutral-300 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-800 mb-3 shadow-xs">
+                <img
+                  src={
+                    avatar ||
+                    `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(name || "User")}`
+                  }
+                  alt="Profile Preview"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+
               <input
                 ref={fileInputRef}
                 type="file"
@@ -185,179 +362,40 @@ export function EditProfileModal({
                 onChange={handleImageFileChange}
                 className="hidden"
               />
-              <div className="flex items-center space-x-2">
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="px-3 py-1.5 text-xs font-semibold text-neutral-700 dark:text-neutral-200 bg-white dark:bg-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-600 border border-neutral-300 dark:border-neutral-600 rounded-xl transition flex items-center space-x-1.5"
-                >
-                  <Upload className="w-3.5 h-3.5" />
-                  <span>Upload Image</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={handleRemovePhoto}
-                  className="px-3 py-1.5 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl transition flex items-center space-x-1"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  <span>Reset</span>
-                </button>
-              </div>
-              <p className="text-[11px] text-neutral-400">
-                Recommended: Square JPG, PNG, or WebP up to 5MB.
-              </p>
-            </div>
-          </div>
 
-          {/* Full Name & Display Name */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label
-                htmlFor={nameInputId}
-                className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1"
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full py-2 px-3 border border-neutral-300 dark:border-neutral-700 rounded-lg text-sm font-semibold text-neutral-800 dark:text-neutral-200 bg-white dark:bg-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-750 transition text-center cursor-pointer shadow-xs"
               >
-                Full Name <span className="text-rose-500">*</span>
-              </label>
-              <div className="relative">
-                <User className="w-4 h-4 text-neutral-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                <input
-                  id={nameInputId}
-                  type="text"
-                  required
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. Alex Morgan"
-                  className="w-full pl-10 pr-3 py-2 bg-neutral-50 dark:bg-neutral-800/80 border border-neutral-300 dark:border-neutral-700 rounded-xl text-xs text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"
-                />
-              </div>
-            </div>
+                Upload photo
+              </button>
 
-            <div>
-              <label
-                htmlFor={displayNameInputId}
-                className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1"
+              <button
+                type="button"
+                onClick={handleRemovePhoto}
+                className="w-full text-center text-sm font-medium text-sky-600 dark:text-sky-400 hover:underline cursor-pointer mt-2.5 transition"
               >
-                Display Name
-              </label>
-              <input
-                id={displayNameInputId}
-                type="text"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                placeholder="e.g. alex.morgan"
-                className="w-full px-3 py-2 bg-neutral-50 dark:bg-neutral-800/80 border border-neutral-300 dark:border-neutral-700 rounded-xl text-xs text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"
-              />
+                Remove photo
+              </button>
             </div>
           </div>
 
-          {/* Job Title & Phone */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label
-                htmlFor={titleInputId}
-                className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1"
-              >
-                Job Title / Role
-              </label>
-              <div className="relative">
-                <Briefcase className="w-4 h-4 text-neutral-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                <input
-                  id={titleInputId}
-                  type="text"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="e.g. Senior Software Engineer"
-                  className="w-full pl-10 pr-3 py-2 bg-neutral-50 dark:bg-neutral-800/80 border border-neutral-300 dark:border-neutral-700 rounded-xl text-xs text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label
-                htmlFor={phoneInputId}
-                className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1"
-              >
-                Phone Number
-              </label>
-              <div className="relative">
-                <Phone className="w-4 h-4 text-neutral-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                <input
-                  id={phoneInputId}
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="+1 (555) 000-0000"
-                  className="w-full pl-10 pr-3 py-2 bg-neutral-50 dark:bg-neutral-800/80 border border-neutral-300 dark:border-neutral-700 rounded-xl text-xs text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Status (Emoji + Text) */}
-          <div>
-            <label
-              htmlFor={statusTextInputId}
-              className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1"
-            >
-              Current Status
-            </label>
-            <div className="flex items-center space-x-2">
-              <input
-                id={statusEmojiInputId}
-                type="text"
-                value={statusEmoji}
-                onChange={(e) => setStatusEmoji(e.target.value)}
-                maxLength={4}
-                className="w-14 text-center py-2 bg-neutral-50 dark:bg-neutral-800/80 border border-neutral-300 dark:border-neutral-700 rounded-xl text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"
-                title="Status Emoji"
-              />
-              <input
-                id={statusTextInputId}
-                type="text"
-                value={statusText}
-                onChange={(e) => setStatusText(e.target.value)}
-                placeholder="What are you working on? (e.g. In focus mode)"
-                className="flex-1 px-3 py-2 bg-neutral-50 dark:bg-neutral-800/80 border border-neutral-300 dark:border-neutral-700 rounded-xl text-xs text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"
-              />
-            </div>
-          </div>
-
-          {/* Bio / Summary */}
-          <div>
-            <label
-              htmlFor={bioInputId}
-              className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1"
-            >
-              About Me <span className="text-neutral-400 font-normal">(Bio)</span>
-            </label>
-            <div className="relative">
-              <FileText className="w-4 h-4 text-neutral-400 absolute left-3.5 top-3" />
-              <textarea
-                id={bioInputId}
-                rows={3}
-                value={bio}
-                onChange={(e) => setBio(e.target.value)}
-                placeholder="Share a brief introduction with your colleagues..."
-                className="w-full pl-10 pr-3 py-2.5 bg-neutral-50 dark:bg-neutral-800/80 border border-neutral-300 dark:border-neutral-700 rounded-xl text-xs text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition resize-none"
-              />
-            </div>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="pt-3 flex items-center justify-end space-x-3 border-t border-neutral-200 dark:border-neutral-800">
+          {/* Footer Action Buttons */}
+          <div className="mt-8 pt-4 flex items-center justify-end space-x-3 border-t border-neutral-200 dark:border-neutral-800">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-xs font-semibold text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-800"
+              className="px-4 py-2 text-sm font-bold text-neutral-700 dark:text-neutral-300 border border-neutral-300 dark:border-neutral-700 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-5 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md transition disabled:opacity-50 cursor-pointer"
+              className="px-5 py-2 text-sm font-bold text-white bg-[#007a5a] hover:bg-[#006a4e] rounded-lg shadow-sm transition disabled:opacity-50 cursor-pointer"
             >
-              {isSubmitting ? "Saving..." : "Save Changes"}
+              {isSubmitting ? "Saving..." : "Save changes"}
             </button>
           </div>
         </form>

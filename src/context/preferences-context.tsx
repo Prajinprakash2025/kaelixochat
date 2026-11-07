@@ -123,16 +123,35 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
     const root = document.documentElement;
     root.setAttribute("data-slack-theme", themeId);
     root.style.setProperty("--theme-accent", currentTheme.accentColor);
+
+    const isDark = resolvedMode === "dark";
+    const headerTint = isDark ? currentTheme.headerTintDark : currentTheme.headerTintLight;
+    const headerTextColor = isDark
+      ? currentTheme.headerTextColorDark || "#ffffff"
+      : currentTheme.headerTextColorLight || "#0f172a";
+
+    root.style.setProperty("--theme-header-tint", headerTint);
+    root.style.setProperty("--theme-header-text", headerTextColor);
     root.style.setProperty(
-      "--theme-header-tint",
-      resolvedMode === "dark" ? currentTheme.headerTintDark : currentTheme.headerTintLight
+      "--theme-header-border",
+      isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.1)"
     );
     root.style.setProperty("--theme-sidebar-active", currentTheme.accentColor);
 
-    const isDark = resolvedMode === "dark";
+    // Sync PWA / browser theme color
+    try {
+      let metaThemeColor = document.querySelector('meta[name="theme-color"]');
+      if (!metaThemeColor) {
+        metaThemeColor = document.createElement("meta");
+        metaThemeColor.setAttribute("name", "theme-color");
+        document.head.appendChild(metaThemeColor);
+      }
+      metaThemeColor.setAttribute("content", headerTint);
+    } catch {}
+
     const sidebarBg = isDark
       ? currentTheme.sidebarBgDark || "#111217"
-      : currentTheme.sidebarBgLight || "#f8fafc";
+      : currentTheme.sidebarBgLight || "#ffffff";
 
     // For Aubergine, text stays white even in light mode
     const isSpecialDarkSidebar = !isDark && currentTheme.id === "aubergine";
