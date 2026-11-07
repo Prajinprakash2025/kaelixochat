@@ -14,6 +14,7 @@ import {
   FileText,
   FileCode,
   ImageIcon,
+  Video as VideoIcon,
   Check,
   Loader2,
   UploadCloud,
@@ -26,6 +27,7 @@ import {
   formatFileSize,
   getFileCategory,
   isImageFile,
+  isVideoFile,
   deleteAttachment,
 } from "@/utils/storage";
 import { EmojiPicker } from "./emoji-picker";
@@ -98,7 +100,8 @@ export function ChatInput({
       const stageId = `stage-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
       const category = getFileCategory(file.type || "", file.name);
       const isImg = isImageFile(file.type || "");
-      const previewUrl = isImg ? URL.createObjectURL(file) : undefined;
+      const isVid = isVideoFile(file.type || "");
+      const previewUrl = isImg || isVid ? URL.createObjectURL(file) : undefined;
 
       // Initial validation check
       try {
@@ -320,6 +323,8 @@ export function ChatInput({
     switch (category) {
       case "image":
         return <ImageIcon className="w-5 h-5 text-indigo-500" />;
+      case "video":
+        return <VideoIcon className="w-5 h-5 text-purple-500" />;
       case "pdf":
         return <FileText className="w-5 h-5 text-rose-500" />;
       case "code":
@@ -344,6 +349,7 @@ export function ChatInput({
         onChange={handleFileInputChange}
         multiple
         className="hidden"
+        accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv,.json,.zip,.md,.py,.js,.ts"
         aria-label="Upload file attachments"
       />
 
@@ -355,7 +361,7 @@ export function ChatInput({
             Drop files here to upload to #{channelName}
           </p>
           <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
-            Images, PDFs, documents, or code (up to 25 MB)
+            Images, videos, PDFs, documents, or code (up to 25 MB)
           </p>
         </div>
       )}
@@ -426,11 +432,16 @@ export function ChatInput({
                 }`}
               >
                 {/* Thumbnail or Category Icon */}
-                {item.previewUrl ? (
+                {item.previewUrl && item.category === "image" ? (
                   <img
                     src={item.previewUrl}
                     alt={item.name}
                     className="w-8 h-8 rounded-lg object-cover flex-shrink-0 bg-neutral-100 dark:bg-neutral-700 border border-neutral-200 dark:border-neutral-700"
+                  />
+                ) : item.previewUrl && item.category === "video" ? (
+                  <video
+                    src={item.previewUrl}
+                    className="w-8 h-8 rounded-lg object-cover flex-shrink-0 bg-black border border-neutral-700"
                   />
                 ) : (
                   <div className="w-8 h-8 rounded-lg bg-neutral-100 dark:bg-neutral-700/60 flex items-center justify-center flex-shrink-0">

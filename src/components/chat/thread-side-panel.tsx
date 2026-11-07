@@ -553,6 +553,7 @@ export function ThreadSidePanel({
                   multiple
                   className="hidden"
                   id="thread-file-upload"
+                  accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv,.json,.zip,.md,.py,.js,.ts"
                 />
                 <label
                   htmlFor="thread-file-upload"

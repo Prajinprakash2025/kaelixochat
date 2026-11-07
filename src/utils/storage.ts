@@ -15,6 +15,17 @@ export const ALLOWED_MIME_TYPES = new Set([
   "image/gif",
   "image/webp",
   "image/svg+xml",
+  // Videos
+  "video/mp4",
+  "video/webm",
+  "video/ogg",
+  "video/quicktime",
+  "video/x-matroska",
+  // Audio
+  "audio/mpeg",
+  "audio/mp3",
+  "audio/wav",
+  "audio/ogg",
   // Documents
   "application/pdf",
   "text/plain",
@@ -42,6 +53,16 @@ export const SAFE_FILE_EXTENSIONS = new Set([
   "gif",
   "webp",
   "svg",
+  // Videos
+  "mp4",
+  "webm",
+  "mov",
+  "mkv",
+  "ogg",
+  "m4v",
+  // Audio
+  "mp3",
+  "wav",
   // Documents
   "pdf",
   "txt",
@@ -139,7 +160,8 @@ export function sanitizeChannelId(channelId: string): string {
  */
 export function getFileCategory(mimeType: string, filename: string): FileCategory {
   if (mimeType.startsWith("image/")) return "image";
-  if (mimeType === "application/pdf") return "pdf";
+  if (isVideoFile(mimeType) || /\.(mp4|webm|mov|mkv|ogg|m4v)$/i.test(filename)) return "video";
+  if (mimeType === "application/pdf" || filename.toLowerCase().endsWith(".pdf")) return "pdf";
   if (
     mimeType.includes("json") ||
     mimeType.includes("javascript") ||
@@ -159,7 +181,16 @@ export function getFileCategory(mimeType: string, filename: string): FileCategor
  * Returns true if the MIME type represents an inline-renderable image.
  */
 export function isImageFile(mimeType: string): boolean {
-  return mimeType.startsWith("image/");
+  return Boolean(mimeType && mimeType.startsWith("image/"));
+}
+
+/**
+ * Returns true if the MIME type or extension represents a playable video.
+ */
+export function isVideoFile(mimeType: string): boolean {
+  if (!mimeType) return false;
+  const lower = mimeType.toLowerCase();
+  return lower.startsWith("video/") || lower === "application/mp4";
 }
 
 /**

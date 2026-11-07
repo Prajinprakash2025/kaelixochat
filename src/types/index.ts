@@ -75,7 +75,7 @@ export interface Channel {
 // Attachment Contracts (R1 / PROJECT.md Contract 1)
 // ------------------------------------------------------------------------------
 
-export type FileCategory = "image" | "file" | "code" | "pdf";
+export type FileCategory = "image" | "video" | "file" | "code" | "pdf";
 
 export interface Attachment {
   id: string;

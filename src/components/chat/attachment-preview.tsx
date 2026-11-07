@@ -5,6 +5,7 @@ import { Attachment } from "@/types";
 import { DocumentCard } from "./document-card";
 import {
   isImageFile,
+  isVideoFile,
   extractFileExtension,
   formatFileSize,
   sanitizeFileName,
@@ -21,6 +22,8 @@ import {
   FileText,
   ImageOff,
   Eye,
+  Maximize2,
+  Video as VideoIcon,
 } from "lucide-react";
 
 export interface LightboxFile {
@@ -30,7 +33,14 @@ export interface LightboxFile {
   size?: number;
 }
 
+export function isVideoAttachment(att: Attachment | LightboxFile): boolean {
+  if (att.type && isVideoFile(att.type)) return true;
+  const ext = extractFileExtension(att.name).toLowerCase();
+  return ["mp4", "webm", "mov", "mkv", "ogg", "m4v"].includes(ext);
+}
+
 export function isImageAttachment(att: Attachment | LightboxFile): boolean {
+  if (isVideoAttachment(att)) return false;
   if (att.type && isImageFile(att.type)) return true;
   const ext = extractFileExtension(att.name).toLowerCase();
   return ["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp", "avif"].includes(ext);
@@ -110,8 +120,9 @@ export function AttachmentPreview({ attachments, className = "" }: AttachmentPre
 
   if (!attachments || attachments.length === 0) return null;
 
-  const images = attachments.filter(isImageAttachment);
-  const documents = attachments.filter((att) => !isImageAttachment(att));
+  const videos = attachments.filter(isVideoAttachment);
+  const images = attachments.filter((att) => isImageAttachment(att) && !isVideoAttachment(att));
+  const documents = attachments.filter((att) => !isImageAttachment(att) && !isVideoAttachment(att));
 
   // Full item list for lightbox navigation
   const allFiles: LightboxFile[] = attachments.map((a) => ({
@@ -138,6 +149,55 @@ export function AttachmentPreview({ attachments, className = "" }: AttachmentPre
 
   return (
     <div className={`mt-2.5 space-y-2.5 ${className}`}>
+      {/* 1. Native In-Chat Video Player */}
+      {videos.length > 0 && (
+        <div className="space-y-3 max-w-lg w-full">
+          {videos.map((vid) => (
+            <div
+              key={vid.id || vid.url}
+              className="rounded-2xl overflow-hidden border border-neutral-200/90 dark:border-neutral-800 bg-neutral-950 shadow-md group"
+            >
+              <div className="relative aspect-video max-h-80 w-full bg-black flex items-center justify-center">
+                <video
+                  src={vid.url}
+                  controls
+                  preload="metadata"
+                  playsInline
+                  className="w-full h-full object-contain max-h-80 rounded-t-2xl bg-black"
+                >
+                  Your browser does not support the video tag.
+                </video>
+              </div>
+              <div className="px-3.5 py-2 bg-neutral-900 text-neutral-300 flex items-center justify-between text-xs border-t border-neutral-800">
+                <div className="flex items-center space-x-2 truncate mr-2">
+                  <span className="font-medium text-white truncate max-w-[200px] sm:max-w-[280px]">
+                    {vid.name}
+                  </span>
+                  <span className="text-[10px] uppercase font-bold px-1.5 py-0.2 rounded bg-purple-900/60 text-purple-300 border border-purple-800/80">
+                    Video
+                  </span>
+                </div>
+                <div className="flex items-center space-x-2 flex-shrink-0">
+                  <span className="text-[11px] text-neutral-400">
+                    {vid.size ? formatFileSize(vid.size) : ""}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const idx = allFiles.findIndex((f) => f.url === vid.url);
+                      handleOpenLightbox(idx >= 0 ? idx : 0);
+                    }}
+                    className="p-1 hover:bg-neutral-800 rounded text-neutral-300 hover:text-white transition cursor-pointer"
+                    title="Open video in Theater Lightbox"
+                  >
+                    <Maximize2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
       {/* 1. Image Attachments Grid Layout */}
       {images.length > 0 && (
         <div>
@@ -299,7 +359,8 @@ export function SlackMediaLightbox({
   }, [isOpen]);
 
   const currentFile = files[index];
-  const isImage = currentFile ? isImageAttachment(currentFile) : false;
+  const isVideo = currentFile ? isVideoAttachment(currentFile) : false;
+  const isImage = currentFile ? isImageAttachment(currentFile) && !isVideo : false;
   const isPdf = currentFile ? isPdfAttachment(currentFile) : false;
 
   const handleZoomIn = useCallback(() => {
@@ -437,7 +498,7 @@ export function SlackMediaLightbox({
             </h4>
             <p className="text-xs text-neutral-400">
               {files.length > 1 && `File ${index + 1} of ${files.length} • `}
-              {isPdf ? "PDF Document" : isImage ? "Image Preview" : "Document"}
+              {isVideo ? "Video Player" : isPdf ? "PDF Document" : isImage ? "Image Preview" : "Document"}
               {currentFile.size ? ` • ${formatFileSize(currentFile.size)}` : ""}
             </p>
           </div>
@@ -445,52 +506,58 @@ export function SlackMediaLightbox({
 
         {/* Right: Zoom & Tool Actions */}
         <div className="flex items-center space-x-1.5 sm:space-x-2">
-          {/* Zoom Out */}
-          <button
-            type="button"
-            onClick={handleZoomOut}
-            disabled={zoom <= 0.5}
-            className="p-1.5 hover:bg-white/10 rounded-lg text-white/80 hover:text-white transition disabled:opacity-30 cursor-pointer"
-            title="Zoom Out (-)"
-            aria-label="Zoom Out"
-          >
-            <ZoomOut className="w-4 h-4" />
-          </button>
+          {!isVideo && (
+            <>
+              {/* Zoom Out */}
+              <button
+                type="button"
+                onClick={handleZoomOut}
+                disabled={zoom <= 0.5}
+                className="p-1.5 hover:bg-white/10 rounded-lg text-white/80 hover:text-white transition disabled:opacity-30 cursor-pointer"
+                title="Zoom Out (-)"
+                aria-label="Zoom Out"
+              >
+                <ZoomOut className="w-4 h-4" />
+              </button>
 
-          {/* Zoom % Pill */}
-          <button
-            type="button"
-            onClick={handleResetZoom}
-            className="px-2 py-0.5 rounded-md bg-white/10 hover:bg-white/20 text-xs font-mono font-medium text-white/90 transition cursor-pointer"
-            title="Reset Zoom (0)"
-          >
-            {Math.round(zoom * 100)}%
-          </button>
+              {/* Zoom % Pill */}
+              <button
+                type="button"
+                onClick={handleResetZoom}
+                className="px-2 py-0.5 rounded-md bg-white/10 hover:bg-white/20 text-xs font-mono font-medium text-white/90 transition cursor-pointer"
+                title="Reset Zoom (0)"
+              >
+                {Math.round(zoom * 100)}%
+              </button>
 
-          {/* Zoom In */}
-          <button
-            type="button"
-            onClick={handleZoomIn}
-            disabled={zoom >= 3}
-            className="p-1.5 hover:bg-white/10 rounded-lg text-white/80 hover:text-white transition disabled:opacity-30 cursor-pointer"
-            title="Zoom In (+)"
-            aria-label="Zoom In"
-          >
-            <ZoomIn className="w-4 h-4" />
-          </button>
+              {/* Zoom In */}
+              <button
+                type="button"
+                onClick={handleZoomIn}
+                disabled={zoom >= 3}
+                className="p-1.5 hover:bg-white/10 rounded-lg text-white/80 hover:text-white transition disabled:opacity-30 cursor-pointer"
+                title="Zoom In (+)"
+                aria-label="Zoom In"
+              >
+                <ZoomIn className="w-4 h-4" />
+              </button>
 
-          <span className="h-4 w-[1px] bg-white/20 mx-1" />
+              <span className="h-4 w-[1px] bg-white/20 mx-1" />
 
-          {/* Reset Zoom Icon */}
-          <button
-            type="button"
-            onClick={handleResetZoom}
-            className="p-1.5 hover:bg-white/10 rounded-lg text-white/80 hover:text-white transition cursor-pointer"
-            title="Reset Zoom"
-            aria-label="Reset zoom"
-          >
-            <RotateCcw className="w-4 h-4" />
-          </button>
+              {/* Reset Zoom Icon */}
+              <button
+                type="button"
+                onClick={handleResetZoom}
+                className="p-1.5 hover:bg-white/10 rounded-lg text-white/80 hover:text-white transition cursor-pointer"
+                title="Reset Zoom"
+                aria-label="Reset zoom"
+              >
+                <RotateCcw className="w-4 h-4" />
+              </button>
+
+              <span className="h-4 w-[1px] bg-white/20 mx-1" />
+            </>
+          )}
 
           {/* Download */}
           <button
@@ -538,7 +605,23 @@ export function SlackMediaLightbox({
           cursor: isImage && zoom > 1 ? (isDragging ? "grabbing" : "grab") : "default",
         }}
       >
-        {isPdf ? (
+        {isVideo ? (
+          /* Slack-Style In-App Video Player Theater */
+          <div
+            className="w-full max-w-5xl max-h-[82vh] flex flex-col items-center justify-center bg-black rounded-2xl overflow-hidden shadow-2xl border border-neutral-800"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <video
+              src={currentFile.url}
+              controls
+              autoPlay
+              playsInline
+              className="w-full max-h-[76vh] object-contain rounded-2xl outline-none bg-black"
+            >
+              Your browser does not support the video tag.
+            </video>
+          </div>
+        ) : isPdf ? (
           /* Slack-Style In-App PDF Preview Viewer */
           <div
             className="w-full max-w-5xl h-[80vh] bg-white rounded-xl overflow-hidden shadow-2xl border border-neutral-700 transition-transform duration-100 ease-out"
