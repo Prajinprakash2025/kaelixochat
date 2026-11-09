@@ -82,12 +82,13 @@ export function ChatInput({
   const [stagedFiles, setStagedFiles] = useState<StagedFile[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [showFormatting, setShowFormatting] = useState(true);
+  const [showFormatting, setShowFormatting] = useState(false);
   const [showHeadingMenu, setShowHeadingMenu] = useState(false);
   const [isRecordingVoice, setIsRecordingVoice] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const mobileTextareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
   const dragCounterRef = useRef<number>(0);
@@ -339,6 +340,12 @@ export function ChatInput({
     });
 
     setContent("");
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+    }
+    if (mobileTextareaRef.current) {
+      mobileTextareaRef.current.style.height = "auto";
+    }
     setStagedFiles([]);
     setShowEmojiPicker(false);
     textareaRef.current?.focus();
@@ -358,7 +365,7 @@ export function ChatInput({
     suffix: string = prefix,
     defaultPlaceholder: string = "text"
   ) => {
-    const textarea = textareaRef.current;
+    const textarea = textareaRef.current || mobileTextareaRef.current;
     if (!textarea) return;
 
     const start = textarea.selectionStart;
@@ -388,7 +395,7 @@ export function ChatInput({
   };
 
   const handleInsertEmoji = (emoji: string) => {
-    const textarea = textareaRef.current;
+    const textarea = textareaRef.current || mobileTextareaRef.current;
     if (!textarea) {
       setContent((prev) => prev + emoji);
       return;
@@ -417,6 +424,11 @@ export function ChatInput({
         return <FileIcon className="w-5 h-5 text-sky-500" />;
     }
   };
+
+  const cleanName = channelName.replace(/^#+/, "");
+  const placeholderText = cleanName.startsWith("@")
+    ? `Message ${cleanName.slice(1)}`
+    : `Message #${cleanName}`;
 
   return (
     <div
@@ -450,7 +462,7 @@ export function ChatInput({
         <div className="absolute inset-2 bg-indigo-500/10 dark:bg-indigo-500/20 border-2 border-dashed border-indigo-500 rounded-2xl flex flex-col items-center justify-center z-30 backdrop-blur-xs pointer-events-none transition-all">
           <UploadCloud className="w-8 h-8 text-indigo-600 dark:text-indigo-400 animate-bounce mb-1" />
           <p className="font-semibold text-sm text-indigo-700 dark:text-indigo-300">
-            Drop files here to upload to #{channelName}
+            Drop files here to upload to #{cleanName}
           </p>
           <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
             Images, videos, PDFs, documents, or code (up to 25 MB)
@@ -458,7 +470,229 @@ export function ChatInput({
         </div>
       )}
 
-      <div className="relative rounded-2xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50/50 dark:bg-neutral-800/50 focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-transparent transition shadow-xs">
+      {/* =========================================================================
+          MOBILE COMPOSER (sm:hidden) - Exact Slack mobile layout from screenshot
+          ========================================================================= */}
+      <div className="sm:hidden flex flex-col bg-white dark:bg-[#1a1d21] rounded-2xl border border-neutral-200 dark:border-neutral-800 shadow-xs px-3 pt-2 pb-2">
+        {/* Subtle top drag handle pill */}
+        <div className="w-8 h-1 bg-neutral-300 dark:bg-neutral-700/80 rounded-full mx-auto mb-1.5" />
+
+        {/* Collapsible Mobile Formatting Bar (Opened via Aa button) */}
+        {showFormatting && (
+          <div className="flex items-center space-x-1 py-1 px-1 mb-1 border-b border-neutral-100 dark:border-neutral-800 overflow-x-auto no-scrollbar text-neutral-600 dark:text-neutral-300">
+            <button
+              type="button"
+              onClick={() => insertFormatting("**", "**", "bold text")}
+              className="p-1 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded transition cursor-pointer"
+              title="Bold"
+            >
+              <Bold className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => insertFormatting("*", "*", "italic text")}
+              className="p-1 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded transition cursor-pointer"
+              title="Italic"
+            >
+              <Italic className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => insertFormatting("<u>", "</u>", "underline text")}
+              className="p-1 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded transition cursor-pointer"
+              title="Underline"
+            >
+              <Underline className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => insertFormatting("~", "~", "strikethrough text")}
+              className="p-1 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded transition cursor-pointer"
+              title="Strikethrough"
+            >
+              <Strikethrough className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => insertFormatting("`", "`", "code")}
+              className="p-1 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded transition cursor-pointer"
+              title="Code"
+            >
+              <Code className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => insertFormatting("```\n", "\n```", "code block")}
+              className="p-1 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded transition cursor-pointer"
+              title="Code Block"
+            >
+              <SquareCode className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => insertFormatting("> ", "", "quote")}
+              className="p-1 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded transition cursor-pointer"
+              title="Quote"
+            >
+              <Quote className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => insertFormatting("• ", "", "list item")}
+              className="p-1 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded transition cursor-pointer"
+              title="Bullet"
+            >
+              <List className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
+        {/* Mobile Textarea */}
+        <textarea
+          ref={mobileTextareaRef}
+          value={content}
+          onChange={(e) => {
+            setContent(e.target.value);
+            if (mobileTextareaRef.current) {
+              mobileTextareaRef.current.style.height = "auto";
+              mobileTextareaRef.current.style.height = `${Math.min(mobileTextareaRef.current.scrollHeight, 100)}px`;
+            }
+          }}
+          onKeyDown={handleKeyDown}
+          onPaste={handlePaste}
+          placeholder={placeholderText}
+          rows={1}
+          disabled={disabled}
+          className="w-full bg-transparent px-1 py-1 text-[15px] leading-snug text-neutral-900 dark:text-neutral-100 placeholder-neutral-400 dark:placeholder-neutral-500 focus:outline-none resize-none font-sans min-h-[30px] max-h-24"
+        />
+
+        {/* Staged files on mobile */}
+        {stagedFiles.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 py-1.5 border-t border-neutral-100 dark:border-neutral-800 max-h-28 overflow-y-auto">
+            {stagedFiles.map((item) => (
+              <div
+                key={item.id}
+                className="flex items-center space-x-1.5 px-2 py-1 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-xs text-neutral-700 dark:text-neutral-200"
+              >
+                <span className="truncate max-w-[120px]">{item.name}</span>
+                {item.status === "uploading" && (
+                  <Loader2 className="w-3 h-3 animate-spin text-indigo-500" />
+                )}
+                {item.status === "complete" && (
+                  <Check className="w-3 h-3 text-emerald-500" />
+                )}
+                <button
+                  type="button"
+                  onClick={() => handleRemoveStagedFile(item.id)}
+                  className="text-neutral-400 hover:text-rose-500 cursor-pointer"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Mobile Action Bar matching reference screenshot media_1794208993921_9e8a01b3.jpg */}
+        <div className="flex items-center justify-between pt-1 relative">
+          <div className="flex items-center space-x-3 text-neutral-400 dark:text-neutral-400">
+            {/* (+) Attachment Button */}
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="w-7 h-7 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-600 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition cursor-pointer"
+              title="Add attachment"
+            >
+              <Plus className="w-4 h-4 stroke-[2.5]" />
+            </button>
+
+            {/* Aa Format Toggle */}
+            <button
+              type="button"
+              onClick={() => setShowFormatting(!showFormatting)}
+              className={`text-sm font-semibold tracking-tight transition cursor-pointer ${
+                showFormatting
+                  ? "text-indigo-600 dark:text-indigo-400 font-bold"
+                  : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white"
+              }`}
+              title="Format"
+            >
+              Aa
+            </button>
+
+            {/* 😊 Emoji Picker */}
+            <button
+              type="button"
+              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+              className={`transition cursor-pointer ${
+                showEmojiPicker
+                  ? "text-indigo-600 dark:text-indigo-400"
+                  : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white"
+              }`}
+              title="Emoji"
+            >
+              <Smile className="w-5 h-5" />
+            </button>
+
+            {/* @ Mention */}
+            <button
+              type="button"
+              onClick={() => insertFormatting("@", "", "colleague")}
+              className="text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition cursor-pointer"
+              title="Mention"
+            >
+              <AtSign className="w-5 h-5" />
+            </button>
+
+            {/* [/] Shortcuts */}
+            <button
+              type="button"
+              onClick={() => {
+                setContent((prev) => (prev.startsWith("/") ? prev : "/" + prev));
+                mobileTextareaRef.current?.focus();
+              }}
+              className="w-5 h-5 rounded border border-neutral-400/80 dark:border-neutral-600 flex items-center justify-center text-[10px] font-mono font-bold text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition cursor-pointer"
+              title="Shortcuts"
+            >
+              /
+            </button>
+          </div>
+
+          {/* Right Paper Airplane Send Button */}
+          <button
+            type="button"
+            onClick={handleSend}
+            disabled={!canSend}
+            className={`p-1.5 rounded-full transition ${
+              canSend
+                ? "text-emerald-500 dark:text-emerald-400 hover:text-emerald-600 active:scale-95 cursor-pointer"
+                : "text-neutral-300 dark:text-neutral-600 cursor-not-allowed"
+            }`}
+            title="Send"
+          >
+            {isAnyUploading ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              <SendHorizontal className="w-5 h-5" />
+            )}
+          </button>
+
+          {/* Emoji Popover for Mobile */}
+          {showEmojiPicker && (
+            <div className="absolute bottom-full left-0 mb-2 z-50">
+              <EmojiPicker
+                onSelectEmoji={handleInsertEmoji}
+                onClose={() => setShowEmojiPicker(false)}
+              />
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* =========================================================================
+          DESKTOP COMPOSER (hidden sm:block) - Enterprise Slack Rich Experience
+          ========================================================================= */}
+      <div className="hidden sm:block relative rounded-2xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50/50 dark:bg-neutral-800/50 focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-transparent transition shadow-xs">
         {/* Slack-Grade Top Rich Text Formatting Toolbar */}
         {showFormatting && (
           <div className="flex items-center justify-between px-3 py-1.5 border-b border-neutral-200 dark:border-neutral-700/60 text-neutral-500 dark:text-neutral-400 bg-neutral-100/40 dark:bg-neutral-800/40 rounded-t-2xl">
@@ -619,13 +853,19 @@ export function ChatInput({
         <textarea
           ref={textareaRef}
           value={content}
-          onChange={(e) => setContent(e.target.value)}
+          onChange={(e) => {
+            setContent(e.target.value);
+            if (textareaRef.current) {
+              textareaRef.current.style.height = "auto";
+              textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 120)}px`;
+            }
+          }}
           onKeyDown={handleKeyDown}
           onPaste={handlePaste}
-          placeholder={channelName.startsWith("#") ? `Message ${channelName}...` : `Message #${channelName}...`}
-          rows={2}
+          placeholder={placeholderText}
+          rows={1}
           disabled={disabled}
-          className="w-full bg-transparent p-2.5 sm:p-3 text-sm text-neutral-900 dark:text-neutral-100 placeholder-neutral-400 focus:outline-none resize-none font-sans"
+          className="w-full bg-transparent px-3 py-2 sm:py-2.5 text-sm text-neutral-900 dark:text-neutral-100 placeholder-neutral-400 focus:outline-none resize-none font-sans min-h-[36px] max-h-28"
         />
 
         {/* File Attachments Staging Area */}
@@ -713,9 +953,9 @@ export function ChatInput({
           </div>
         )}
 
-        {/* Slack-Grade Bottom Actions Bar */}
+        {/* Desktop Bottom Actions Bar */}
         <div className="flex items-center justify-between px-3 py-2 border-t border-neutral-200/50 dark:border-neutral-700/40">
-          <div className="relative flex items-center space-x-1 sm:space-x-1.5">
+          <div className="relative flex items-center space-x-1.5">
             {/* + Add Attachment / Media */}
             <button
               type="button"
@@ -770,7 +1010,7 @@ export function ChatInput({
             <button
               type="button"
               onClick={() => videoInputRef.current?.click()}
-              className="p-1.5 text-neutral-500 hover:text-purple-600 dark:text-neutral-400 dark:hover:text-purple-400 hover:bg-neutral-200/60 dark:hover:bg-neutral-700/60 rounded-lg transition cursor-pointer"
+              className="inline-flex p-1.5 text-neutral-500 hover:text-purple-600 dark:text-neutral-400 dark:hover:text-purple-400 hover:bg-neutral-200/60 dark:hover:bg-neutral-700/60 rounded-lg transition cursor-pointer"
               title="Record or upload video clip"
             >
               <VideoIcon className="w-4 h-4" />
@@ -779,7 +1019,7 @@ export function ChatInput({
             {/* 🎙️ Voice Recording */}
             {isRecordingVoice ? (
               <div className="flex items-center space-x-2 bg-rose-50 dark:bg-rose-950/60 border border-rose-300 dark:border-rose-800 px-2.5 py-1 rounded-xl">
-                <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping" />
+                <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
                 <span className="text-xs font-mono font-semibold text-rose-600 dark:text-rose-300">
                   {Math.floor(recordingSeconds / 60)}:
                   {String(recordingSeconds % 60).padStart(2, "0")}
@@ -812,7 +1052,7 @@ export function ChatInput({
               </button>
             )}
 
-            <span className="h-4 w-[1px] bg-neutral-300 dark:bg-neutral-700 mx-0.5" />
+            <span className="inline-block h-4 w-[1px] bg-neutral-300 dark:bg-neutral-700 mx-0.5" />
 
             {/* [/] Slash Commands */}
             <button
@@ -821,7 +1061,7 @@ export function ChatInput({
                 setContent((prev) => (prev.startsWith("/") ? prev : "/" + prev));
                 textareaRef.current?.focus();
               }}
-              className="p-1.5 text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-white hover:bg-neutral-200/60 dark:hover:bg-neutral-700/60 rounded-lg transition cursor-pointer"
+              className="inline-flex p-1.5 text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-white hover:bg-neutral-200/60 dark:hover:bg-neutral-700/60 rounded-lg transition cursor-pointer"
               title="Run a shortcut or slash command (/)"
             >
               <Slash className="w-4 h-4" />
@@ -838,42 +1078,27 @@ export function ChatInput({
             )}
           </div>
 
-          {/* Right Side: Slack-Grade Send Button with Dropdown Chevron */}
+          {/* Right Side: Desktop Send Button with shortcut */}
           <div className="flex items-center">
             <button
               type="button"
               onClick={handleSend}
               disabled={!canSend}
-              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-l-xl font-medium text-xs transition shadow-xs ${
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl transition shadow-xs cursor-pointer ${
                 canSend
-                  ? "bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/20 active:scale-95 cursor-pointer"
-                  : "bg-neutral-200 dark:bg-neutral-700 text-neutral-400 cursor-not-allowed"
+                  ? "bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/20 active:scale-95"
+                  : "bg-neutral-200 dark:bg-neutral-700/70 text-neutral-400 dark:text-neutral-500 cursor-not-allowed"
               }`}
               title="Send message (Enter)"
             >
               {isAnyUploading ? (
-                <>
-                  <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
-                  <span>Uploading...</span>
-                </>
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
               ) : (
                 <>
                   <SendHorizontal className="w-3.5 h-3.5" />
+                  <span className="text-xs font-medium">Send</span>
                 </>
               )}
-            </button>
-            <button
-              type="button"
-              onClick={handleSend}
-              disabled={!canSend}
-              className={`p-1.5 rounded-r-xl border-l border-emerald-700/40 text-xs transition ${
-                canSend
-                  ? "bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer"
-                  : "bg-neutral-200 dark:bg-neutral-700 text-neutral-400 cursor-not-allowed"
-              }`}
-              title="Send options"
-            >
-              <ChevronDown className="w-3 h-3" />
             </button>
           </div>
         </div>

@@ -46,6 +46,7 @@ import { GamesModal } from "@/components/games/games-modal";
 import { PreferencesModal } from "@/components/preferences/preferences-modal";
 import { InstallPwaButton } from "@/components/layout/install-pwa-button";
 import { usePreferences } from "@/context/preferences-context";
+import { MobileSlackView, MobileTabType } from "@/components/mobile/mobile-slack-view";
 import {
   Hash,
   Lock,
@@ -62,6 +63,7 @@ import {
   Sun,
   Moon,
   Settings,
+  ArrowLeft,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
@@ -251,6 +253,8 @@ export default function KaelixoApp() {
   const [externalTemplateText, setExternalTemplateText] = useState("");
   const [isLiveConnected, setIsLiveConnected] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [mobileViewMode, setMobileViewMode] = useState<"tabs" | "chat">("tabs");
+  const [mobileActiveTab, setMobileActiveTab] = useState<MobileTabType>("home");
 
   // Milestone 3: Right Dock Architecture (Feature 12, extended for Feature 27 Profile)
   const [rightPanelMode, setRightPanelMode] = useState<RightPanelMode>("none");
@@ -1577,6 +1581,7 @@ export default function KaelixoApp() {
     }
 
     setIsMobileSidebarOpen(false);
+    setMobileViewMode("chat");
     try {
       const dmId = await getOrCreateDmChannel(
         currentUser.id,
@@ -1618,6 +1623,7 @@ export default function KaelixoApp() {
     setActiveDmRecipient(null);
     setActiveChannelId(channelId);
     setIsMobileSidebarOpen(false);
+    setMobileViewMode("chat");
   };
 
   // Active channel resolution
@@ -2401,6 +2407,42 @@ export default function KaelixoApp() {
   return (
     <div className="flex h-screen bg-white dark:bg-neutral-950 overflow-hidden font-sans antialiased text-neutral-900 dark:text-neutral-100">
       {/* Sidebar with Company Switcher & DMs */}
+      {/* Mobile-Only Slack Navigation (Tabs View matching screenshots) */}
+      <div className={`md:hidden w-full h-full ${mobileViewMode === "tabs" ? "block" : "hidden"}`}>
+        <MobileSlackView
+          organizations={organizations}
+          activeOrg={activeOrg}
+          onSelectOrg={setActiveOrg}
+          channels={channels}
+          activeChannelId={activeChannelId}
+          onSelectChannel={(chId) => {
+            handleSelectRegularChannel(chId);
+            setMobileViewMode("chat");
+          }}
+          teamMembers={membersWithPresence}
+          currentUser={currentUser}
+          onSelectDirectMessage={(member) => {
+            handleSelectDirectMessage(member);
+            setMobileViewMode("chat");
+          }}
+          messagesByChannel={messagesByChannel}
+          notifications={notifications}
+          presenceMap={presenceMap}
+          activeTab={mobileActiveTab}
+          onChangeTab={setMobileActiveTab}
+          onOpenNewChannelModal={() => setIsNewChannelModalOpen(true)}
+          onOpenInviteModal={() => setIsInviteModalOpen(true)}
+          onOpenMemberDirectory={() => setIsMemberDirectoryOpen(true)}
+          onOpenGamesModal={() => setIsGamesModalOpen(true)}
+          onOpenPreferences={() => openPreferences("appearance")}
+          onOpenUserProfile={(member) => {
+            setActiveProfileMember(member);
+            setRightPanelMode("profile");
+          }}
+          onLogout={handleLogout}
+        />
+      </div>
+
       <Sidebar
         organizations={organizations}
         activeOrg={activeOrg}
@@ -2435,24 +2477,21 @@ export default function KaelixoApp() {
       {/* Main Chat Stage */}
       <main
         className={`flex-1 flex flex-col h-screen min-w-0 bg-white dark:bg-neutral-950 transition-all duration-300 ${
+          mobileViewMode === "tabs" ? "hidden md:flex" : "flex"
+        } ${
           !isAuthenticated ? "filter blur-[2px] pointer-events-none select-none opacity-40" : ""
         }`}
       >
         {/* Top Header */}
         <header className="h-14 sm:h-16 px-3 sm:px-6 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between flex-shrink-0 bg-white/95 dark:bg-neutral-950/95 backdrop-blur-md transition-colors duration-200">
           <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1 mr-2">
-            {/* Mobile Hamburger Toggle with Realtime Status Dot */}
+            {/* Mobile Back Button to return to Mobile Tabs */}
             <button
-              onClick={() => setIsMobileSidebarOpen(true)}
-              className="relative p-2 -ml-1 rounded-xl text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-900 md:hidden transition flex-shrink-0 cursor-pointer"
-              title="Open Navigation"
+              onClick={() => setMobileViewMode("tabs")}
+              className="p-2 -ml-1 rounded-xl text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-900 md:hidden transition flex-shrink-0 cursor-pointer"
+              title="Back to Channels & DMs"
             >
-              <Menu className="w-5 h-5" />
-              <span
-                className={`absolute top-1.5 right-1.5 w-2 h-2 rounded-full ${
-                  isLiveConnected ? "bg-emerald-500 animate-pulse" : "bg-indigo-500"
-                }`}
-              />
+              <ArrowLeft className="w-5 h-5" />
             </button>
             {activeDmRecipient ? (
               <div className="flex items-center space-x-2 sm:space-x-2.5 min-w-0">
