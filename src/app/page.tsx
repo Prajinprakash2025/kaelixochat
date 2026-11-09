@@ -123,7 +123,7 @@ export default function KaelixoApp() {
   const [presenceMap, setPresenceMap] = useState<PresenceMap>({});
 
   // In-App Notifications State (Feature 21 / R5)
-  const [notifications, setNotifications] = useState<Notification[]>(INITIAL_NOTIFICATIONS);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
 
   // Hydrate client state safely without SSR mismatch
   useEffect(() => {
@@ -160,11 +160,6 @@ export default function KaelixoApp() {
       }
     } catch {}
   }, []);
-        if (saved) return JSON.parse(saved);
-      } catch {}
-    }
-    return [];
-  });
 
   // Modals state
   const [isNewChannelModalOpen, setIsNewChannelModalOpen] = useState(false);
@@ -1154,7 +1149,7 @@ export default function KaelixoApp() {
               playChime();
             }
 
-            const next = {
+            const next: Record<string, Message[]> = {
               ...prev,
               [newMsg.channel_id]: updated,
             };
