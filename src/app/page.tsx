@@ -158,8 +158,55 @@ export default function KaelixoApp() {
         const parsedNotifs = JSON.parse(savedNotifs);
         if (Array.isArray(parsedNotifs)) setNotifications(parsedNotifs);
       }
+
+      // Persist & restore active chat (Channel or DM) across page refreshes
+      const savedChannelId = localStorage.getItem("kaelixo_active_channel_id");
+      const savedDmRecipient = localStorage.getItem("kaelixo_active_dm_recipient");
+      if (savedDmRecipient) {
+        try {
+          const parsedDm = JSON.parse(savedDmRecipient);
+          if (parsedDm && parsedDm.id) {
+            setActiveDmRecipient(parsedDm);
+            if (savedChannelId) {
+              setActiveChannelId(savedChannelId);
+              setChannels((prev) => {
+                if (prev.some((c) => c.id === savedChannelId)) return prev;
+                return [
+                  ...prev,
+                  {
+                    id: savedChannelId,
+                    name: `@${parsedDm.name}`,
+                    topic: `Direct 1-on-1 message with ${parsedDm.name}`,
+                    isPrivate: true,
+                    isDm: true,
+                    recipientId: parsedDm.id,
+                    recipientName: parsedDm.name,
+                    recipientAvatar: parsedDm.avatar,
+                  },
+                ];
+              });
+            }
+          }
+        } catch {}
+      } else if (savedChannelId) {
+        setActiveChannelId(savedChannelId);
+      }
     } catch {}
   }, []);
+
+  // Persist active channel or direct message whenever the user switches chats
+  useEffect(() => {
+    try {
+      if (activeChannelId) {
+        localStorage.setItem("kaelixo_active_channel_id", activeChannelId);
+      }
+      if (activeDmRecipient) {
+        localStorage.setItem("kaelixo_active_dm_recipient", JSON.stringify(activeDmRecipient));
+      } else {
+        localStorage.removeItem("kaelixo_active_dm_recipient");
+      }
+    } catch {}
+  }, [activeChannelId, activeDmRecipient]);
 
   // Modals state
   const [isNewChannelModalOpen, setIsNewChannelModalOpen] = useState(false);
@@ -756,7 +803,15 @@ export default function KaelixoApp() {
 
           setChannels(formatted);
           setActiveChannelId((prev) => {
+            // If user is currently in a DM, do not override with first channel
+            const savedDm = typeof window !== "undefined" ? localStorage.getItem("kaelixo_active_dm_recipient") : null;
+            if (savedDm || activeDmRecipient) return prev;
+
             if (prev && formatted.some((c) => c.id === prev)) return prev;
+
+            const savedCh = typeof window !== "undefined" ? localStorage.getItem("kaelixo_active_channel_id") : null;
+            if (savedCh && formatted.some((c) => c.id === savedCh)) return savedCh;
+
             const firstNonDm = formatted.find((c) => !c.isDm) || formatted[0];
             return firstNonDm ? firstNonDm.id : prev;
           });
