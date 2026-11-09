@@ -78,15 +78,18 @@ const DEFAULT_ORGS: Organization[] = [
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function mergeMessageIntoList(currentList: Message[], incoming: Message): Message[] {
-  // 1. Exact ID match check
-  if (currentList.some((m) => m.id === incoming.id)) {
-    return currentList;
+  // 1. Exact ID match check: update existing message in-place
+  const existingIndex = currentList.findIndex((m) => m.id === incoming.id);
+  if (existingIndex !== -1) {
+    const updated = [...currentList];
+    updated[existingIndex] = { ...updated[existingIndex], ...incoming };
+    return updated;
   }
 
   // 2. Check if this incoming message matches a temporary optimistic message
   const optimisticIndex = currentList.findIndex(
     (m) =>
-      (m.id.startsWith("msg-") || m.id.includes("reply-")) &&
+      (m.id.startsWith("msg-") || m.id.includes("reply-") || m.id.startsWith("temp-")) &&
       m.sender.name === incoming.sender.name &&
       m.content === incoming.content
   );
@@ -97,96 +100,66 @@ function mergeMessageIntoList(currentList: Message[], incoming: Message): Messag
     return updated;
   }
 
-  // 3. Fallback duplicate check: same sender, same content, and identical timestamp
-  const contentDuplicate = currentList.find(
-    (m) =>
-      m.sender.name === incoming.sender.name &&
-      m.content.trim() === incoming.content.trim() &&
-      m.content.trim().length > 0 &&
-      m.createdAt === incoming.createdAt
-  );
-
-  if (contentDuplicate) {
-    return currentList;
-  }
-
+  // 3. Genuine new message (supports consecutive messages with identical text)
   return [...currentList, incoming];
 }
 
 export default function KaelixoApp() {
   const [organizations, setOrganizations] = useState<Organization[]>(DEFAULT_ORGS);
-  const [activeOrg, setActiveOrg] = useState<Organization>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const savedOrg = localStorage.getItem("kaelixo_org");
-        if (savedOrg) return JSON.parse(savedOrg);
-      } catch {}
-    }
-    return DEFAULT_ORGS[0];
-  });
+  const [activeOrg, setActiveOrg] = useState<Organization>(DEFAULT_ORGS[0]);
   const [departments, setDepartments] = useState<Department[]>(INITIAL_DEPTS);
   const [selectedDepartment, setSelectedDepartment] = useState<DepartmentCode>("all");
   const [channels, setChannels] = useState<Channel[]>(INITIAL_CHANNELS);
   const [activeChannelId, setActiveChannelId] = useState<string>("33333333-3333-3333-3333-333333333331");
   const [activeDmRecipient, setActiveDmRecipient] = useState<WorkspaceMember | null>(null);
   const [messagesByChannel, setMessagesByChannel] = useState<Record<string, Message[]>>(INITIAL_MESSAGES);
-  const [currentUser, setCurrentUser] = useState<WorkspaceMember>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const saved = localStorage.getItem("kaelixo_user");
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          if (parsed && typeof parsed.avatar === "string" && parsed.avatar.startsWith("blob:")) {
-            parsed.avatar = `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(parsed.name || "user")}`;
-          }
-          return parsed;
-        }
-      } catch {}
-    }
-    return DEFAULT_USER;
-  });
-
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        return Boolean(localStorage.getItem("kaelixo_user"));
-      } catch {}
-    }
-    return false;
-  });
+  const [currentUser, setCurrentUser] = useState<WorkspaceMember>(DEFAULT_USER);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(true);
 
   // Dynamic Workspace Members State (Features 25 & 26 / R7)
-  const [teamMembers, setTeamMembers] = useState<WorkspaceMember[]>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const saved = localStorage.getItem("kaelixo_team_members");
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            return parsed.map((m: any) => {
-              if (m.avatar && typeof m.avatar === "string" && m.avatar.startsWith("blob:")) {
-                return {
-                  ...m,
-                  avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(m.name || "member")}`,
-                };
-              }
-              return m;
-            });
-          }
-        }
-      } catch {}
-    }
-    return TEAM_MEMBERS;
-  });
+  const [teamMembers, setTeamMembers] = useState<WorkspaceMember[]>(TEAM_MEMBERS);
 
   // Real-time Presence State (Feature 20 / R5)
   const [presenceMap, setPresenceMap] = useState<PresenceMap>({});
 
   // In-App Notifications State (Feature 21 / R5)
-  const [notifications, setNotifications] = useState<Notification[]>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const saved = localStorage.getItem("kaelixo_notifications");
+  const [notifications, setNotifications] = useState<Notification[]>(INITIAL_NOTIFICATIONS);
+
+  // Hydrate client state safely without SSR mismatch
+  useEffect(() => {
+    try {
+      const savedUser = localStorage.getItem("kaelixo_user");
+      if (savedUser) {
+        const parsed = JSON.parse(savedUser);
+        if (parsed && typeof parsed.avatar === "string" && parsed.avatar.startsWith("blob:")) {
+          parsed.avatar = `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(parsed.name || "user")}`;
+        }
+        if (parsed && parsed.id) {
+          setCurrentUser(parsed);
+          setIsAuthenticated(true);
+        }
+      } else {
+        setIsAuthenticated(false);
+      }
+      const savedOrg = localStorage.getItem("kaelixo_org");
+      if (savedOrg) {
+        const parsedOrg = JSON.parse(savedOrg);
+        if (parsedOrg && parsedOrg.id) setActiveOrg(parsedOrg);
+      }
+      const savedTeam = localStorage.getItem("kaelixo_team_members");
+      if (savedTeam) {
+        const parsedTeam = JSON.parse(savedTeam);
+        if (Array.isArray(parsedTeam) && parsedTeam.length > 0) {
+          setTeamMembers(parsedTeam);
+        }
+      }
+      const savedNotifs = localStorage.getItem("kaelixo_notifications");
+      if (savedNotifs) {
+        const parsedNotifs = JSON.parse(savedNotifs);
+        if (Array.isArray(parsedNotifs)) setNotifications(parsedNotifs);
+      }
+    } catch {}
+  }, []);
         if (saved) return JSON.parse(saved);
       } catch {}
     }
@@ -1176,16 +1149,25 @@ export default function KaelixoApp() {
           setMessagesByChannel((prev) => {
             const currentList = prev[newMsg.channel_id] || [];
             const updated = mergeMessageIntoList(currentList, formatted);
-            if (updated === currentList) return prev;
 
             if (newMsg.sender_name !== currentUser.name) {
               playChime();
             }
 
-            return {
+            const next = {
               ...prev,
               [newMsg.channel_id]: updated,
             };
+
+            // Also keep activeChannelId in sync if it points to this channel
+            if (activeChannelId && activeChannelId !== newMsg.channel_id) {
+              const activeChan = channels.find((c) => c.id === activeChannelId);
+              if (activeChan && (activeChan.id === newMsg.channel_id || activeChan.name === newMsg.channel_id)) {
+                next[activeChannelId] = mergeMessageIntoList(prev[activeChannelId] || [], formatted);
+              }
+            }
+
+            return next;
           });
           setIsLiveConnected(true);
         }
@@ -1638,10 +1620,14 @@ export default function KaelixoApp() {
     };
 
     // Optimistically add to state with de-duplication check
-    setMessagesByChannel((prev) => ({
-      ...prev,
-      [targetChannelId]: mergeMessageIntoList(prev[targetChannelId] || [], newMessage),
-    }));
+    setMessagesByChannel((prev) => {
+      const next = { ...prev };
+      next[targetChannelId] = mergeMessageIntoList(prev[targetChannelId] || [], newMessage);
+      if (activeChannelId && activeChannelId !== targetChannelId) {
+        next[activeChannelId] = mergeMessageIntoList(prev[activeChannelId] || [], newMessage);
+      }
+      return next;
+    });
 
     try {
       const { error: insertError } = await supabase
