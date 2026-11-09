@@ -15,6 +15,13 @@ import {
   Calendar,
   Shield,
   Building,
+  Settings,
+  Moon,
+  Sun,
+  Pin,
+  Gamepad2,
+  Share2,
+  LogOut,
 } from "lucide-react";
 import { WorkspaceMember } from "@/types";
 import { formatRoleLabel } from "@/utils/permissions";
@@ -25,6 +32,13 @@ export interface UserProfileDrawerProps {
   onClose: () => void;
   onStartDm: (member: WorkspaceMember) => void;
   onOpenEditProfile: () => void;
+  onOpenPreferences?: () => void;
+  onToggleColorMode?: () => void;
+  resolvedMode?: "light" | "dark";
+  onOpenPinned?: () => void;
+  onOpenGames?: () => void;
+  onOpenInvite?: () => void;
+  onSignOut?: () => void;
 }
 
 export function UserProfileDrawer({
@@ -33,6 +47,13 @@ export function UserProfileDrawer({
   onClose,
   onStartDm,
   onOpenEditProfile,
+  onOpenPreferences,
+  onToggleColorMode,
+  resolvedMode,
+  onOpenPinned,
+  onOpenGames,
+  onOpenInvite,
+  onSignOut,
 }: UserProfileDrawerProps) {
   const [copiedEmail, setCopiedEmail] = useState(false);
   const [localTime, setLocalTime] = useState("");
@@ -324,6 +345,132 @@ export function UserProfileDrawer({
             </div>
           </div>
         </div>
+
+        {/* Quick Settings & Tools (Slack Parity) */}
+        {isSelf && (
+          <>
+            <div className="border-t border-neutral-200 dark:border-neutral-800" />
+            <div>
+              <h4 className="font-bold text-sm text-neutral-900 dark:text-neutral-100 mb-2.5">
+                Settings & Preferences
+              </h4>
+              <div className="space-y-1.5">
+                {/* Theme / Appearance Toggle */}
+                {onToggleColorMode && (
+                  <button
+                    type="button"
+                    onClick={onToggleColorMode}
+                    className="w-full flex items-center justify-between p-2.5 rounded-xl text-xs font-medium text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition cursor-pointer"
+                  >
+                    <div className="flex items-center space-x-2.5">
+                      <div className="w-7 h-7 rounded-lg bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800/60 flex items-center justify-center text-amber-500">
+                        {resolvedMode === "dark" ? (
+                          <Sun className="w-3.5 h-3.5 text-amber-400" />
+                        ) : (
+                          <Moon className="w-3.5 h-3.5 text-indigo-500" />
+                        )}
+                      </div>
+                      <span className="font-semibold">
+                        Appearance ({resolvedMode === "dark" ? "Dark Mode" : "Light Mode"})
+                      </span>
+                    </div>
+                    <span className="text-[11px] text-sky-600 dark:text-sky-400 font-bold">
+                      Switch
+                    </span>
+                  </button>
+                )}
+
+                {/* Preferences */}
+                {onOpenPreferences && (
+                  <button
+                    type="button"
+                    onClick={onOpenPreferences}
+                    className="w-full flex items-center justify-between p-2.5 rounded-xl text-xs font-medium text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition cursor-pointer"
+                  >
+                    <div className="flex items-center space-x-2.5">
+                      <div className="w-7 h-7 rounded-lg bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 flex items-center justify-center text-neutral-500">
+                        <Settings className="w-3.5 h-3.5" />
+                      </div>
+                      <span className="font-semibold">Preferences (Themes, Sounds)</span>
+                    </div>
+                    <kbd className="text-[10px] bg-neutral-200 dark:bg-neutral-700 px-1.5 py-0.5 rounded font-mono text-neutral-500">
+                      Ctrl+,
+                    </kbd>
+                  </button>
+                )}
+
+                {/* Pinned Messages */}
+                {onOpenPinned && (
+                  <button
+                    type="button"
+                    onClick={onOpenPinned}
+                    className="w-full flex items-center justify-between p-2.5 rounded-xl text-xs font-medium text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition cursor-pointer"
+                  >
+                    <div className="flex items-center space-x-2.5">
+                      <div className="w-7 h-7 rounded-lg bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800/60 flex items-center justify-center text-amber-500">
+                        <Pin className="w-3.5 h-3.5" />
+                      </div>
+                      <span className="font-semibold">Pinned Messages</span>
+                    </div>
+                    <span className="text-[11px] text-neutral-400">View</span>
+                  </button>
+                )}
+
+                {/* Team Arcade Games */}
+                {onOpenGames && (
+                  <button
+                    type="button"
+                    onClick={onOpenGames}
+                    className="w-full flex items-center justify-between p-2.5 rounded-xl text-xs font-medium text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition cursor-pointer"
+                  >
+                    <div className="flex items-center space-x-2.5">
+                      <div className="w-7 h-7 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/60 flex items-center justify-center text-emerald-500">
+                        <Gamepad2 className="w-3.5 h-3.5" />
+                      </div>
+                      <span className="font-semibold">Team Arcade Games</span>
+                    </div>
+                    <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold">
+                      Play
+                    </span>
+                  </button>
+                )}
+
+                {/* Invite Members */}
+                {onOpenInvite && (
+                  <button
+                    type="button"
+                    onClick={onOpenInvite}
+                    className="w-full flex items-center justify-between p-2.5 rounded-xl text-xs font-medium text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition cursor-pointer"
+                  >
+                    <div className="flex items-center space-x-2.5">
+                      <div className="w-7 h-7 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800/60 flex items-center justify-center text-indigo-500">
+                        <Share2 className="w-3.5 h-3.5" />
+                      </div>
+                      <span className="font-semibold">Invite Team Members</span>
+                    </div>
+                    <span className="text-[11px] text-indigo-600 dark:text-indigo-400 font-bold">
+                      Invite
+                    </span>
+                  </button>
+                )}
+
+                {/* Sign Out */}
+                {onSignOut && (
+                  <button
+                    type="button"
+                    onClick={onSignOut}
+                    className="w-full flex items-center space-x-2.5 p-2.5 rounded-xl text-xs font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition cursor-pointer mt-1"
+                  >
+                    <div className="w-7 h-7 rounded-lg bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800/60 flex items-center justify-center text-rose-500">
+                      <LogOut className="w-3.5 h-3.5" />
+                    </div>
+                    <span className="font-bold">Sign out of Kaelixo</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </aside>
   );

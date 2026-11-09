@@ -2484,48 +2484,33 @@ export default function KaelixoApp() {
             )}
           </div>
 
-          {/* Action Tools */}
-          <div className="flex items-center space-x-1 sm:space-x-2 flex-shrink-0">
-            {/* Supabase Status (Desktop & Tablet) */}
-            <div
-              className={`hidden sm:flex items-center space-x-1.5 text-[11px] font-medium px-2.5 py-1 rounded-full border ${
-                isLiveConnected
-                  ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/50"
-                  : "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800/50"
-              }`}
-            >
-              <Radio
-                className={`w-3 h-3 ${
-                  isLiveConnected ? "text-emerald-500 animate-pulse" : "text-indigo-500"
-                }`}
-              />
-              <span>{isLiveConnected ? "Live" : "Connecting..."}</span>
-            </div>
-
-            {/* Search Trigger */}
+          {/* Action Tools: Minimal Slack-Parity Navbar (Search, Notifications, Members, Profile) */}
+          <div className="flex items-center space-x-2 sm:space-x-3 flex-shrink-0">
+            {/* 1. Global Search Pill */}
             <button
+              type="button"
               onClick={() => setIsSearchModalOpen(true)}
-              className="flex items-center space-x-1.5 text-xs text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white bg-neutral-100 dark:bg-neutral-800/80 p-2 sm:px-2.5 sm:py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-700/60 transition cursor-pointer"
+              className="hidden sm:flex items-center justify-between w-40 md:w-56 lg:w-72 h-8 px-2.5 rounded-lg bg-neutral-100 dark:bg-neutral-900 hover:bg-neutral-200/80 dark:hover:bg-neutral-800 border border-neutral-200 dark:border-neutral-800 text-xs text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 transition cursor-pointer"
               title="Search messages & channels (Ctrl+K)"
             >
-              <Search className="w-4 h-4 sm:w-3.5 sm:h-3.5 text-neutral-400" />
-              <span className="hidden md:inline">Search</span>
-              <kbd className="hidden lg:inline text-[10px] bg-white dark:bg-neutral-700 px-1 py-0.5 rounded border border-neutral-300 dark:border-neutral-600 font-mono text-neutral-400">
-                ⌘K
+              <div className="flex items-center space-x-2">
+                <Search className="w-3.5 h-3.5 text-neutral-400" />
+                <span>Search...</span>
+              </div>
+              <kbd className="text-[10px] bg-white dark:bg-neutral-800 px-1.5 py-0.5 rounded border border-neutral-300 dark:border-neutral-700 font-mono text-neutral-400 shadow-2xs">
+                Ctrl K
               </kbd>
             </button>
-
-            {/* Member Directory Trigger */}
             <button
-              onClick={() => setIsMemberDirectoryOpen(true)}
-              className="flex items-center space-x-1.5 text-xs text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white bg-neutral-100 dark:bg-neutral-800/80 p-2 sm:px-2.5 sm:py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-700/60 transition cursor-pointer"
-              title="Open People & Member Directory"
+              type="button"
+              onClick={() => setIsSearchModalOpen(true)}
+              className="sm:hidden p-2 rounded-lg text-neutral-500 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition cursor-pointer"
+              title="Search (Ctrl+K)"
             >
-              <Users className="w-4 h-4 sm:w-3.5 sm:h-3.5 text-indigo-500" />
-              <span className="hidden md:inline">Directory</span>
+              <Search className="w-4 h-4" />
             </button>
 
-            {/* In-App Notifications Center */}
+            {/* 2. In-App Notifications Center (Bell) */}
             <NotificationCenter
               notifications={notifications}
               unreadCount={unreadNotificationCount}
@@ -2534,117 +2519,44 @@ export default function KaelixoApp() {
               onSelectNotification={handleSelectNotification}
             />
 
-            {/* Team Arcade Trigger Button */}
+            {/* 3. Member Directory Trigger (Users) */}
             <button
               type="button"
-              onClick={() => setIsGamesModalOpen(true)}
-              className="flex items-center space-x-1.5 p-2 sm:px-2.5 sm:py-1.5 rounded-xl text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60 transition cursor-pointer shadow-xs"
-              title="Team Arcade: Snake, Duo Tic-Tac-Toe, Reflex Duel"
+              onClick={() => setIsMemberDirectoryOpen(true)}
+              className="p-2 rounded-lg text-neutral-500 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition cursor-pointer"
+              title="People & Member Directory"
             >
-              <Gamepad2 className="w-4 h-4 sm:w-3.5 sm:h-3.5 text-emerald-500" />
-              <span className="hidden md:inline">Games</span>
+              <Users className="w-4 h-4" />
             </button>
 
-            {/* Feature 18: Pinned Messages Trigger with Count Badge */}
+            {/* 4. User Profile Avatar Trigger */}
             <button
               type="button"
-              onClick={handleTogglePinnedDrawer}
-              title={
-                pinnedCount > 0
-                  ? `${pinnedCount} pinned message${pinnedCount === 1 ? "" : "s"}`
-                  : "Pinned messages"
-              }
-              className={`relative flex items-center space-x-1.5 p-2 sm:px-2.5 sm:py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer border ${
-                isPinnedOpen
-                  ? "bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 border-amber-300 dark:border-amber-800 ring-2 ring-amber-400/20"
-                  : "bg-white dark:bg-neutral-900 text-neutral-600 dark:text-neutral-300 border-neutral-200 dark:border-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-800"
-              }`}
-            >
-              <Pin
-                className={`w-4 h-4 sm:w-3.5 sm:h-3.5 ${
-                  isPinnedOpen || pinnedCount > 0
-                    ? "fill-amber-500 text-amber-500"
-                    : "text-neutral-500"
-                }`}
-              />
-              <span className="hidden md:inline">Pinned</span>
-              {pinnedCount > 0 && (
-                <span className="ml-0.5 px-1.5 py-0.2 text-[10px] font-bold rounded-full bg-amber-100 dark:bg-amber-900/80 text-amber-800 dark:text-amber-200 border border-amber-300 dark:border-amber-700">
-                  {pinnedCount}
-                </span>
-              )}
-            </button>
-
-            {/* Invite Team Button (Desktop & Tablet) */}
-            <button
-              onClick={() => setIsInviteModalOpen(true)}
-              className="hidden md:flex items-center space-x-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 px-2.5 py-1.5 rounded-xl border border-indigo-200 dark:border-indigo-800/50 transition shadow-sm cursor-pointer"
-              title="Invite Team Members (Generate Link & Code)"
-            >
-              <Share2 className="w-3.5 h-3.5 text-indigo-500" />
-              <span>Invite</span>
-            </button>
-
-            {/* PWA App Install Button (Hides automatically once installed) */}
-            <InstallPwaButton />
-
-            {/* Quick Light / Dark Mode Toggle */}
-            <button
-              type="button"
-              onClick={toggleColorMode}
-              title={`Switch to ${resolvedMode === "dark" ? "Light" : "Dark"} Mode`}
-              className="flex items-center justify-center p-2 rounded-xl text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white bg-neutral-100 dark:bg-neutral-800/80 hover:bg-neutral-200 dark:hover:bg-neutral-700/80 border border-neutral-200 dark:border-neutral-700/60 transition cursor-pointer"
-            >
-              {resolvedMode === "dark" ? (
-                <Sun className="w-4 h-4 sm:w-3.5 sm:h-3.5 text-amber-400" />
-              ) : (
-                <Moon className="w-4 h-4 sm:w-3.5 sm:h-3.5 text-indigo-500" />
-              )}
-            </button>
-
-            {/* Slack Preferences Modal Trigger */}
-            <button
-              type="button"
-              onClick={() => openPreferences("appearance")}
-              title="Preferences (Appearance, Themes, Dark/Light mode) [Ctrl+,]"
-              className="flex items-center space-x-1.5 p-2 sm:px-2.5 sm:py-1.5 rounded-xl text-xs font-semibold text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white bg-neutral-100 dark:bg-neutral-800/80 hover:bg-neutral-200 dark:hover:bg-neutral-700/80 border border-neutral-200 dark:border-neutral-700/60 transition cursor-pointer"
-            >
-              <Settings className="w-4 h-4 sm:w-3.5 sm:h-3.5 text-neutral-500 dark:text-neutral-400" />
-              <span className="hidden xl:inline">Preferences</span>
-            </button>
-
-            {/* User Profile Drawer Trigger */}
-            <button
               onClick={() => {
                 setActiveProfileMember(currentUser);
-                setRightPanelMode("profile");
+                setRightPanelMode((prev) => (prev === "profile" ? "none" : "profile"));
               }}
-              className="flex items-center space-x-1.5 text-xs font-semibold text-neutral-700 dark:text-neutral-200 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-750 p-1 sm:px-3 sm:py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-700 transition cursor-pointer flex-shrink-0"
-              title="View Profile & Settings"
+              className="relative p-0.5 rounded-lg hover:ring-2 hover:ring-indigo-500/50 transition cursor-pointer flex-shrink-0"
+              title={`${currentUser.name} — Profile & Settings`}
             >
               {currentUser.avatar ? (
                 <img
                   src={currentUser.avatar}
                   alt={currentUser.name}
-                  className="w-5 h-5 rounded-lg object-cover"
+                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg object-cover ring-1 ring-neutral-200 dark:ring-neutral-700"
                 />
               ) : (
-                <User className="w-3.5 h-3.5 text-indigo-500" />
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-bold text-xs">
+                  {currentUser.name.charAt(0).toUpperCase()}
+                </div>
               )}
-              <span className="hidden md:inline">{currentUser.name.split(" ")[0]}</span>
-            </button>
-
-            {/* Channel Details Drawer Toggle Button (Large screen) */}
-            <button
-              onClick={handleToggleDetailsDrawer}
-              title="Channel Details"
-              className={`hidden lg:flex p-2 rounded-xl transition cursor-pointer border ${
-                rightPanelMode === "details"
-                  ? "bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800"
-                  : "text-neutral-500 border-neutral-200 dark:border-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-900"
-              }`}
-            >
-              <PanelRight className="w-4 h-4" />
+              <span
+                className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full ring-2 ring-white dark:ring-neutral-950 ${
+                  currentUser.online || currentUser.status === "online"
+                    ? "bg-emerald-500"
+                    : "bg-neutral-400"
+                }`}
+              />
             </button>
           </div>
         </header>
@@ -2725,6 +2637,13 @@ export default function KaelixoApp() {
             handleCloseRightDock();
           }}
           onOpenEditProfile={() => setIsEditProfileModalOpen(true)}
+          onOpenPreferences={() => openPreferences("appearance")}
+          onToggleColorMode={toggleColorMode}
+          resolvedMode={resolvedMode}
+          onOpenPinned={handleTogglePinnedDrawer}
+          onOpenGames={() => setIsGamesModalOpen(true)}
+          onOpenInvite={() => setIsInviteModalOpen(true)}
+          onSignOut={handleLogout}
         />
       )}
 
