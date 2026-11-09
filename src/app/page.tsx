@@ -2403,14 +2403,7 @@ export default function KaelixoApp() {
         }`}
       >
         {/* Top Header */}
-        <header
-          style={{
-            backgroundColor: "var(--theme-header-tint)",
-            borderColor: "var(--theme-header-border)",
-            color: "var(--theme-header-text)",
-          }}
-          className="h-14 sm:h-16 px-3 sm:px-6 border-b flex items-center justify-between flex-shrink-0 backdrop-blur-md transition-colors duration-200"
-        >
+        <header className="h-14 sm:h-16 px-3 sm:px-6 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between flex-shrink-0 bg-white/95 dark:bg-neutral-950/95 backdrop-blur-md transition-colors duration-200">
           <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1 mr-2">
             {/* Mobile Hamburger Toggle with Realtime Status Dot */}
             <button
@@ -2512,12 +2505,12 @@ export default function KaelixoApp() {
             {/* Search Trigger */}
             <button
               onClick={() => setIsSearchModalOpen(true)}
-              className="flex items-center space-x-1.5 text-xs text-inherit bg-black/10 dark:bg-white/10 hover:bg-black/15 dark:hover:bg-white/15 p-2 sm:px-2.5 sm:py-1.5 rounded-xl border border-black/10 dark:border-white/15 transition cursor-pointer"
+              className="flex items-center space-x-1.5 text-xs text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white bg-neutral-100 dark:bg-neutral-800/80 p-2 sm:px-2.5 sm:py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-700/60 transition cursor-pointer"
               title="Search messages & channels (Ctrl+K)"
             >
-              <Search className="w-4 h-4 sm:w-3.5 sm:h-3.5 opacity-75" />
+              <Search className="w-4 h-4 sm:w-3.5 sm:h-3.5 text-neutral-400" />
               <span className="hidden md:inline">Search</span>
-              <kbd className="hidden lg:inline text-[10px] bg-black/10 dark:bg-white/10 px-1 py-0.5 rounded border border-black/10 dark:border-white/10 font-mono opacity-80">
+              <kbd className="hidden lg:inline text-[10px] bg-white dark:bg-neutral-700 px-1 py-0.5 rounded border border-neutral-300 dark:border-neutral-600 font-mono text-neutral-400">
                 ⌘K
               </kbd>
             </button>
@@ -2525,10 +2518,10 @@ export default function KaelixoApp() {
             {/* Member Directory Trigger */}
             <button
               onClick={() => setIsMemberDirectoryOpen(true)}
-              className="flex items-center space-x-1.5 text-xs text-inherit bg-black/10 dark:bg-white/10 hover:bg-black/15 dark:hover:bg-white/15 p-2 sm:px-2.5 sm:py-1.5 rounded-xl border border-black/10 dark:border-white/15 transition cursor-pointer"
+              className="flex items-center space-x-1.5 text-xs text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white bg-neutral-100 dark:bg-neutral-800/80 p-2 sm:px-2.5 sm:py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-700/60 transition cursor-pointer"
               title="Open People & Member Directory"
             >
-              <Users className="w-4 h-4 sm:w-3.5 sm:h-3.5 opacity-80" />
+              <Users className="w-4 h-4 sm:w-3.5 sm:h-3.5 text-indigo-500" />
               <span className="hidden md:inline">Directory</span>
             </button>
 
@@ -2545,7 +2538,7 @@ export default function KaelixoApp() {
             <button
               type="button"
               onClick={() => setIsGamesModalOpen(true)}
-              className="flex items-center space-x-1.5 p-2 sm:px-2.5 sm:py-1.5 rounded-xl text-xs font-semibold bg-black/10 dark:bg-white/10 hover:bg-black/15 dark:hover:bg-white/15 text-inherit border border-black/10 dark:border-white/15 transition cursor-pointer shadow-xs"
+              className="flex items-center space-x-1.5 p-2 sm:px-2.5 sm:py-1.5 rounded-xl text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60 transition cursor-pointer shadow-xs"
               title="Team Arcade: Snake, Duo Tic-Tac-Toe, Reflex Duel"
             >
               <Gamepad2 className="w-4 h-4 sm:w-3.5 sm:h-3.5 text-emerald-500" />
@@ -2563,20 +2556,20 @@ export default function KaelixoApp() {
               }
               className={`relative flex items-center space-x-1.5 p-2 sm:px-2.5 sm:py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer border ${
                 isPinnedOpen
-                  ? "bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/40"
-                  : "bg-black/10 dark:bg-white/10 hover:bg-black/15 dark:hover:bg-white/15 text-inherit border-black/10 dark:border-white/15"
+                  ? "bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 border-amber-300 dark:border-amber-800 ring-2 ring-amber-400/20"
+                  : "bg-white dark:bg-neutral-900 text-neutral-600 dark:text-neutral-300 border-neutral-200 dark:border-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-800"
               }`}
             >
               <Pin
                 className={`w-4 h-4 sm:w-3.5 sm:h-3.5 ${
                   isPinnedOpen || pinnedCount > 0
                     ? "fill-amber-500 text-amber-500"
-                    : "opacity-75"
+                    : "text-neutral-500"
                 }`}
               />
               <span className="hidden md:inline">Pinned</span>
               {pinnedCount > 0 && (
-                <span className="ml-0.5 px-1.5 py-0.2 text-[10px] font-bold rounded-full bg-amber-500 text-white">
+                <span className="ml-0.5 px-1.5 py-0.2 text-[10px] font-bold rounded-full bg-amber-100 dark:bg-amber-900/80 text-amber-800 dark:text-amber-200 border border-amber-300 dark:border-amber-700">
                   {pinnedCount}
                 </span>
               )}
@@ -2585,10 +2578,10 @@ export default function KaelixoApp() {
             {/* Invite Team Button (Desktop & Tablet) */}
             <button
               onClick={() => setIsInviteModalOpen(true)}
-              className="hidden md:flex items-center space-x-1.5 text-xs font-semibold text-inherit bg-black/10 dark:bg-white/10 hover:bg-black/15 dark:hover:bg-white/15 px-2.5 py-1.5 rounded-xl border border-black/10 dark:border-white/15 transition shadow-xs cursor-pointer"
+              className="hidden md:flex items-center space-x-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 px-2.5 py-1.5 rounded-xl border border-indigo-200 dark:border-indigo-800/50 transition shadow-sm cursor-pointer"
               title="Invite Team Members (Generate Link & Code)"
             >
-              <Share2 className="w-3.5 h-3.5 opacity-80" />
+              <Share2 className="w-3.5 h-3.5 text-indigo-500" />
               <span>Invite</span>
             </button>
 
@@ -2600,12 +2593,12 @@ export default function KaelixoApp() {
               type="button"
               onClick={toggleColorMode}
               title={`Switch to ${resolvedMode === "dark" ? "Light" : "Dark"} Mode`}
-              className="flex items-center justify-center p-2 rounded-xl text-inherit bg-black/10 dark:bg-white/10 hover:bg-black/15 dark:hover:bg-white/15 border border-black/10 dark:border-white/15 transition cursor-pointer"
+              className="flex items-center justify-center p-2 rounded-xl text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white bg-neutral-100 dark:bg-neutral-800/80 hover:bg-neutral-200 dark:hover:bg-neutral-700/80 border border-neutral-200 dark:border-neutral-700/60 transition cursor-pointer"
             >
               {resolvedMode === "dark" ? (
                 <Sun className="w-4 h-4 sm:w-3.5 sm:h-3.5 text-amber-400" />
               ) : (
-                <Moon className="w-4 h-4 sm:w-3.5 sm:h-3.5 opacity-80" />
+                <Moon className="w-4 h-4 sm:w-3.5 sm:h-3.5 text-indigo-500" />
               )}
             </button>
 
@@ -2614,9 +2607,9 @@ export default function KaelixoApp() {
               type="button"
               onClick={() => openPreferences("appearance")}
               title="Preferences (Appearance, Themes, Dark/Light mode) [Ctrl+,]"
-              className="flex items-center space-x-1.5 p-2 sm:px-2.5 sm:py-1.5 rounded-xl text-xs font-semibold text-inherit bg-black/10 dark:bg-white/10 hover:bg-black/15 dark:hover:bg-white/15 border border-black/10 dark:border-white/15 transition cursor-pointer"
+              className="flex items-center space-x-1.5 p-2 sm:px-2.5 sm:py-1.5 rounded-xl text-xs font-semibold text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white bg-neutral-100 dark:bg-neutral-800/80 hover:bg-neutral-200 dark:hover:bg-neutral-700/80 border border-neutral-200 dark:border-neutral-700/60 transition cursor-pointer"
             >
-              <Settings className="w-4 h-4 sm:w-3.5 sm:h-3.5 opacity-80" />
+              <Settings className="w-4 h-4 sm:w-3.5 sm:h-3.5 text-neutral-500 dark:text-neutral-400" />
               <span className="hidden xl:inline">Preferences</span>
             </button>
 
@@ -2626,19 +2619,19 @@ export default function KaelixoApp() {
                 setActiveProfileMember(currentUser);
                 setRightPanelMode("profile");
               }}
-              className="flex items-center space-x-1.5 text-xs font-semibold text-inherit bg-black/10 dark:bg-white/10 hover:bg-black/15 dark:hover:bg-white/15 p-1 sm:px-3 sm:py-1.5 rounded-xl border border-black/10 dark:border-white/15 transition cursor-pointer flex-shrink-0"
+              className="flex items-center space-x-1.5 text-xs font-semibold text-neutral-700 dark:text-neutral-200 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-750 p-1 sm:px-3 sm:py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-700 transition cursor-pointer flex-shrink-0"
               title="View Profile & Settings"
             >
               {currentUser.avatar ? (
                 <img
                   src={currentUser.avatar}
                   alt={currentUser.name}
-                  className="w-5 h-5 rounded-lg object-cover ring-1 ring-white/30"
+                  className="w-5 h-5 rounded-lg object-cover"
                 />
               ) : (
-                <User className="w-3.5 h-3.5 opacity-80" />
+                <User className="w-3.5 h-3.5 text-indigo-500" />
               )}
-              <span className="hidden md:inline font-bold">{currentUser.name.split(" ")[0]}</span>
+              <span className="hidden md:inline">{currentUser.name.split(" ")[0]}</span>
             </button>
 
             {/* Channel Details Drawer Toggle Button (Large screen) */}

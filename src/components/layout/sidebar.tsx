@@ -155,8 +155,7 @@ export function Sidebar({
         {/* 1. SLACK LEFT ACTIVITY RAIL (Themed Workspace Bar)             */}
         {/* ============================================================== */}
         <div
-          style={{ backgroundColor: "var(--theme-header-tint)" }}
-          className="w-16 flex-shrink-0 flex flex-col items-center justify-between py-3.5 border-r border-black/10 dark:border-white/10"
+          className="w-16 flex-shrink-0 flex flex-col items-center justify-between py-3.5 bg-neutral-900 text-neutral-300 border-r border-neutral-800 select-none"
         >
           {/* Top workspace / app icons */}
           <div className="flex flex-col items-center space-y-4 w-full">
@@ -166,7 +165,7 @@ export function Sidebar({
                 src={activeOrg.logo_url}
                 alt={activeOrg.name}
                 onClick={() => setShowOrgDropdown(!showOrgDropdown)}
-                className="w-10 h-10 rounded-2xl object-cover ring-1 ring-black/20 dark:ring-white/20 shadow-md hover:scale-105 transition cursor-pointer"
+                className="w-10 h-10 rounded-2xl object-cover ring-1 ring-white/20 shadow-md hover:scale-105 transition cursor-pointer"
                 title={`${activeOrg.name} — Switch Workspace`}
               />
             ) : (
@@ -187,8 +186,8 @@ export function Sidebar({
                 onClick={() => setActiveRailTab("home")}
                 className={`flex flex-col items-center justify-center w-12 py-1.5 rounded-xl transition cursor-pointer ${
                   activeRailTab === "home"
-                    ? "bg-black/15 dark:bg-white/20 text-neutral-900 dark:text-white font-bold shadow-xs"
-                    : "text-neutral-700 dark:text-neutral-300 hover:bg-black/10 dark:hover:bg-white/10"
+                    ? "bg-white/20 text-white font-bold shadow-xs"
+                    : "text-neutral-400 hover:text-white hover:bg-white/10"
                 }`}
                 title="Home"
               >
@@ -200,8 +199,8 @@ export function Sidebar({
                 onClick={() => setActiveRailTab("dms")}
                 className={`flex flex-col items-center justify-center w-12 py-1.5 rounded-xl transition cursor-pointer ${
                   activeRailTab === "dms"
-                    ? "bg-black/15 dark:bg-white/20 text-neutral-900 dark:text-white font-bold shadow-xs"
-                    : "text-neutral-700 dark:text-neutral-300 hover:bg-black/10 dark:hover:bg-white/10"
+                    ? "bg-white/20 text-white font-bold shadow-xs"
+                    : "text-neutral-400 hover:text-white hover:bg-white/10"
                 }`}
                 title="Direct Messages"
               >
@@ -216,8 +215,8 @@ export function Sidebar({
                 }}
                 className={`flex flex-col items-center justify-center w-12 py-1.5 rounded-xl transition cursor-pointer ${
                   activeRailTab === "activity"
-                    ? "bg-black/15 dark:bg-white/20 text-neutral-900 dark:text-white font-bold shadow-xs"
-                    : "text-neutral-700 dark:text-neutral-300 hover:bg-black/10 dark:hover:bg-white/10"
+                    ? "bg-white/20 text-white font-bold shadow-xs"
+                    : "text-neutral-400 hover:text-white hover:bg-white/10"
                 }`}
                 title="Activity & Directory"
               >
@@ -232,12 +231,12 @@ export function Sidebar({
                 }}
                 className={`flex flex-col items-center justify-center w-12 py-1.5 rounded-xl transition cursor-pointer ${
                   activeRailTab === "games"
-                    ? "bg-black/15 dark:bg-white/20 text-neutral-900 dark:text-white font-bold shadow-xs"
-                    : "text-neutral-700 dark:text-neutral-300 hover:bg-black/10 dark:hover:bg-white/10"
+                    ? "bg-white/20 text-white font-bold shadow-xs"
+                    : "text-neutral-400 hover:text-white hover:bg-white/10"
                 }`}
                 title="Team Arcade"
               >
-                <Gamepad2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                <Gamepad2 className="w-4 h-4 text-emerald-400" />
                 <span className="text-[10px] mt-0.5 font-medium leading-none">Arcade</span>
               </button>
             </div>
@@ -248,7 +247,7 @@ export function Sidebar({
             {onOpenPreferences && (
               <button
                 onClick={onOpenPreferences}
-                className="w-9 h-9 rounded-xl flex items-center justify-center text-neutral-700 dark:text-neutral-300 hover:bg-black/10 dark:hover:bg-white/10 transition cursor-pointer"
+                className="w-9 h-9 rounded-xl flex items-center justify-center text-neutral-400 hover:text-white hover:bg-white/10 transition cursor-pointer"
                 title="Preferences [Ctrl+,]"
               >
                 <Settings className="w-4 h-4" />
