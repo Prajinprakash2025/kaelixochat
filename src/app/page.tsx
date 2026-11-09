@@ -648,6 +648,84 @@ export default function KaelixoApp() {
     }
   };
 
+  // 0. Supabase Auth state listener (OAuth and OTP session persistence)
+  useEffect(() => {
+    let isMounted = true;
+
+    // Check for existing session from OAuth redirect or session cookie
+    supabase.auth.getSession().then(({ data }: any) => {
+      const session = data?.session;
+      if (!isMounted || !session?.user) return;
+      const u = session.user;
+      const meta = u.user_metadata || {};
+      const fullName = meta.full_name || meta.name || u.email?.split("@")[0] || "User";
+      const avatar =
+        meta.avatar_url ||
+        meta.picture ||
+        `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(fullName)}`;
+
+      const authMember: WorkspaceMember = {
+        id: u.id,
+        name: fullName,
+        email: u.email || "",
+        avatar,
+        role: "member",
+        department: "dev",
+        status: "online",
+        statusText: "🟢 Online",
+      };
+
+      handleLoginSuccess(authMember);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event: any, session: any) => {
+      if (!isMounted) return;
+      if ((event === "SIGNED_IN" || event === "USER_UPDATED") && session?.user) {
+        const u = session.user;
+        const meta = u.user_metadata || {};
+        const fullName = meta.full_name || meta.name || u.email?.split("@")[0] || "User";
+        const avatar =
+          meta.avatar_url ||
+          meta.picture ||
+          `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(fullName)}`;
+
+        try {
+          await supabase.from("profiles").upsert({
+            id: u.id,
+            email: u.email || "",
+            full_name: fullName,
+            avatar_url: avatar,
+          });
+        } catch (e) {
+          console.warn("Profile upsert note:", e);
+        }
+
+        const authMember: WorkspaceMember = {
+          id: u.id,
+          name: fullName,
+          email: u.email || "",
+          avatar,
+          role: "member",
+          department: "dev",
+          status: "online",
+          statusText: "🟢 Online",
+        };
+
+        handleLoginSuccess(authMember);
+      } else if (event === "SIGNED_OUT") {
+        setIsAuthenticated(false);
+        setIsAuthModalOpen(true);
+      }
+    });
+
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
+  }, []);
+
   // 1. Fetch live organizations, departments & channels from Supabase
   useEffect(() => {
     async function loadWorkspaceData() {
