@@ -20,7 +20,9 @@ import {
   Bot,
   User,
   Sparkles,
+  EyeOff,
 } from "lucide-react";
+import { HideAndSeekGame } from "./hide-and-seek-game";
 import { WorkspaceMember } from "@/types";
 import { createClient } from "@/lib/supabase/client";
 
@@ -50,7 +52,8 @@ export function GamesModal({
   onShareToChannel,
   activeChannelName = "general",
 }: GamesModalProps) {
-  const [activeTab, setActiveTab] = useState<"snake_duel" | "snake_solo" | "tictactoe" | "reflex">("snake_duel");
+  const [activeTab, setActiveTab] = useState<"snake_duel" | "snake_solo" | "tictactoe" | "reflex" | "hide_seek">("snake_duel");
+  const [hideSeekOpen, setHideSeekOpen] = useState(false);
   const [leaderboard, setLeaderboard] = useState<ScoreRecord[]>([]);
   const [sharedToast, setSharedToast] = useState(false);
   const supabase = createClient();
@@ -105,6 +108,10 @@ export function GamesModal({
 
   if (!isOpen) return null;
 
+  if (hideSeekOpen) {
+    return <HideAndSeekGame onExit={() => setHideSeekOpen(false)} />;
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 md:p-6 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
       <div
@@ -148,6 +155,9 @@ export function GamesModal({
 
         {/* Tab Selection Navigation */}
         <div className="flex items-center space-x-2 px-4 sm:px-6 py-2.5 bg-neutral-950/70 border-b border-neutral-800 overflow-x-auto no-scrollbar">
+          <button onClick={() => setActiveTab("hide_seek")} className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold shrink-0 ${activeTab === "hide_seek" ? "bg-violet-600 text-white" : "text-neutral-400 hover:text-white hover:bg-neutral-800/70"}`}>
+            <EyeOff className="w-4 h-4" /> Hide &amp; Seek
+          </button>
           <button
             onClick={() => setActiveTab("snake_duel")}
             className={`flex items-center space-x-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer shrink-0 ${
@@ -205,6 +215,12 @@ export function GamesModal({
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Game Screen Viewport */}
             <div className="lg:col-span-2 flex flex-col items-center">
+              {activeTab === "hide_seek" && <div className="w-full min-h-80 rounded-2xl border border-violet-500/30 bg-gradient-to-br from-violet-950 via-slate-950 to-emerald-950 flex flex-col items-center justify-center text-center p-8 gap-4">
+                <EyeOff className="w-12 h-12 text-violet-300" />
+                <h4 className="text-2xl font-black text-white">Shadow Hunt</h4>
+                <p className="text-sm text-slate-300 max-w-md">Paint your white character, blend into a matching color area in the 3D room, and avoid the seeker.</p>
+                <button onClick={() => setHideSeekOpen(true)} className="rounded-xl bg-violet-500 hover:bg-violet-400 px-7 py-3 text-white font-bold cursor-pointer">Start full-screen game</button>
+              </div>}
               {activeTab === "snake_duel" && (
                 <TwoPlayerSnakeDuel
                   currentUser={currentUser}
