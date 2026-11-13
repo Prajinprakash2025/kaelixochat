@@ -58,6 +58,19 @@ export function EditProfileModal({
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  React.useEffect(() => {
+    if (isOpen) {
+      setName(currentUser.name || "");
+      setDisplayName(currentUser.displayName || currentUser.name?.toLowerCase().replace(/\s+/g, "") || "");
+      setTitle(currentUser.title || "");
+      setPronunciation(currentUser.displayName || currentUser.name || "");
+      setPhone(currentUser.phone || "");
+      setAvatar(currentUser.avatar || "");
+      setSelectedFile(null);
+      setError(null);
+    }
+  }, [isOpen, currentUser]);
+
   if (!isOpen) return null;
 
   const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {

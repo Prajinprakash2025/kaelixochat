@@ -62,7 +62,13 @@ export function MemberDirectoryModal({
 
   // Filter members based on search and department
   const filteredMembers = useMemo(() => {
+    const seenNames = new Set<string>();
     return members.filter((member) => {
+      if (!member || !member.name) return false;
+      const key = member.name.trim().toLowerCase();
+      if (seenNames.has(key)) return false;
+      seenNames.add(key);
+
       // Department filter
       if (selectedDept !== "all" && member.department !== selectedDept) {
         return false;

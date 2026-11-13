@@ -80,13 +80,32 @@ const DEFAULT_ORGS: Organization[] = [
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-function uniqueMembers(members: WorkspaceMember[]) {
-  return [...new Map(members.map(member => [member.id, member])).values()];
+function uniqueMembers(members: WorkspaceMember[], currentUserId?: string, currentUserName?: string): WorkspaceMember[] {
+  const map = new Map<string, WorkspaceMember>();
+  for (const m of members) {
+    if (!m || !m.name) continue;
+    const key = m.name.trim().toLowerCase();
+    const existing = map.get(key);
+    if (!existing) {
+      map.set(key, m);
+    } else {
+      // Prioritize currentUser record or real uploaded avatars over bottts seed avatars
+      const isCur = currentUserId && (m.id === currentUserId || m.name.trim().toLowerCase() === currentUserName?.trim().toLowerCase());
+      if (isCur) {
+        map.set(key, { ...existing, ...m });
+      } else if (m.avatar && !m.avatar.includes("seed=")) {
+        map.set(key, { ...existing, ...m });
+      }
+    }
+  }
+  return Array.from(map.values());
 }
 
 function findMemberIndex(members: WorkspaceMember[], id: string, name: string) {
+  const targetName = name ? name.trim().toLowerCase() : "";
   const exactIndex = members.findIndex(member => member.id === id);
-  return exactIndex >= 0 ? exactIndex : members.findIndex(member => member.name === name);
+  if (exactIndex >= 0) return exactIndex;
+  return targetName ? members.findIndex(member => member.name.trim().toLowerCase() === targetName) : -1;
 }
 
 function mergeMessageIntoList(currentList: Message[], incoming: Message): Message[] {
@@ -171,7 +190,8 @@ export default function KaelixoApp() {
       if (savedTeam) {
         const parsedTeam = JSON.parse(savedTeam);
         if (Array.isArray(parsedTeam) && parsedTeam.length > 0) {
-          setTeamMembers(uniqueMembers(parsedTeam));
+          const userObj = savedUser ? JSON.parse(savedUser) : null;
+          setTeamMembers(uniqueMembers(parsedTeam, userObj?.id, userObj?.name));
         }
       }
       const savedNotifs = localStorage.getItem("kaelixo_notifications");
@@ -509,13 +529,13 @@ export default function KaelixoApp() {
     } catch {}
 
     setTeamMembers((prev) => {
-      const idx = prev.findIndex((m) => m.id === currentUser.id || m.name === currentUser.name);
-      if (idx > -1) {
-        const next = [...prev];
-        next[idx] = { ...next[idx], ...updatedData };
-        return next;
-      }
-      return [...prev, updatedUser];
+      const filtered = prev.filter(
+        (m) =>
+          m.id !== currentUser.id &&
+          m.name.trim().toLowerCase() !== currentUser.name.trim().toLowerCase() &&
+          m.name.trim().toLowerCase() !== (updatedData.name || "").trim().toLowerCase()
+      );
+      return uniqueMembers([...filtered, updatedUser], updatedUser.id, updatedUser.name);
     });
 
     if (
@@ -847,7 +867,7 @@ export default function KaelixoApp() {
 
           if (dbMembers && dbMembers.length > 0) {
             setTeamMembers((prev) => {
-              const merged = uniqueMembers(prev);
+              const merged = uniqueMembers(prev, currentUser.id, currentUser.name);
               for (const row of dbMembers) {
                 const idx = findMemberIndex(merged, row.user_id, row.name);
                 const memberData: Partial<WorkspaceMember> = {
@@ -880,7 +900,7 @@ export default function KaelixoApp() {
                   });
                 }
               }
-              return merged;
+              return uniqueMembers(merged, currentUser.id, currentUser.name);
             });
 
             // If currentUser profile exists in Supabase with a valid avatar, sync it
@@ -1450,6 +1470,10 @@ export default function KaelixoApp() {
         (payload: any) => {
           const row = (payload.new || payload.old) as any;
           if (!row || !row.user_id) return;
+          if (payload.eventType === "DELETE") {
+            setTeamMembers((prev) => prev.filter((m) => m.id !== row.user_id));
+            return;
+          }
           setTeamMembers((prev) => {
             const idx = findMemberIndex(prev, row.user_id, row.name);
             if (idx > -1) {
@@ -1463,21 +1487,25 @@ export default function KaelixoApp() {
                 status: (row.status as any) || next[idx].status,
                 statusText: row.status_text !== undefined ? row.status_text : next[idx].statusText,
               };
-              return next;
+              return uniqueMembers(next, currentUser.id, currentUser.name);
             }
-            return [
-              ...prev,
-              {
-                id: row.user_id,
-                name: row.name,
-                email: `${row.name.toLowerCase().replace(/\s+/g, ".")}@kaelixo.com`,
-                avatar: row.avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(row.name)}`,
-                role: (row.role as any) || "member",
-                department: (row.department as any) || "management",
-                status: (row.status as any) || "online",
-                statusText: row.status_text || "",
-              },
-            ];
+            return uniqueMembers(
+              [
+                ...prev,
+                {
+                  id: row.user_id,
+                  name: row.name,
+                  email: `${row.name.toLowerCase().replace(/\s+/g, ".")}@kaelixo.com`,
+                  avatar: row.avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(row.name)}`,
+                  role: (row.role as any) || "member",
+                  department: (row.department as any) || "management",
+                  status: (row.status as any) || "online",
+                  statusText: row.status_text || "",
+                },
+              ],
+              currentUser.id,
+              currentUser.name
+            );
           });
         }
       )

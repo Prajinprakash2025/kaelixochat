@@ -119,8 +119,21 @@ export function MobileSlackView({
   // Filter channels (exclude DMs)
   const regularChannels = channels.filter((c) => !c.isDm);
 
-  // Other members excluding current user (with current user first)
-  const otherMembers = teamMembers.filter((m) => m.id !== currentUser.id);
+  // Deduplicated members excluding current user
+  const uniqueTeamMembers = React.useMemo(() => {
+    const seen = new Set<string>();
+    return teamMembers.filter((m) => {
+      if (!m || !m.name) return false;
+      const key = m.name.trim().toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [teamMembers]);
+
+  const otherMembers = uniqueTeamMembers.filter(
+    (m) => m.id !== currentUser.id && m.name.trim().toLowerCase() !== currentUser.name.trim().toLowerCase()
+  );
 
   return (
     <div className="flex flex-col h-screen w-full bg-[#121517] text-neutral-100 select-none overflow-hidden">
@@ -402,7 +415,7 @@ export function MobileSlackView({
           <div className="pt-2">
             {/* Top Horizontal Teammates Carousel (Stories / Quick Contacts) */}
             <div className="px-3 pb-3 overflow-x-auto no-scrollbar flex items-center space-x-3 border-b border-neutral-800/80">
-              {teamMembers.map((member) => {
+              {otherMembers.map((member) => {
                 const online = isUserOnline(member);
                 return (
                   <div
@@ -472,7 +485,7 @@ export function MobileSlackView({
 
             {/* Rich DM Conversations List */}
             <div className="divide-y divide-neutral-800/60">
-              {teamMembers.map((member) => {
+              {otherMembers.map((member) => {
                 const snippet = getDmSnippet(member);
                 const online = isUserOnline(member);
                 return (

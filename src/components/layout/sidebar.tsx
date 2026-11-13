@@ -547,11 +547,20 @@ export function Sidebar({
               </div>
 
               <div className="space-y-1">
-                {teamMembers
-                  .filter((m) => m.id !== currentUser.id)
-                  .map((member) => {
-                    const dmChannelId = `dm-${[currentUser.id, member.id].sort().join("-")}`;
-                    const isDmActive = activeChannelId === dmChannelId;
+                {(() => {
+                  const seenNames = new Set<string>();
+                  return teamMembers
+                    .filter((m) => {
+                      if (!m || !m.name) return false;
+                      const norm = m.name.trim().toLowerCase();
+                      if (m.id === currentUser.id || norm === currentUser.name.trim().toLowerCase()) return false;
+                      if (seenNames.has(norm)) return false;
+                      seenNames.add(norm);
+                      return true;
+                    })
+                    .map((member) => {
+                      const dmChannelId = `dm-${[currentUser.id, member.id].sort().join("-")}`;
+                      const isDmActive = activeChannelId === dmChannelId;
 
                     return (
                       <button
@@ -595,7 +604,8 @@ export function Sidebar({
                         </span>
                       </button>
                     );
-                  })}
+                  });
+                })()}
               </div>
             </div>
           </div>
