@@ -27,6 +27,7 @@ import {
   X,
   ExternalLink,
   Filter,
+  Trash2,
 } from "lucide-react";
 import {
   Channel,
@@ -36,6 +37,7 @@ import {
   Notification,
 } from "@/types";
 import { PresenceMap } from "@/utils/realtime";
+import { canRemoveMember } from "@/utils/permissions";
 
 export type MobileTabType = "home" | "dms" | "activity" | "search" | "more";
 
@@ -61,6 +63,7 @@ interface MobileSlackViewProps {
   onOpenPreferences: () => void;
   onOpenUserProfile: (member: WorkspaceMember) => void;
   onLogout: () => void;
+  onRemoveMember?: (memberId: string) => void;
 }
 
 export function MobileSlackView({
@@ -85,6 +88,7 @@ export function MobileSlackView({
   onOpenPreferences,
   onOpenUserProfile,
   onLogout,
+  onRemoveMember,
 }: MobileSlackViewProps) {
   const [showOrgDropdown, setShowOrgDropdown] = useState(false);
   const [isDmsExpanded, setIsDmsExpanded] = useState(true);
@@ -365,21 +369,38 @@ export function MobileSlackView({
                       <div
                         key={member.id}
                         onClick={() => onSelectDirectMessage(member)}
-                        className="flex items-center space-x-3 px-3 py-2 rounded-xl cursor-pointer hover:bg-neutral-800/50 transition text-neutral-300 hover:text-white"
+                        className="flex items-center justify-between px-3 py-2 rounded-xl cursor-pointer hover:bg-neutral-800/50 transition text-neutral-300 hover:text-white"
                       >
-                        <div className="relative flex-shrink-0">
-                          <img
-                            src={member.avatar}
-                            alt={member.name}
-                            className="w-7 h-7 rounded-xl object-cover bg-neutral-800"
-                          />
-                          <span
-                            className={`absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full ring-2 ring-[#121517] ${
-                              online ? "bg-emerald-500" : "bg-neutral-500"
-                            }`}
-                          />
+                        <div className="flex items-center space-x-3 min-w-0">
+                          <div className="relative flex-shrink-0">
+                            <img
+                              src={member.avatar}
+                              alt={member.name}
+                              className="w-7 h-7 rounded-xl object-cover bg-neutral-800"
+                            />
+                            <span
+                              className={`absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full ring-2 ring-[#121517] ${
+                                online ? "bg-emerald-500" : "bg-neutral-500"
+                              }`}
+                            />
+                          </div>
+                          <span className="text-sm truncate">{member.name}</span>
                         </div>
-                        <span className="text-sm truncate">{member.name}</span>
+                        {onRemoveMember && canRemoveMember(currentUser, member).allowed && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (window.confirm(`Are you sure you want to remove ${member.name} from the company?`)) {
+                                onRemoveMember(member.id);
+                              }
+                            }}
+                            className="p-1.5 text-neutral-500 hover:text-rose-400 rounded-lg hover:bg-neutral-700/60 transition cursor-pointer"
+                            title={`Remove ${member.name}`}
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                       </div>
                     );
                   })}
@@ -514,9 +535,26 @@ export function MobileSlackView({
                         <h3 className="font-semibold text-sm text-neutral-100 truncate">
                           {member.name}
                         </h3>
-                        <span className="text-[11px] text-neutral-400">
-                          {snippet ? "2h" : "active"}
-                        </span>
+                        <div className="flex items-center space-x-2">
+                          <span className="text-[11px] text-neutral-400">
+                            {snippet ? "2h" : "active"}
+                          </span>
+                          {onRemoveMember && canRemoveMember(currentUser, member).allowed && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (window.confirm(`Are you sure you want to remove ${member.name} from the company?`)) {
+                                  onRemoveMember(member.id);
+                                }
+                              }}
+                              className="p-1 text-neutral-500 hover:text-rose-400 rounded hover:bg-neutral-800 transition cursor-pointer"
+                              title={`Remove ${member.name}`}
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
                       </div>
 
                       {snippet ? (

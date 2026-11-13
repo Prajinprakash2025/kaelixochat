@@ -22,9 +22,12 @@ import {
   Gamepad2,
   Share2,
   LogOut,
+  Trash2,
+  AlertTriangle,
+  UserMinus,
 } from "lucide-react";
 import { WorkspaceMember } from "@/types";
-import { formatRoleLabel } from "@/utils/permissions";
+import { formatRoleLabel, canRemoveMember } from "@/utils/permissions";
 
 export interface UserProfileDrawerProps {
   member: WorkspaceMember;
@@ -39,6 +42,7 @@ export interface UserProfileDrawerProps {
   onOpenGames?: () => void;
   onOpenInvite?: () => void;
   onSignOut?: () => void;
+  onRemoveMember?: (memberId: string) => void | Promise<void>;
 }
 
 export function UserProfileDrawer({
@@ -54,10 +58,13 @@ export function UserProfileDrawer({
   onOpenGames,
   onOpenInvite,
   onSignOut,
+  onRemoveMember,
 }: UserProfileDrawerProps) {
   const [copiedEmail, setCopiedEmail] = useState(false);
   const [localTime, setLocalTime] = useState("");
+  const [isConfirmRemoveOpen, setIsConfirmRemoveOpen] = useState(false);
   const isSelf = currentUser.id === member.id;
+  const removeCheck = canRemoveMember(currentUser, member);
 
   useEffect(() => {
     const updateTime = () => {
@@ -77,6 +84,21 @@ export function UserProfileDrawer({
       setCopiedEmail(true);
       setTimeout(() => setCopiedEmail(false), 2000);
     }
+  };
+
+  const getStatusColor = (status: WorkspaceMember["status"], isOnline?: boolean) => {
+    if (status === "in_call") return "bg-rose-500 ring-2 ring-white dark:ring-neutral-900 animate-pulse";
+    if (status === "away") return "bg-amber-500 ring-2 ring-white dark:ring-neutral-900";
+    if (status === "online" || isOnline) return "bg-emerald-500 ring-2 ring-white dark:ring-neutral-900";
+    return "bg-neutral-400 ring-2 ring-white dark:ring-neutral-900";
+  };
+
+  const getStatusLabel = (m: WorkspaceMember, isOnline?: boolean) => {
+    if (m.statusText) return m.statusText;
+    if (m.status === "in_call") return "In a call";
+    if (m.status === "away") return "Away";
+    if (m.status === "online" || isOnline) return "Active now";
+    return "Offline";
   };
 
   const isOnline = member.online || member.status === "online";
@@ -122,8 +144,9 @@ export function UserProfileDrawer({
                 type="button"
                 onClick={onOpenEditProfile}
                 className="text-sm font-semibold text-sky-600 dark:text-sky-400 hover:underline cursor-pointer"
+                title="Edit Profile"
               >
-                Edit
+                Edit Profile
               </button>
             )}
           </div>
@@ -141,12 +164,13 @@ export function UserProfileDrawer({
           {/* Status Indicator */}
           <div className="flex items-center space-x-2 mt-2 text-xs text-neutral-600 dark:text-neutral-300">
             <span
-              className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                isOnline ? "bg-emerald-500" : "bg-neutral-400"
-              }`}
+              className={`w-2 h-2 rounded-full flex-shrink-0 ${getStatusColor(
+                member.status,
+                isOnline
+              )}`}
             />
             <span className="truncate">
-              {member.statusText || (isOnline ? "Active, notifications snoozed" : "Away")}
+              {getStatusLabel(member, isOnline)}
             </span>
           </div>
 
@@ -205,6 +229,16 @@ export function UserProfileDrawer({
               >
                 {copiedEmail ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
               </button>
+              {removeCheck.allowed && onRemoveMember && (
+                <button
+                  type="button"
+                  onClick={() => setIsConfirmRemoveOpen(true)}
+                  className="py-2 px-3 text-sm font-semibold text-rose-600 dark:text-rose-400 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition cursor-pointer shadow-xs"
+                  title={`Remove ${member.name} from company`}
+                >
+                  <Trash2 className="w-4 h-4 text-rose-500" />
+                </button>
+              )}
             </>
           )}
         </div>
@@ -345,6 +379,63 @@ export function UserProfileDrawer({
             </div>
           </div>
         </div>
+
+        {/* Workspace Administration / Member Removal */}
+        {!isSelf && removeCheck.allowed && onRemoveMember && (
+          <div className="pt-2">
+            <div className="border-t border-neutral-200 dark:border-neutral-800 my-4" />
+            <div className="p-3.5 rounded-2xl bg-neutral-50 dark:bg-neutral-800/40 border border-neutral-200 dark:border-neutral-800 space-y-3">
+              <div>
+                <h4 className="font-bold text-xs uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
+                  Workspace Administration
+                </h4>
+                <p className="text-xs text-neutral-600 dark:text-neutral-300 mt-1">
+                  As the workspace administrator, you can manage access for this team member.
+                </p>
+              </div>
+
+              {!isConfirmRemoveOpen ? (
+                <button
+                  type="button"
+                  onClick={() => setIsConfirmRemoveOpen(true)}
+                  className="w-full flex items-center justify-center space-x-2 py-2 px-3 text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/60 dark:hover:bg-rose-900/60 border border-rose-200 dark:border-rose-900 rounded-xl transition cursor-pointer"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Remove User from Company</span>
+                </button>
+              ) : (
+                <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/80 border border-rose-300 dark:border-rose-800 text-left space-y-2.5 animate-in fade-in">
+                  <div className="flex items-center space-x-2 text-rose-700 dark:text-rose-300">
+                    <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+                    <p className="text-xs font-bold">Remove {member.name}?</p>
+                  </div>
+                  <p className="text-[11px] text-rose-700 dark:text-rose-300 leading-snug">
+                    This will immediately revoke their access to the company workspace and remove them from all channels.
+                  </p>
+                  <div className="flex items-center space-x-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setIsConfirmRemoveOpen(false)}
+                      className="flex-1 py-1.5 px-2 text-xs font-semibold bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-200 rounded-lg hover:bg-neutral-50 cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsConfirmRemoveOpen(false);
+                        onRemoveMember(member.id);
+                      }}
+                      className="flex-1 py-1.5 px-2 text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white rounded-lg shadow-sm cursor-pointer"
+                    >
+                      Yes, Remove
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Quick Settings & Tools (Slack Parity) */}
         {isSelf && (

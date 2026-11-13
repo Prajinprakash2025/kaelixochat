@@ -65,8 +65,10 @@ import {
   Settings,
   ArrowLeft,
   Headphones,
+  Trash2,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { canRemoveMember } from "@/utils/permissions";
 
 const DEFAULT_ORGS: Organization[] = [
   {
@@ -80,17 +82,36 @@ const DEFAULT_ORGS: Organization[] = [
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+function getRemovedMembersSet(): Set<string> {
+  if (typeof window === "undefined") return new Set();
+  try {
+    const raw = localStorage.getItem("kaelixo_removed_members");
+    if (raw) {
+      const arr = JSON.parse(raw);
+      if (Array.isArray(arr)) {
+        return new Set(arr.map((s: string) => String(s).toLowerCase().trim()));
+      }
+    }
+  } catch {}
+  return new Set();
+}
+
 function uniqueMembers(members: WorkspaceMember[], currentUserId?: string, currentUserName?: string): WorkspaceMember[] {
+  const removedSet = getRemovedMembersSet();
   const map = new Map<string, WorkspaceMember>();
   for (const m of members) {
     if (!m || !m.name) continue;
     const key = m.name.trim().toLowerCase();
+    const idLower = (m.id || "").toLowerCase().trim();
+    if (removedSet.has(key) || (idLower && removedSet.has(idLower))) {
+      continue;
+    }
     const existing = map.get(key);
     if (!existing) {
       map.set(key, m);
     } else {
       // Prioritize currentUser record or real uploaded avatars over bottts seed avatars
-      const isCur = currentUserId && (m.id === currentUserId || m.name.trim().toLowerCase() === currentUserName?.trim().toLowerCase());
+      const isCur = currentUserId && (m.id === currentUserId || key === currentUserName?.trim().toLowerCase());
       if (isCur) {
         map.set(key, { ...existing, ...m });
       } else if (m.avatar && !m.avatar.includes("seed=")) {
@@ -510,12 +531,119 @@ export default function KaelixoApp() {
     setTeamMembers((prev) => [...prev, newMember]);
   };
 
-  const handleRemoveMember = (memberId: string) => {
-    setTeamMembers((prev) => prev.filter((m) => m.id !== memberId));
-    if (activeProfileMember?.id === memberId) {
+  const handleRemoveMember = async (memberId: string) => {
+    const targetMember = teamMembers.find((m) => m.id === memberId);
+    const targetName = targetMember?.name?.trim() || "";
+
+    // Security guard: check removal permission
+    const check = canRemoveMember(currentUser, targetMember);
+    if (!check.allowed) {
+      setActiveToast({
+        id: `toast-${Date.now()}`,
+        senderName: "Workspace Admin",
+        content: check.reason || "You do not have permission to remove this user.",
+        channelName: activeOrg.name,
+        channelId: activeChannelId,
+        messageId: "",
+      });
+      return;
+    }
+
+    // 1. Immediately update React state
+    setTeamMembers((prev) => {
+      const updated = prev.filter(
+        (m) =>
+          m.id !== memberId &&
+          (!targetName || m.name.trim().toLowerCase() !== targetName.toLowerCase())
+      );
+      try {
+        localStorage.setItem("kaelixo_team_members", JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+
+    // 2. Persist to removed members blacklist so they never reappear
+    try {
+      const raw = localStorage.getItem("kaelixo_removed_members");
+      const currentRemoved: string[] = raw ? JSON.parse(raw) : [];
+      const updatedRemoved = Array.from(
+        new Set([...currentRemoved, memberId, targetName.toLowerCase()].filter(Boolean))
+      );
+      localStorage.setItem("kaelixo_removed_members", JSON.stringify(updatedRemoved));
+    } catch {}
+
+    // 3. Reset active profile drawer if currently viewing this member
+    if (
+      activeProfileMember?.id === memberId ||
+      (targetName && activeProfileMember?.name.trim().toLowerCase() === targetName.toLowerCase())
+    ) {
       setActiveProfileMember(null);
       setRightPanelMode("none");
     }
+
+    // 4. Reset active DM if chatting with this member
+    if (
+      activeDmRecipient?.id === memberId ||
+      (targetName && activeDmRecipient?.name.trim().toLowerCase() === targetName.toLowerCase())
+    ) {
+      setActiveDmRecipient(null);
+      try {
+        localStorage.removeItem("kaelixo_active_dm_recipient");
+      } catch {}
+      const generalChannel = channels.find((c) => c.name === "general") || channels[0];
+      if (generalChannel) {
+        setActiveChannelId(generalChannel.id);
+      }
+    }
+
+    // 5. Delete from Supabase `user_presence` table
+    try {
+      if (targetName) {
+        await supabase
+          .from("user_presence")
+          .delete()
+          .or(`user_id.eq.${memberId},name.ilike.${targetName}`);
+      } else {
+        await supabase.from("user_presence").delete().eq("user_id", memberId);
+      }
+    } catch (err) {
+      console.warn("Failed to delete member from user_presence:", err);
+    }
+
+    // 6. Delete from Supabase `workspace_members` and `channel_members`
+    try {
+      await supabase.from("workspace_members").delete().eq("user_id", memberId);
+    } catch {}
+    try {
+      await supabase.from("channel_members").delete().eq("member_id", memberId);
+    } catch {}
+
+    // 7. Broadcast real-time removal event so all connected devices update immediately
+    try {
+      if (realtimeChannelRef.current) {
+        realtimeChannelRef.current.send({
+          type: "broadcast",
+          event: "member_removed",
+          payload: {
+            memberId,
+            memberName: targetName,
+            removedBy: currentUser.name,
+          },
+        });
+      }
+    } catch (err) {
+      console.warn("Failed to broadcast member_removed:", err);
+    }
+
+    // 8. Trigger feedback toast
+    setActiveToast({
+      id: `toast-${Date.now()}`,
+      senderName: "Workspace Admin",
+      content: `${targetName || "User"} has been removed from the company workspace.`,
+      channelName: activeOrg.name,
+      channelId: activeChannelId,
+      messageId: "",
+    });
   };
 
   const handleSaveProfile = async (updatedData: Partial<WorkspaceMember>) => {
@@ -1464,6 +1592,85 @@ export default function KaelixoApp() {
           });
         }
       })
+      .on("broadcast", { event: "member_removed" }, ({ payload }: any) => {
+        if (!payload || !payload.memberId) return;
+        const removedId = payload.memberId;
+        const removedName = (payload.memberName || "").toLowerCase().trim();
+
+        // If the removed member is currentUser, notify and log out
+        if (
+          currentUser.id === removedId ||
+          (removedName && currentUser.name.toLowerCase().trim() === removedName)
+        ) {
+          setActiveToast({
+            id: `toast-${Date.now()}`,
+            senderName: "Workspace Admin",
+            content: "You have been removed from this company workspace by an administrator.",
+            channelName: activeOrg.name,
+            channelId: activeChannelId,
+            messageId: "",
+          });
+          setTimeout(() => {
+            handleLogout();
+          }, 1500);
+          return;
+        }
+
+        // Add to local removed blacklist
+        try {
+          const raw = localStorage.getItem("kaelixo_removed_members");
+          const currentRemoved: string[] = raw ? JSON.parse(raw) : [];
+          const updatedRemoved = Array.from(
+            new Set([...currentRemoved, removedId, removedName].filter(Boolean))
+          );
+          localStorage.setItem("kaelixo_removed_members", JSON.stringify(updatedRemoved));
+        } catch {}
+
+        // Remove from teamMembers
+        setTeamMembers((prev) => {
+          const next = prev.filter(
+            (m) =>
+              m.id !== removedId &&
+              (!removedName || m.name.toLowerCase().trim() !== removedName)
+          );
+          try {
+            localStorage.setItem("kaelixo_team_members", JSON.stringify(next));
+          } catch {}
+          return next;
+        });
+
+        // Close profile drawer if open for this member
+        setActiveProfileMember((prev) => {
+          if (
+            prev &&
+            (prev.id === removedId ||
+              (removedName && prev.name.toLowerCase().trim() === removedName))
+          ) {
+            setRightPanelMode("none");
+            return null;
+          }
+          return prev;
+        });
+
+        // Reset active DM if chatting with this member
+        setActiveDmRecipient((prev) => {
+          if (
+            prev &&
+            (prev.id === removedId ||
+              (removedName && prev.name.toLowerCase().trim() === removedName))
+          ) {
+            const general = channels.find((c) => c.name === "general") || channels[0];
+            if (general) {
+              setActiveChannelId(general.id);
+            }
+            try {
+              localStorage.removeItem("kaelixo_active_dm_recipient");
+            } catch {}
+            return null;
+          }
+          return prev;
+        });
+      })
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "user_presence" },
@@ -1622,6 +1829,9 @@ export default function KaelixoApp() {
     if (rightPanelMode === "thread") {
       setRightPanelMode("none");
       setActiveThreadParent(null);
+    }
+    if (rightPanelMode === "profile") {
+      setActiveProfileMember(member);
     }
 
     setIsMobileSidebarOpen(false);
@@ -2484,6 +2694,7 @@ export default function KaelixoApp() {
             setRightPanelMode("profile");
           }}
           onLogout={handleLogout}
+          onRemoveMember={handleRemoveMember}
         />
       </div>
 
@@ -2514,6 +2725,7 @@ export default function KaelixoApp() {
         }}
         onSelectDirectMessage={handleSelectDirectMessage}
         onLogout={handleLogout}
+        onRemoveMember={handleRemoveMember}
         isMobileOpen={isMobileSidebarOpen}
         onCloseMobile={() => setIsMobileSidebarOpen(false)}
       />
@@ -2784,6 +2996,7 @@ export default function KaelixoApp() {
           onOpenGames={() => setIsGamesModalOpen(true)}
           onOpenInvite={() => setIsInviteModalOpen(true)}
           onSignOut={handleLogout}
+          onRemoveMember={handleRemoveMember}
         />
       )}
 
@@ -2817,6 +3030,20 @@ export default function KaelixoApp() {
                   <span className="mt-2 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800">
                     {activeDmRecipient.role} • {activeDmRecipient.department}
                   </span>
+                  {canRemoveMember(currentUser, activeDmRecipient).allowed && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (window.confirm(`Are you sure you want to remove ${activeDmRecipient.name} from the company?`)) {
+                          handleRemoveMember(activeDmRecipient.id);
+                        }
+                      }}
+                      className="mt-3 w-full flex items-center justify-center space-x-1.5 py-1.5 px-3 text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/40 border border-rose-200 dark:border-rose-900 rounded-xl transition cursor-pointer"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Remove from Company</span>
+                    </button>
+                  )}
                 </div>
               </div>
             ) : (

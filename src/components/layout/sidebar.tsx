@@ -29,8 +29,10 @@ import {
   FileText,
   Bot,
   Home as HomeIcon,
+  Trash2,
 } from "lucide-react";
 import { DepartmentCode, Channel, WorkspaceMember, Department, Organization } from "@/types";
+import { canRemoveMember } from "@/utils/permissions";
 
 interface SidebarProps {
   organizations: Organization[];
@@ -56,6 +58,7 @@ interface SidebarProps {
   onOpenUserProfile?: (member: WorkspaceMember) => void;
   onSelectDirectMessage: (member: WorkspaceMember) => void;
   onLogout?: () => void;
+  onRemoveMember?: (memberId: string) => void;
   isMobileOpen?: boolean;
   onCloseMobile?: () => void;
 }
@@ -84,6 +87,7 @@ export function Sidebar({
   onOpenUserProfile,
   onSelectDirectMessage,
   onLogout,
+  onRemoveMember,
   isMobileOpen = false,
   onCloseMobile,
 }: SidebarProps) {
@@ -569,7 +573,7 @@ export function Sidebar({
                           onSelectDirectMessage(member);
                           if (onCloseMobile) onCloseMobile();
                         }}
-                        className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-sm transition text-left cursor-pointer ${
+                        className={`w-full group flex items-center justify-between px-2.5 py-1.5 rounded-xl text-sm transition text-left cursor-pointer ${
                           isDmActive
                             ? "bg-indigo-600 text-white font-medium shadow-xs"
                             : "hover:bg-neutral-100 dark:hover:bg-neutral-800/70 text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white"
@@ -599,9 +603,27 @@ export function Sidebar({
                           </div>
                         </div>
 
-                        <span className="text-[9px] px-1 py-0.2 rounded uppercase font-semibold text-neutral-500 dark:text-neutral-400 bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700/60">
-                          {member.department}
-                        </span>
+                        <div className="flex items-center space-x-1.5 flex-shrink-0">
+                          {onRemoveMember && canRemoveMember(currentUser, member).allowed && (
+                            <span
+                              role="button"
+                              tabIndex={0}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (window.confirm(`Are you sure you want to remove ${member.name} from the company?`)) {
+                                  onRemoveMember(member.id);
+                                }
+                              }}
+                              className="opacity-0 group-hover:opacity-100 p-1 text-neutral-400 hover:text-rose-500 rounded transition cursor-pointer"
+                              title={`Remove ${member.name} from company`}
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </span>
+                          )}
+                          <span className="text-[9px] px-1 py-0.2 rounded uppercase font-semibold text-neutral-500 dark:text-neutral-400 bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700/60">
+                            {member.department}
+                          </span>
+                        </div>
                       </button>
                     );
                   });

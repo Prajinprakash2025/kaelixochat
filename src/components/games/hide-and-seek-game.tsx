@@ -33,6 +33,8 @@ import {
 import { canOccupy, clearRoute, distanceToProp, findSeekerWaypoint, furnishRoom, matchingSpot, propFootprint, roomAt, PAINTS as COLORS, ZONES, type MapProp, type Paint } from "./shadow-hunt-room";
 import { newMotion, stepMotion, WALK_SPEED } from "./shadow-hunt-motion";
 import { createTagRaycast } from "./shadow-hunt-tag";
+import { makePaintSurfaces, readPaintDesign, type PaintDesign } from "./shadow-hunt-paint";
+import { PaintStudio } from "./shadow-hunt-paint-studio";
 import { createClient } from "@/lib/supabase/client";
 import {
   type ShadowHuntRoom,
@@ -195,6 +197,8 @@ function makeCharacter(paint: Paint, seeker = false) {
   return { group, arms, legs };
 }
 
+const createStudioCharacter = () => makeCharacter("white").group;
+
 export function HideAndSeekGame({
   onExit,
   currentUser,
@@ -217,6 +221,8 @@ export function HideAndSeekGame({
   const player = useRef<THREE.Group | null>(null);
   const seeker = useRef<THREE.Group | null>(null);
   const avatar = useRef<THREE.Group | null>(null);
+  const avatarPaint = useRef<ReturnType<typeof makePaintSurfaces> | null>(null);
+  const [studioOpen, setStudioOpen] = useState(false);
   const switchRole = useRef<((role: Role) => number) | null>(null);
   const mapProps = useRef<MapProp[]>([]);
   const disguise = useRef<Disguise | null>(null);
@@ -345,6 +351,12 @@ export function HideAndSeekGame({
     const seekerModel = makeCharacter("white", true);
     seekerModel.group.visible = false;
     avatar.current = hiderModel.group;
+    const applySavedPaint = (design: PaintDesign) => {
+      if (Object.keys(design).length === 0) return;
+      avatarPaint.current ??= makePaintSurfaces(hiderModel.group);
+      void avatarPaint.current.load(design);
+    };
+    applySavedPaint(readPaintDesign());
     me.add(hiderModel.group, seekerModel.group);
     scene.add(me);
     player.current = me;
@@ -781,6 +793,8 @@ export function HideAndSeekGame({
       cancelAnimationFrame(frame);
       observer.disconnect();
       renderer.domElement.remove();
+      avatarPaint.current?.dispose();
+      avatarPaint.current = null;
       const materials = new Set<THREE.Material>();
       scene.traverse(object => {
         if (object instanceof THREE.Mesh) {
@@ -806,7 +820,10 @@ export function HideAndSeekGame({
   }, [clearRemotePlayers, gameMode, mpRoom, supabase]);
 
   useEffect(() => {
-    if (avatar.current) (avatar.current.userData.bodyMaterial as THREE.MeshStandardMaterial).color.setHex(COLORS[paint]);
+    if (avatar.current) {
+      (avatar.current.userData.bodyMaterial as THREE.MeshStandardMaterial).color.setHex(COLORS[paint]);
+      avatarPaint.current?.refresh();
+    }
   }, [paint]);
 
   // Restore avatar from disguise
@@ -881,6 +898,7 @@ export function HideAndSeekGame({
   // Keyboard controls
   useEffect(() => {
     const down = (event: KeyboardEvent) => {
+      if (studioOpen) return;
       if (event.key === "Escape") { onExit(); return; }
       if (state.current.phase !== "playing") return;
       if (event.code === "Space" && !(event.target instanceof HTMLButtonElement)) {
@@ -923,7 +941,7 @@ export function HideAndSeekGame({
       window.removeEventListener("blur", clear);
       document.removeEventListener("visibilitychange", visibilityChanged);
     };
-  }, [onExit, restoreAvatar, toggleFreeze, turnProp]);
+  }, [onExit, restoreAvatar, toggleFreeze, turnProp, studioOpen]);
 
   // Solo mode local countdown timer
   useEffect(() => {
@@ -1269,7 +1287,7 @@ export function HideAndSeekGame({
 
   return (
     <div role="dialog" aria-modal="true" aria-label="Shadow Hunt 3D game" className="fixed inset-0 z-[100] overflow-hidden bg-[#20130e] text-[#fff2d8] select-none">
-      <main className="absolute inset-0">
+      <main inert={studioOpen} className="absolute inset-0">
         <div
           ref={mount}
           className={`absolute inset-0 touch-none ${phase === "playing" && role === "seeker" ? "cursor-crosshair" : "cursor-grab active:cursor-grabbing"}`}
@@ -1893,6 +1911,17 @@ export function HideAndSeekGame({
           </>
         )}
       </main>
+        {phase !== "playing" && !mpRoom && !studioOpen && <button type="button" onClick={() => setStudioOpen(true)}
+          className="absolute bottom-4 right-4 z-40 flex items-center gap-1.5 rounded-xl border border-amber-100/25 bg-[#25170f] px-3.5 py-2 text-xs font-bold text-amber-100">
+          <Palette size={14} /> Paint studio
+        </button>}
+        {studioOpen && <PaintStudio createModel={createStudioCharacter}
+          onSave={design => {
+            if (!avatar.current) return;
+            avatarPaint.current ??= makePaintSurfaces(avatar.current);
+            void avatarPaint.current.load(design);
+          }}
+          onClose={() => setStudioOpen(false)} />}
     </div>
   );
 }

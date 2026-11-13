@@ -42,6 +42,8 @@ export function EditProfileModal({
   const pronunciationInputId = useId();
   const timezoneInputId = useId();
   const phoneInputId = useId();
+  const bioInputId = useId();
+  const statusInputId = useId();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -51,6 +53,8 @@ export function EditProfileModal({
   const [pronunciation, setPronunciation] = useState(currentUser.displayName || currentUser.name || "");
   const [timezone, setTimezone] = useState("Asia/Kolkata");
   const [phone, setPhone] = useState(currentUser.phone || "");
+  const [statusText, setStatusText] = useState(currentUser.statusText || "");
+  const [bio, setBio] = useState(currentUser.bio || "");
   const [avatar, setAvatar] = useState(currentUser.avatar || "");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isRecording, setIsRecording] = useState(false);
@@ -65,6 +69,8 @@ export function EditProfileModal({
       setTitle(currentUser.title || "");
       setPronunciation(currentUser.displayName || currentUser.name || "");
       setPhone(currentUser.phone || "");
+      setStatusText(currentUser.statusText || "");
+      setBio(currentUser.bio || "");
       setAvatar(currentUser.avatar || "");
       setSelectedFile(null);
       setError(null);
@@ -150,6 +156,8 @@ export function EditProfileModal({
         displayName: displayName.trim() || trimmedName.toLowerCase().replace(/\s+/g, ""),
         title: title.trim(),
         phone: phone.trim(),
+        statusText: statusText.trim(),
+        bio: bio.trim(),
         avatar: finalAvatar,
       });
       onClose();
@@ -166,9 +174,14 @@ export function EditProfileModal({
       <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col max-h-[92vh]">
         {/* Header */}
         <div className="px-6 py-5 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between">
-          <h2 className="font-extrabold text-xl text-neutral-900 dark:text-neutral-100 tracking-tight">
-            Edit your profile
-          </h2>
+          <div>
+            <h2 className="font-extrabold text-xl text-neutral-900 dark:text-neutral-100 tracking-tight">
+              Edit Your Profile
+            </h2>
+            <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+              Update your photo, contact details, and status
+            </p>
+          </div>
 
           <button
             onClick={onClose}
@@ -196,7 +209,7 @@ export function EditProfileModal({
                   htmlFor={nameInputId}
                   className="block text-sm font-bold text-neutral-900 dark:text-neutral-100 mb-1.5"
                 >
-                  Full name
+                  Full Name
                 </label>
                 <input
                   id={nameInputId}
@@ -215,7 +228,7 @@ export function EditProfileModal({
                   htmlFor={displayNameInputId}
                   className="block text-sm font-bold text-neutral-900 dark:text-neutral-100 mb-1.5"
                 >
-                  Display name
+                  Display Name
                 </label>
                 <input
                   id={displayNameInputId}
@@ -236,7 +249,7 @@ export function EditProfileModal({
                   htmlFor={titleInputId}
                   className="block text-sm font-bold text-neutral-900 dark:text-neutral-100 mb-1.5"
                 >
-                  Title
+                  Job Title / Role
                 </label>
                 <input
                   id={titleInputId}
@@ -249,6 +262,24 @@ export function EditProfileModal({
                 <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
                   Let people know what you do at {companyName}.
                 </p>
+              </div>
+
+              {/* Current Status */}
+              <div>
+                <label
+                  htmlFor={statusInputId}
+                  className="block text-sm font-bold text-neutral-900 dark:text-neutral-100 mb-1.5"
+                >
+                  Current Status
+                </label>
+                <input
+                  id={statusInputId}
+                  type="text"
+                  value={statusText}
+                  onChange={(e) => setStatusText(e.target.value)}
+                  placeholder="e.g. Working remotely, In a meeting"
+                  className="w-full px-3 py-2 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 rounded-lg text-sm text-neutral-900 dark:text-white focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition"
+                />
               </div>
 
               {/* Name recording */}
@@ -338,7 +369,7 @@ export function EditProfileModal({
                   htmlFor={phoneInputId}
                   className="block text-sm font-bold text-neutral-900 dark:text-neutral-100 mb-1.5"
                 >
-                  Phone number
+                  Phone Number
                 </label>
                 <input
                   id={phoneInputId}
@@ -347,6 +378,24 @@ export function EditProfileModal({
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="+91 98765 43210"
                   className="w-full px-3 py-2 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 rounded-lg text-sm text-neutral-900 dark:text-white focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition"
+                />
+              </div>
+
+              {/* About Me (Bio) */}
+              <div>
+                <label
+                  htmlFor={bioInputId}
+                  className="block text-sm font-bold text-neutral-900 dark:text-neutral-100 mb-1.5"
+                >
+                  About Me (Bio)
+                </label>
+                <textarea
+                  id={bioInputId}
+                  value={bio}
+                  onChange={(e) => setBio(e.target.value)}
+                  placeholder="Share a little bit about yourself, what you work on, or what you enjoy..."
+                  rows={3}
+                  className="w-full px-3 py-2 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 rounded-lg text-sm text-neutral-900 dark:text-white focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition resize-none"
                 />
               </div>
             </div>
@@ -381,7 +430,7 @@ export function EditProfileModal({
                 onClick={() => fileInputRef.current?.click()}
                 className="w-full py-2 px-3 border border-neutral-300 dark:border-neutral-700 rounded-lg text-sm font-semibold text-neutral-800 dark:text-neutral-200 bg-white dark:bg-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-750 transition text-center cursor-pointer shadow-xs"
               >
-                Upload photo
+                Upload Image
               </button>
 
               <button
@@ -408,7 +457,7 @@ export function EditProfileModal({
               disabled={isSubmitting}
               className="px-5 py-2 text-sm font-bold text-white bg-[#007a5a] hover:bg-[#006a4e] rounded-lg shadow-sm transition disabled:opacity-50 cursor-pointer"
             >
-              {isSubmitting ? "Saving..." : "Save changes"}
+              {isSubmitting ? "Saving..." : "Save Changes"}
             </button>
           </div>
         </form>

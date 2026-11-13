@@ -176,7 +176,7 @@ VALUES (
     'kaelixo-attachments',
     true,
     52428800, -- 50 MB
-    NULL -- Allows all media and documents (validated client-side against dangerous executables)
+    ARRAY['image/png', 'image/jpeg', 'image/gif', 'image/webp', 'application/pdf', 'text/plain', 'application/json']::text[] -- Allows media and documents including application/pdf
 )
 ON CONFLICT (id) DO UPDATE SET
     public = EXCLUDED.public,
