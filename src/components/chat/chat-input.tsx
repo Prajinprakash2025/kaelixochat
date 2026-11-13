@@ -64,6 +64,8 @@ export interface StagedFile {
 interface ChatInputProps {
   channelId?: string;
   channelName: string;
+  isDm?: boolean;
+  recipientName?: string;
   onSendMessage: (content: string, attachments?: Attachment[]) => void | Promise<void>;
   externalText?: string;
   onClearExternalText?: () => void;
@@ -73,6 +75,8 @@ interface ChatInputProps {
 export function ChatInput({
   channelId = "general",
   channelName,
+  isDm = false,
+  recipientName,
   onSendMessage,
   externalText,
   onClearExternalText,
@@ -425,14 +429,16 @@ export function ChatInput({
     }
   };
 
-  const cleanName = channelName.replace(/^#+/, "");
-  const placeholderText = cleanName.startsWith("@")
-    ? `Message ${cleanName.slice(1)}`
+  const isDirectMessage = isDm || channelName.startsWith("@") || Boolean(recipientName);
+  const rawTargetName = recipientName || channelName;
+  const cleanName = rawTargetName.replace(/^[#@]+/, "").trim();
+  const placeholderText = isDirectMessage
+    ? `Message ${cleanName}`
     : `Message #${cleanName}`;
 
   return (
     <div
-      className="p-2 sm:p-4 border-t border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900/70 relative"
+      className="p-2 md:p-4 border-t border-[#1e2227] md:border-neutral-200 md:dark:border-neutral-800 bg-[#121517] md:bg-white md:dark:bg-neutral-900/70 relative"
       onDragEnter={handleDragEnter}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
@@ -471,120 +477,60 @@ export function ChatInput({
       )}
 
       {/* =========================================================================
-          MOBILE COMPOSER (sm:hidden) - Exact Slack mobile layout from screenshot
+          MOBILE COMPOSER (md:hidden) - Exact Slack mobile layout matching Screenshot
           ========================================================================= */}
-      <div className="sm:hidden flex flex-col bg-white dark:bg-[#1a1d21] rounded-2xl border border-neutral-200 dark:border-neutral-800 shadow-xs px-3 pt-2 pb-2">
-        {/* Subtle top drag handle pill */}
-        <div className="w-8 h-1 bg-neutral-300 dark:bg-neutral-700/80 rounded-full mx-auto mb-1.5" />
-
-        {/* Collapsible Mobile Formatting Bar (Opened via Aa button) */}
-        {showFormatting && (
-          <div className="flex items-center space-x-1 py-1 px-1 mb-1 border-b border-neutral-100 dark:border-neutral-800 overflow-x-auto no-scrollbar text-neutral-600 dark:text-neutral-300">
-            <button
-              type="button"
-              onClick={() => insertFormatting("**", "**", "bold text")}
-              className="p-1 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded transition cursor-pointer"
-              title="Bold"
-            >
-              <Bold className="w-4 h-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => insertFormatting("*", "*", "italic text")}
-              className="p-1 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded transition cursor-pointer"
-              title="Italic"
-            >
-              <Italic className="w-4 h-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => insertFormatting("<u>", "</u>", "underline text")}
-              className="p-1 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded transition cursor-pointer"
-              title="Underline"
-            >
-              <Underline className="w-4 h-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => insertFormatting("~", "~", "strikethrough text")}
-              className="p-1 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded transition cursor-pointer"
-              title="Strikethrough"
-            >
-              <Strikethrough className="w-4 h-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => insertFormatting("`", "`", "code")}
-              className="p-1 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded transition cursor-pointer"
-              title="Code"
-            >
-              <Code className="w-4 h-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => insertFormatting("```\n", "\n```", "code block")}
-              className="p-1 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded transition cursor-pointer"
-              title="Code Block"
-            >
-              <SquareCode className="w-4 h-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => insertFormatting("> ", "", "quote")}
-              className="p-1 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded transition cursor-pointer"
-              title="Quote"
-            >
-              <Quote className="w-4 h-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => insertFormatting("• ", "", "list item")}
-              className="p-1 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded transition cursor-pointer"
-              title="Bullet"
-            >
-              <List className="w-4 h-4" />
-            </button>
+      <div className="md:hidden flex flex-col space-y-1.5">
+        {/* Voice recording strip on mobile */}
+        {isRecordingVoice && (
+          <div className="flex items-center justify-between bg-rose-950/80 border border-rose-800/80 px-3 py-2 rounded-xl text-white shadow-lg animate-in fade-in">
+            <div className="flex items-center space-x-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping" />
+              <span className="text-xs font-mono font-bold text-rose-300">
+                {Math.floor(recordingSeconds / 60)}:{String(recordingSeconds % 60).padStart(2, "0")}
+              </span>
+              <span className="text-xs text-rose-200">Recording voice note...</span>
+            </div>
+            <div className="flex items-center space-x-1.5">
+              <button
+                type="button"
+                onClick={() => stopVoiceRecording(false)}
+                className="p-1.5 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-white transition cursor-pointer"
+                title="Send voice note"
+              >
+                <Check className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => stopVoiceRecording(true)}
+                className="p-1.5 bg-neutral-800 hover:bg-rose-600 rounded-lg text-neutral-300 hover:text-white transition cursor-pointer"
+                title="Cancel"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         )}
 
-        {/* Mobile Textarea */}
-        <textarea
-          ref={mobileTextareaRef}
-          value={content}
-          onChange={(e) => {
-            setContent(e.target.value);
-            if (mobileTextareaRef.current) {
-              mobileTextareaRef.current.style.height = "auto";
-              mobileTextareaRef.current.style.height = `${Math.min(mobileTextareaRef.current.scrollHeight, 100)}px`;
-            }
-          }}
-          onKeyDown={handleKeyDown}
-          onPaste={handlePaste}
-          placeholder={placeholderText}
-          rows={1}
-          disabled={disabled}
-          className="w-full bg-transparent px-1 py-1 text-[15px] leading-snug text-neutral-900 dark:text-neutral-100 placeholder-neutral-400 dark:placeholder-neutral-500 focus:outline-none resize-none font-sans min-h-[30px] max-h-24"
-        />
-
         {/* Staged files on mobile */}
         {stagedFiles.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 py-1.5 border-t border-neutral-100 dark:border-neutral-800 max-h-28 overflow-y-auto">
+          <div className="flex flex-wrap gap-1.5 py-1 px-1 max-h-24 overflow-y-auto no-scrollbar">
             {stagedFiles.map((item) => (
               <div
                 key={item.id}
-                className="flex items-center space-x-1.5 px-2 py-1 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-xs text-neutral-700 dark:text-neutral-200"
+                className="flex items-center space-x-1.5 px-2 py-1 rounded-xl bg-[#1e2227] border border-[#2d3239] text-xs text-neutral-200 shadow-xs"
               >
-                <span className="truncate max-w-[120px]">{item.name}</span>
-                {item.status === "uploading" && (
-                  <Loader2 className="w-3 h-3 animate-spin text-indigo-500" />
+                {item.previewUrl && item.category === "image" ? (
+                  <img src={item.previewUrl} alt={item.name} className="w-5 h-5 rounded object-cover" />
+                ) : (
+                  renderCategoryIcon(item.category)
                 )}
-                {item.status === "complete" && (
-                  <Check className="w-3 h-3 text-emerald-500" />
-                )}
+                <span className="truncate max-w-[110px] text-[11px]">{item.name}</span>
+                {item.status === "uploading" && <Loader2 className="w-3 h-3 animate-spin text-emerald-400" />}
+                {item.status === "complete" && <Check className="w-3 h-3 text-emerald-400" />}
                 <button
                   type="button"
                   onClick={() => handleRemoveStagedFile(item.id)}
-                  className="text-neutral-400 hover:text-rose-500 cursor-pointer"
+                  className="text-neutral-400 hover:text-rose-400 cursor-pointer ml-1"
                 >
                   <X className="w-3 h-3" />
                 </button>
@@ -593,91 +539,191 @@ export function ChatInput({
           </div>
         )}
 
-        {/* Mobile Action Bar matching reference screenshot media_1794208993921_9e8a01b3.jpg */}
-        <div className="flex items-center justify-between pt-1 relative">
-          <div className="flex items-center space-x-3 text-neutral-400 dark:text-neutral-400">
-            {/* (+) Attachment Button */}
+        {/* Collapsible Mobile Formatting Bar (Toggled via Aa button) */}
+        {showFormatting && (
+          <div className="flex items-center space-x-1 py-1.5 px-2 bg-[#1a1d21] border border-neutral-800 rounded-xl overflow-x-auto no-scrollbar text-neutral-300 shadow-md">
+            <button
+              type="button"
+              onClick={() => insertFormatting("**", "**", "bold text")}
+              className="p-1.5 hover:bg-neutral-800 rounded-lg transition cursor-pointer"
+              title="Bold"
+            >
+              <Bold className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => insertFormatting("*", "*", "italic text")}
+              className="p-1.5 hover:bg-neutral-800 rounded-lg transition cursor-pointer"
+              title="Italic"
+            >
+              <Italic className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => insertFormatting("<u>", "</u>", "underline text")}
+              className="p-1.5 hover:bg-neutral-800 rounded-lg transition cursor-pointer"
+              title="Underline"
+            >
+              <Underline className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => insertFormatting("~", "~", "strikethrough text")}
+              className="p-1.5 hover:bg-neutral-800 rounded-lg transition cursor-pointer"
+              title="Strikethrough"
+            >
+              <Strikethrough className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => insertFormatting("`", "`", "code")}
+              className="p-1.5 hover:bg-neutral-800 rounded-lg transition cursor-pointer"
+              title="Code"
+            >
+              <Code className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => insertFormatting("```\n", "\n```", "code block")}
+              className="p-1.5 hover:bg-neutral-800 rounded-lg transition cursor-pointer"
+              title="Code Block"
+            >
+              <SquareCode className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => insertFormatting("> ", "", "quote")}
+              className="p-1.5 hover:bg-neutral-800 rounded-lg transition cursor-pointer"
+              title="Quote"
+            >
+              <Quote className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => insertFormatting("• ", "", "list item")}
+              className="p-1.5 hover:bg-neutral-800 rounded-lg transition cursor-pointer"
+              title="Bullet"
+            >
+              <List className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={handleInsertLink}
+              className="p-1.5 hover:bg-neutral-800 rounded-lg transition cursor-pointer"
+              title="Link"
+            >
+              <Link2 className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
+        {/* Mobile Input Row matching Slack Mobile Screenshot */}
+        <div className="relative flex items-center bg-[#1a1d21] border border-neutral-800/90 rounded-2xl px-2 py-1 shadow-sm focus-within:border-neutral-700">
+          {/* Left Slack-Style Quick Action Buttons */}
+          <div className="flex items-center space-x-1.5 text-neutral-400 flex-shrink-0">
+            {/* (+) Add Attachment Button */}
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="w-7 h-7 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-600 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition cursor-pointer"
+              className="w-7 h-7 rounded-full bg-neutral-800/90 hover:bg-neutral-700 flex items-center justify-center text-neutral-300 transition active:scale-95 cursor-pointer"
               title="Add attachment"
             >
               <Plus className="w-4 h-4 stroke-[2.5]" />
             </button>
 
-            {/* Aa Format Toggle */}
+            {/* Aa Rich Text Format Toggle */}
             <button
               type="button"
               onClick={() => setShowFormatting(!showFormatting)}
-              className={`text-sm font-semibold tracking-tight transition cursor-pointer ${
+              className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs tracking-tight transition cursor-pointer ${
                 showFormatting
-                  ? "text-indigo-600 dark:text-indigo-400 font-bold"
-                  : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white"
+                  ? "bg-emerald-950 text-emerald-400 border border-emerald-600/40"
+                  : "text-neutral-400 hover:text-white"
               }`}
-              title="Format"
+              title="Formatting"
             >
               Aa
             </button>
 
-            {/* 😊 Emoji Picker */}
+            {/* 😊 Emoji Selector */}
             <button
               type="button"
               onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-              className={`transition cursor-pointer ${
+              className={`w-7 h-7 rounded-lg flex items-center justify-center transition cursor-pointer ${
                 showEmojiPicker
-                  ? "text-indigo-600 dark:text-indigo-400"
-                  : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white"
+                  ? "text-emerald-400"
+                  : "text-neutral-400 hover:text-white"
               }`}
               title="Emoji"
             >
-              <Smile className="w-5 h-5" />
+              <Smile className="w-4 h-4" />
             </button>
 
             {/* @ Mention */}
             <button
               type="button"
               onClick={() => insertFormatting("@", "", "colleague")}
-              className="text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition cursor-pointer"
+              className="w-7 h-7 rounded-lg flex items-center justify-center text-neutral-400 hover:text-white transition cursor-pointer"
               title="Mention"
             >
-              <AtSign className="w-5 h-5" />
+              <AtSign className="w-4 h-4" />
             </button>
 
-            {/* [/] Shortcuts */}
+            {/* [/] Slash Commands / Shortcuts */}
             <button
               type="button"
               onClick={() => {
                 setContent((prev) => (prev.startsWith("/") ? prev : "/" + prev));
                 mobileTextareaRef.current?.focus();
               }}
-              className="w-5 h-5 rounded border border-neutral-400/80 dark:border-neutral-600 flex items-center justify-center text-[10px] font-mono font-bold text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition cursor-pointer"
+              className="w-5 h-5 rounded border border-neutral-600/80 flex items-center justify-center text-[10px] font-mono font-bold text-neutral-400 hover:text-white transition cursor-pointer"
               title="Shortcuts"
             >
               /
             </button>
           </div>
 
-          {/* Right Paper Airplane Send Button */}
+          {/* Center: Message Textarea */}
+          <div className="flex-1 min-w-0 px-2 py-0.5">
+            <textarea
+              ref={mobileTextareaRef}
+              value={content}
+              onChange={(e) => {
+                setContent(e.target.value);
+                if (mobileTextareaRef.current) {
+                  mobileTextareaRef.current.style.height = "auto";
+                  mobileTextareaRef.current.style.height = `${Math.min(mobileTextareaRef.current.scrollHeight, 100)}px`;
+                }
+              }}
+              onKeyDown={handleKeyDown}
+              onPaste={handlePaste}
+              placeholder={placeholderText}
+              rows={1}
+              disabled={disabled}
+              className="w-full bg-transparent text-[14px] leading-snug text-neutral-100 placeholder-neutral-500 focus:outline-none resize-none font-sans min-h-[28px] max-h-24 py-1"
+            />
+          </div>
+
+          {/* Right: Paper Airplane Send Button */}
           <button
             type="button"
             onClick={handleSend}
             disabled={!canSend}
-            className={`p-1.5 rounded-full transition ${
+            className={`w-7 h-7 rounded-full flex items-center justify-center transition flex-shrink-0 cursor-pointer ${
               canSend
-                ? "text-emerald-500 dark:text-emerald-400 hover:text-emerald-600 active:scale-95 cursor-pointer"
-                : "text-neutral-300 dark:text-neutral-600 cursor-not-allowed"
+                ? "bg-[#007a5a] text-white hover:bg-[#00664b] active:scale-95 shadow-xs"
+                : "text-neutral-500 cursor-not-allowed opacity-40"
             }`}
             title="Send"
           >
             {isAnyUploading ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
             ) : (
-              <SendHorizontal className="w-5 h-5" />
+              <SendHorizontal className="w-3.5 h-3.5" />
             )}
           </button>
 
-          {/* Emoji Popover for Mobile */}
+          {/* Mobile Emoji Popover */}
           {showEmojiPicker && (
             <div className="absolute bottom-full left-0 mb-2 z-50">
               <EmojiPicker
@@ -690,9 +736,9 @@ export function ChatInput({
       </div>
 
       {/* =========================================================================
-          DESKTOP COMPOSER (hidden sm:block) - Enterprise Slack Rich Experience
+          DESKTOP COMPOSER (hidden md:block) - Enterprise Slack Rich Experience
           ========================================================================= */}
-      <div className="hidden sm:block relative rounded-2xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50/50 dark:bg-neutral-800/50 focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-transparent transition shadow-xs">
+      <div className="hidden md:block relative rounded-2xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50/50 dark:bg-neutral-800/50 focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-transparent transition shadow-xs">
         {/* Slack-Grade Top Rich Text Formatting Toolbar */}
         {showFormatting && (
           <div className="flex items-center justify-between px-3 py-1.5 border-b border-neutral-200 dark:border-neutral-700/60 text-neutral-500 dark:text-neutral-400 bg-neutral-100/40 dark:bg-neutral-800/40 rounded-t-2xl">

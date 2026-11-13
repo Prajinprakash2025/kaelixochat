@@ -20,6 +20,8 @@ import { registerTier2R6Tests } from "./tier2-boundary-corner/r6-schema-boundary
 
 import { registerTier3Tests } from "./tier3-cross-feature/cross-feature-combinations.test";
 import { registerTier4Tests } from "./tier4-real-world/real-world-scenarios.test";
+import { registerShadowHuntMpTests } from "./shadow-hunt-mp.test";
+import { registerShadowHuntHudTests } from "./shadow-hunt-hud.test";
 
 // ANSI Terminal Colors
 const RESET = "\x1b[0m";
@@ -46,6 +48,8 @@ async function run() {
   registerTier1R4Tests(engine);
   registerTier1R5Tests(engine);
   registerTier1R6Tests(engine);
+  registerShadowHuntMpTests(engine);
+  registerShadowHuntHudTests(engine);
 
   // Register Tier 2: Boundary & Corner Cases (R1 - R6)
   registerTier2R1Tests(engine);

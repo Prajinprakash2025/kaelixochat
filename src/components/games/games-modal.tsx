@@ -109,7 +109,7 @@ export function GamesModal({
   if (!isOpen) return null;
 
   if (hideSeekOpen) {
-    return <HideAndSeekGame onExit={() => setHideSeekOpen(false)} />;
+    return <HideAndSeekGame onExit={() => setHideSeekOpen(false)} currentUser={currentUser} />;
   }
 
   return (
@@ -409,12 +409,14 @@ function TwoPlayerSnakeDuel({
   const scoresRef = useRef(scores);
   const roundsWonRef = useRef(roundsWon);
 
-  s1Ref.current = snake1;
-  s2Ref.current = snake2;
-  dir1Ref.current = dir1;
-  dir2Ref.current = dir2;
-  scoresRef.current = scores;
-  roundsWonRef.current = roundsWon;
+  useEffect(() => {
+    s1Ref.current = snake1;
+    s2Ref.current = snake2;
+    dir1Ref.current = dir1;
+    dir2Ref.current = dir2;
+    scoresRef.current = scores;
+    roundsWonRef.current = roundsWon;
+  }, [snake1, snake2, dir1, dir2, scores, roundsWon]);
 
   const generateFood = useCallback(
     (s1: Point[], s2: Point[]): Point => {
@@ -1211,7 +1213,9 @@ function ClassicSnakeGame({
   const [gameState, setGameState] = useState<"IDLE" | "PLAYING" | "GAMEOVER">("IDLE");
 
   const directionRef = useRef(direction);
-  directionRef.current = direction;
+  useEffect(() => {
+    directionRef.current = direction;
+  }, [direction]);
 
   const generateFood = useCallback((currentSnake: { x: number; y: number }[]) => {
     let newFood = { x: 0, y: 0 };
@@ -1569,7 +1573,7 @@ function DuoTicTacToe({
             the match!
           </div>
         ) : isDraw ? (
-          <div className="text-sm font-bold text-amber-400">🤝 It's a draw! Well played!</div>
+          <div className="text-sm font-bold text-amber-400">🤝 It&apos;s a draw! Well played!</div>
         ) : (
           <div className="text-xs font-semibold text-neutral-300">
             Turn:{" "}

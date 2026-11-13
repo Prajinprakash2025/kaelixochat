@@ -64,6 +64,7 @@ import {
   Moon,
   Settings,
   ArrowLeft,
+  Headphones,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
@@ -78,6 +79,15 @@ const DEFAULT_ORGS: Organization[] = [
 ];
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function uniqueMembers(members: WorkspaceMember[]) {
+  return [...new Map(members.map(member => [member.id, member])).values()];
+}
+
+function findMemberIndex(members: WorkspaceMember[], id: string, name: string) {
+  const exactIndex = members.findIndex(member => member.id === id);
+  return exactIndex >= 0 ? exactIndex : members.findIndex(member => member.name === name);
+}
 
 function mergeMessageIntoList(currentList: Message[], incoming: Message): Message[] {
   // 1. Exact ID match check: update existing message in-place
@@ -117,6 +127,8 @@ export default function KaelixoApp() {
   const [messagesByChannel, setMessagesByChannel] = useState<Record<string, Message[]>>(INITIAL_MESSAGES);
   const [currentUser, setCurrentUser] = useState<WorkspaceMember>(DEFAULT_USER);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(true);
+  const [mobileViewMode, setMobileViewMode] = useState<"tabs" | "chat">("tabs");
+  const [mobileActiveTab, setMobileActiveTab] = useState<MobileTabType>("home");
 
   // Dynamic Workspace Members State (Features 25 & 26 / R7)
   const [teamMembers, setTeamMembers] = useState<WorkspaceMember[]>(TEAM_MEMBERS);
@@ -129,6 +141,9 @@ export default function KaelixoApp() {
 
   // Hydrate client state safely without SSR mismatch
   useEffect(() => {
+    const invite = new URLSearchParams(window.location.search).get("invite") || "";
+    setInitialInviteCode(invite);
+    if (invite) setIsAuthModalOpen(true);
     try {
       const savedUser = localStorage.getItem("kaelixo_user");
       if (savedUser) {
@@ -139,9 +154,13 @@ export default function KaelixoApp() {
         if (parsed && parsed.id) {
           setCurrentUser(parsed);
           setIsAuthenticated(true);
+        } else {
+          setIsAuthenticated(false);
+          setIsAuthModalOpen(true);
         }
       } else {
         setIsAuthenticated(false);
+        setIsAuthModalOpen(true);
       }
       const savedOrg = localStorage.getItem("kaelixo_org");
       if (savedOrg) {
@@ -152,7 +171,7 @@ export default function KaelixoApp() {
       if (savedTeam) {
         const parsedTeam = JSON.parse(savedTeam);
         if (Array.isArray(parsedTeam) && parsedTeam.length > 0) {
-          setTeamMembers(parsedTeam);
+          setTeamMembers(uniqueMembers(parsedTeam));
         }
       }
       const savedNotifs = localStorage.getItem("kaelixo_notifications");
@@ -164,6 +183,11 @@ export default function KaelixoApp() {
       // Persist & restore active chat (Channel or DM) across page refreshes
       const savedChannelId = localStorage.getItem("kaelixo_active_channel_id");
       const savedDmRecipient = localStorage.getItem("kaelixo_active_dm_recipient");
+      const savedMobileView = localStorage.getItem("kaelixo_mobile_view_mode");
+      if (savedMobileView === "chat" || savedMobileView === "tabs") {
+        setMobileViewMode(savedMobileView);
+      }
+
       if (savedDmRecipient) {
         try {
           const parsedDm = JSON.parse(savedDmRecipient);
@@ -174,7 +198,6 @@ export default function KaelixoApp() {
               setChannels((prev) => {
                 if (prev.some((c) => c.id === savedChannelId)) return prev;
                 return [
-                  ...prev,
                   {
                     id: savedChannelId,
                     name: `@${parsedDm.name}`,
@@ -185,6 +208,7 @@ export default function KaelixoApp() {
                     recipientName: parsedDm.name,
                     recipientAvatar: parsedDm.avatar,
                   },
+                  ...prev,
                 ];
               });
             }
@@ -196,7 +220,7 @@ export default function KaelixoApp() {
     } catch {}
   }, []);
 
-  // Persist active channel or direct message whenever the user switches chats
+  // Persist active channel, direct message, and mobile view mode whenever the user switches chats
   useEffect(() => {
     try {
       if (activeChannelId) {
@@ -210,21 +234,18 @@ export default function KaelixoApp() {
     } catch {}
   }, [activeChannelId, activeDmRecipient]);
 
+  useEffect(() => {
+    try {
+      localStorage.setItem("kaelixo_mobile_view_mode", mobileViewMode);
+    } catch {}
+  }, [mobileViewMode]);
+
   // Modals state
   const [isNewChannelModalOpen, setIsNewChannelModalOpen] = useState(false);
   const [isNewCompanyModalOpen, setIsNewCompanyModalOpen] = useState(false);
   const [isEditCompanyModalOpen, setIsEditCompanyModalOpen] = useState(false);
   const [isNewDepartmentModalOpen, setIsNewDepartmentModalOpen] = useState(false);
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(() => {
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      if (params.get("invite")) return true;
-      try {
-        return !localStorage.getItem("kaelixo_user");
-      } catch {}
-    }
-    return false;
-  });
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [isMemberDirectoryOpen, setIsMemberDirectoryOpen] = useState(false);
   const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
@@ -232,13 +253,7 @@ export default function KaelixoApp() {
   const [isGamesModalOpen, setIsGamesModalOpen] = useState(false);
   const [activeProfileMember, setActiveProfileMember] = useState<WorkspaceMember | null>(null);
 
-  const [initialInviteCode] = useState(() => {
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      return params.get("invite") || "";
-    }
-    return "";
-  });
+  const [initialInviteCode, setInitialInviteCode] = useState("");
 
   const [activeToast, setActiveToast] = useState<{
     id: string;
@@ -253,8 +268,6 @@ export default function KaelixoApp() {
   const [externalTemplateText, setExternalTemplateText] = useState("");
   const [isLiveConnected, setIsLiveConnected] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
-  const [mobileViewMode, setMobileViewMode] = useState<"tabs" | "chat">("tabs");
-  const [mobileActiveTab, setMobileActiveTab] = useState<MobileTabType>("home");
 
   // Milestone 3: Right Dock Architecture (Feature 12, extended for Feature 27 Profile)
   const [rightPanelMode, setRightPanelMode] = useState<RightPanelMode>("none");
@@ -805,7 +818,10 @@ export default function KaelixoApp() {
               };
             });
 
-          setChannels(formatted);
+          setChannels((prev) => {
+            const dmChannels = prev.filter((c) => c.isDm);
+            return [...formatted, ...dmChannels];
+          });
           setActiveChannelId((prev) => {
             // If user is currently in a DM, do not override with first channel
             const savedDm = typeof window !== "undefined" ? localStorage.getItem("kaelixo_active_dm_recipient") : null;
@@ -831,9 +847,9 @@ export default function KaelixoApp() {
 
           if (dbMembers && dbMembers.length > 0) {
             setTeamMembers((prev) => {
-              const merged = [...prev];
+              const merged = uniqueMembers(prev);
               for (const row of dbMembers) {
-                const idx = merged.findIndex((m) => m.id === row.user_id || m.name === row.name);
+                const idx = findMemberIndex(merged, row.user_id, row.name);
                 const memberData: Partial<WorkspaceMember> = {
                   id: row.user_id,
                   name: row.name,
@@ -1386,7 +1402,7 @@ export default function KaelixoApp() {
       .on("broadcast", { event: "profile_update" }, ({ payload }: any) => {
         if (!payload || !payload.id) return;
         setTeamMembers((prev) => {
-          const idx = prev.findIndex((m) => m.id === payload.id || m.name === payload.name);
+          const idx = findMemberIndex(prev, payload.id, payload.name);
           if (idx > -1) {
             const next = [...prev];
             next[idx] = { ...next[idx], ...payload };
@@ -1435,7 +1451,7 @@ export default function KaelixoApp() {
           const row = (payload.new || payload.old) as any;
           if (!row || !row.user_id) return;
           setTeamMembers((prev) => {
-            const idx = prev.findIndex((m) => m.id === row.user_id || m.name === row.name);
+            const idx = findMemberIndex(prev, row.user_id, row.name);
             if (idx > -1) {
               const next = [...prev];
               next[idx] = {
@@ -2476,19 +2492,19 @@ export default function KaelixoApp() {
 
       {/* Main Chat Stage */}
       <main
-        className={`flex-1 flex flex-col h-screen min-w-0 bg-white dark:bg-neutral-950 transition-all duration-300 ${
+        className={`flex-1 flex flex-col h-screen min-w-0 bg-[#121517] md:bg-white md:dark:bg-neutral-950 transition-all duration-300 ${
           mobileViewMode === "tabs" ? "hidden md:flex" : "flex"
         } ${
           !isAuthenticated ? "filter blur-[2px] pointer-events-none select-none opacity-40" : ""
         }`}
       >
         {/* Top Header */}
-        <header className="h-14 sm:h-16 px-3 sm:px-6 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between flex-shrink-0 bg-white/95 dark:bg-neutral-950/95 backdrop-blur-md transition-colors duration-200">
+        <header className="h-14 sm:h-16 px-3 sm:px-6 border-b border-[#1e2227] md:border-neutral-200 md:dark:border-neutral-800 flex items-center justify-between flex-shrink-0 bg-[#14171a] md:bg-white/95 md:dark:bg-neutral-950/95 backdrop-blur-md transition-colors duration-200">
           <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1 mr-2">
             {/* Mobile Back Button to return to Mobile Tabs */}
             <button
               onClick={() => setMobileViewMode("tabs")}
-              className="p-2 -ml-1 rounded-xl text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-900 md:hidden transition flex-shrink-0 cursor-pointer"
+              className="p-2 -ml-1 rounded-xl text-neutral-300 hover:text-white hover:bg-neutral-800 md:hidden transition flex-shrink-0 cursor-pointer"
               title="Back to Channels & DMs"
             >
               <ArrowLeft className="w-5 h-5" />
@@ -2506,10 +2522,10 @@ export default function KaelixoApp() {
                   <img
                     src={activeDmRecipient.avatar}
                     alt={activeDmRecipient.name}
-                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-neutral-200 dark:bg-neutral-800 ring-1 ring-neutral-300 dark:ring-neutral-700 group-hover/dmheader:ring-2 group-hover/dmheader:ring-indigo-500 transition object-cover"
+                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-neutral-200 dark:bg-neutral-800 ring-1 ring-neutral-700 md:ring-neutral-300 md:dark:ring-neutral-700 group-hover/dmheader:ring-2 group-hover/dmheader:ring-indigo-500 transition object-cover"
                   />
                   <span
-                    className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full ring-2 ring-white dark:ring-neutral-900 ${
+                    className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full ring-2 ring-[#14171a] md:ring-white md:dark:ring-neutral-900 ${
                       activeDmRecipient.online || activeDmRecipient.status === "online"
                         ? "bg-emerald-500"
                         : activeDmRecipient.status === "away"
@@ -2527,11 +2543,12 @@ export default function KaelixoApp() {
                     setRightPanelMode("profile");
                   }}
                 >
-                  <h2 className="font-bold text-sm sm:text-base text-neutral-900 dark:text-white tracking-tight truncate hover:underline hover:text-indigo-600 dark:hover:text-indigo-400">
+                  <h2 className="font-bold text-sm sm:text-base text-white md:text-neutral-900 md:dark:text-white tracking-tight truncate hover:underline hover:text-indigo-400">
                     {activeDmRecipient.name}
                   </h2>
-                  <p className="text-[10px] sm:text-[11px] text-neutral-400 capitalize truncate hidden sm:block">
-                    {activeDmRecipient.role} • {activeDmRecipient.department} Department
+                  <p className="text-[10px] sm:text-[11px] text-neutral-400 capitalize truncate flex items-center space-x-1">
+                    <span>{activeDmRecipient.role || "Member"}</span>
+                    <span className="hidden sm:inline">• {activeDmRecipient.department} Department</span>
                   </p>
                 </div>
               </div>
@@ -2542,7 +2559,7 @@ export default function KaelixoApp() {
                 ) : (
                   <Hash className="w-4 h-4 sm:w-5 sm:h-5 text-neutral-400 flex-shrink-0" />
                 )}
-                <h2 className="font-bold text-sm sm:text-base text-neutral-900 dark:text-white tracking-tight truncate flex-shrink-0 max-w-[130px] sm:max-w-none">
+                <h2 className="font-bold text-sm sm:text-base text-white md:text-neutral-900 md:dark:text-white tracking-tight truncate flex-shrink-0 max-w-[130px] sm:max-w-none">
                   {activeChannel.name}
                 </h2>
                 {activeChannel.departmentCode && activeChannel.departmentCode !== "all" && (
@@ -2551,7 +2568,7 @@ export default function KaelixoApp() {
                   </span>
                 )}
                 {activeChannel.topic && (
-                  <span className="text-xs text-neutral-400 border-l border-neutral-200 dark:border-neutral-800 pl-3 truncate max-w-[180px] md:max-w-xs lg:max-w-md hidden md:inline">
+                  <span className="text-xs text-neutral-400 border-l border-neutral-700 md:border-neutral-200 md:dark:border-neutral-800 pl-3 truncate max-w-[180px] md:max-w-xs lg:max-w-md hidden md:inline">
                     {activeChannel.topic}
                   </span>
                 )}
@@ -2561,6 +2578,24 @@ export default function KaelixoApp() {
 
           {/* Action Tools: Minimal Slack-Parity Navbar (Search, Notifications, Members, Profile) */}
           <div className="flex items-center space-x-2 sm:space-x-3 flex-shrink-0">
+            {/* Mobile Headphones Icon matching Screenshot */}
+            <button
+              type="button"
+              onClick={() => {
+                setActiveToast({
+                  id: `huddle-${Date.now()}`,
+                  senderName: "Huddle Audio",
+                  content: `Connected to live audio huddle with ${activeDmRecipient ? activeDmRecipient.name : activeChannel.name}`,
+                  channelName: activeChannel.name,
+                  channelId: activeChannelId,
+                  messageId: "",
+                });
+              }}
+              className="md:hidden p-1.5 rounded-xl text-neutral-300 hover:text-white hover:bg-neutral-800 transition cursor-pointer"
+              title="Huddle"
+            >
+              <Headphones className="w-5 h-5" />
+            </button>
             {/* 1. Global Search Pill */}
             <button
               type="button"
@@ -2665,6 +2700,8 @@ export default function KaelixoApp() {
         <ChatInput
           channelId={activeChannelId}
           channelName={activeChannel.name}
+          isDm={Boolean(activeDmRecipient || activeChannel.isDm)}
+          recipientName={activeDmRecipient?.name}
           onSendMessage={handleSendMessage}
           externalText={externalTemplateText}
           onClearExternalText={() => setExternalTemplateText("")}
