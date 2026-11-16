@@ -51,6 +51,7 @@ export interface PlayerPosePayload {
   pitch?: number;
   velocity: number;
   gait: number;
+  climbing?: boolean;
   propId?: string | null;
   propYaw?: number;
   frozen?: boolean;

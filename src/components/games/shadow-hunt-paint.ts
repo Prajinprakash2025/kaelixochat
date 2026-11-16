@@ -4,9 +4,13 @@ const SIZE = 512;
 export const PAINT_KEY = "shadow-hunt-freehand-v1";
 export type PaintDesign = Record<string, string>;
 
-export function readPaintDesign(): PaintDesign {
+export function paintBackupKey(userId: string | null = null) {
+  return userId ? `${PAINT_KEY}:${userId}` : PAINT_KEY;
+}
+
+export function readPaintDesign(userId: string | null = null): PaintDesign {
   try {
-    const data = JSON.parse(localStorage.getItem(PAINT_KEY) ?? "{}");
+    const data = JSON.parse(localStorage.getItem(paintBackupKey(userId)) ?? "{}");
     if (data && typeof data === "object") {
       return Object.fromEntries(Object.entries(data).filter(([key, value]) =>
         /^[0-5]$/.test(key) && typeof value === "string" && value.startsWith("data:image/png;base64,"),
@@ -90,3 +94,47 @@ export function makePaintSurfaces(group: THREE.Group) {
 }
 
 export type PaintSurface = ReturnType<typeof makePaintSurfaces>["surfaces"][number];
+
+export type BrushSettings = {
+  brush: "Hard" | "Soft" | "Spray" | "Eraser";
+  color: string;
+  size: number;
+  opacity: number;
+  brightness: number;
+};
+
+export function paintDab(part: PaintSurface, uv: THREE.Vector2, config: BrushSettings) {
+  const { ink, layer } = part;
+  const x = uv.x * layer.width, y = (1 - uv.y) * layer.height;
+  const radius = config.size / 2;
+  const rgb = config.color.match(/[a-f\d]{2}/gi)!
+    .map(value => Math.min(255, parseInt(value, 16) * config.brightness / 100)).join(",");
+  ink.save();
+  ink.globalCompositeOperation = config.brush === "Eraser" ? "destination-out" : "source-over";
+  ink.globalAlpha = config.opacity / 100;
+  if (part.geometry.type === "BoxGeometry") {
+    const w = layer.width / 3, h = layer.height / 2;
+    ink.beginPath();
+    ink.rect(Math.floor(x / w) * w, Math.floor(y / h) * h, w, h);
+    ink.clip();
+  }
+  ink.fillStyle = `rgb(${rgb})`;
+  if (config.brush === "Soft") {
+    const gradient = ink.createRadialGradient(x, y, 0, x, y, radius);
+    gradient.addColorStop(0, `rgba(${rgb},0.65)`);
+    gradient.addColorStop(1, `rgba(${rgb},0)`);
+    ink.fillStyle = gradient;
+  }
+  if (config.brush === "Spray") {
+    ink.globalAlpha *= 0.45;
+    for (let i = 0; i < 8; i++) {
+      const angle = Math.random() * Math.PI * 2, offset = Math.sqrt(Math.random()) * radius;
+      ink.fillRect(x + Math.cos(angle) * offset, y + Math.sin(angle) * offset, 2, 2);
+    }
+  } else {
+    ink.beginPath();
+    ink.arc(x, y, radius, 0, Math.PI * 2);
+    ink.fill();
+  }
+  ink.restore();
+}
