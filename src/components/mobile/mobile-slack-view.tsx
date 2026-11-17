@@ -378,15 +378,25 @@ export function MobileSlackView({
                               alt={member.name}
                               className="w-7 h-7 rounded-xl object-cover bg-neutral-200 dark:bg-neutral-800"
                             />
-                            <span
-                              className={`absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full ring-2 ring-white dark:ring-[#121517] ${
-                                online ? "bg-emerald-500" : "bg-neutral-400 dark:bg-neutral-500"
-                              }`}
-                            />
+                            {online ? (
+                              <span
+                                className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-[#121517] shadow-xs"
+                                title="Online"
+                              />
+                            ) : (
+                              <span
+                                className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full border border-neutral-400 dark:border-neutral-500 bg-transparent ring-1 ring-white dark:ring-[#121517]"
+                                title="Offline"
+                              />
+                            )}
                           </div>
                           <span className="text-sm truncate">{member.name}</span>
                         </div>
-                        {onRemoveMember && canRemoveMember(currentUser, member).allowed && (
+                        <div className="flex items-center space-x-2 flex-shrink-0">
+                          {online && (
+                            <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-xs flex-shrink-0" title="Online" />
+                          )}
+                          {onRemoveMember && canRemoveMember(currentUser, member).allowed && (
                           <button
                             type="button"
                             onClick={(e) => {
@@ -401,6 +411,7 @@ export function MobileSlackView({
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         )}
+                        </div>
                       </div>
                     );
                   })}
@@ -522,19 +533,30 @@ export function MobileSlackView({
                         alt={member.name}
                         className="w-10 h-10 rounded-2xl object-cover bg-neutral-200 dark:bg-neutral-800"
                       />
-                      <span
-                        className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full ring-2 ring-white dark:ring-[#121517] ${
-                          online ? "bg-emerald-500" : "bg-neutral-400 dark:bg-neutral-500"
-                        }`}
-                      />
+                      {online ? (
+                        <span
+                          className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-[#121517] shadow-xs"
+                          title="Online"
+                        />
+                      ) : (
+                        <span
+                          className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full border border-neutral-400 dark:border-neutral-500 bg-transparent ring-1 ring-white dark:ring-[#121517]"
+                          title="Offline"
+                        />
+                      )}
                     </div>
 
                     {/* Middle: Name + Snippet */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-0.5">
-                        <h3 className="font-semibold text-sm text-neutral-900 dark:text-neutral-100 truncate">
-                          {member.name}
-                        </h3>
+                        <div className="flex items-center space-x-1.5 truncate">
+                          <h3 className="font-semibold text-sm text-neutral-900 dark:text-neutral-100 truncate">
+                            {member.name}
+                          </h3>
+                          {online && (
+                            <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-xs flex-shrink-0" title="Online" />
+                          )}
+                        </div>
                         <div className="flex items-center space-x-2">
                           <span className="text-[11px] text-neutral-500 dark:text-neutral-400">
                             {snippet ? "2h" : "active"}

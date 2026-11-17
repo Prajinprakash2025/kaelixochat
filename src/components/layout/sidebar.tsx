@@ -126,16 +126,17 @@ export function Sidebar({
     }
   };
 
-  const getStatusColor = (status: WorkspaceMember["status"]) => {
+  const getStatusColor = (status: WorkspaceMember["status"], isOnline?: boolean) => {
+    if (isOnline || status === "online") {
+      return "bg-emerald-500 ring-2 ring-white dark:ring-neutral-900";
+    }
     switch (status) {
-      case "online":
-        return "bg-emerald-500 ring-2 ring-white dark:ring-neutral-900";
       case "away":
         return "bg-amber-500 ring-2 ring-white dark:ring-neutral-900";
       case "in_call":
         return "bg-rose-500 animate-pulse ring-2 ring-white dark:ring-neutral-900";
       default:
-        return "bg-neutral-400 ring-2 ring-white dark:ring-neutral-900";
+        return "border border-neutral-400 dark:border-neutral-500 bg-transparent ring-1 ring-white dark:ring-neutral-900";
     }
   };
 
@@ -565,6 +566,7 @@ export function Sidebar({
                     .map((member) => {
                       const dmChannelId = `dm-${[currentUser.id, member.id].sort().join("-")}`;
                       const isDmActive = activeChannelId === dmChannelId;
+                      const isOnline = Boolean(member.online || member.status === "online");
 
                     return (
                       <button
@@ -578,6 +580,7 @@ export function Sidebar({
                             ? "bg-indigo-600 text-white font-medium shadow-xs"
                             : "hover:bg-neutral-100 dark:hover:bg-neutral-800/70 text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white"
                         }`}
+                        title={`${member.name}${member.department ? ` • ${member.department.toUpperCase()}` : ""}${isOnline ? " (Online)" : " (Offline)"}`}
                       >
                         <div className="flex items-center space-x-2.5 min-w-0">
                           <div className="relative flex-shrink-0">
@@ -592,11 +595,17 @@ export function Sidebar({
                                 )}`;
                               }}
                             />
-                            <span
-                              className={`absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full ${getStatusColor(
-                                member.status
-                              )}`}
-                            />
+                            {isOnline ? (
+                              <span
+                                className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-neutral-900 shadow-xs"
+                                title="Online"
+                              />
+                            ) : (
+                              <span
+                                className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full border border-neutral-400 dark:border-neutral-500 bg-transparent ring-1 ring-white dark:ring-neutral-900"
+                                title="Offline"
+                              />
+                            )}
                           </div>
                           <div className="truncate">
                             <p className="text-xs truncate">{member.name}</p>
@@ -620,9 +629,12 @@ export function Sidebar({
                               <Trash2 className="w-3.5 h-3.5" />
                             </span>
                           )}
-                          <span className="text-[9px] px-1 py-0.2 rounded uppercase font-semibold text-neutral-500 dark:text-neutral-400 bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700/60">
-                            {member.department}
-                          </span>
+                          {isOnline && (
+                            <span
+                              className="w-2 h-2 rounded-full bg-emerald-500 shadow-xs flex-shrink-0"
+                              title="Online"
+                            />
+                          )}
                         </div>
                       </button>
                     );
