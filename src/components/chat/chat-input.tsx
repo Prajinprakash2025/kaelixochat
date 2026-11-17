@@ -171,6 +171,20 @@ export function ChatInput({
     }
   }, [externalText, onClearExternalText]);
 
+  // Auto-resize textarea to expand smoothly with multi-line text up to max height, then scroll (Slack-parity)
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+      const nextHeight = Math.min(Math.max(textareaRef.current.scrollHeight, 40), 240);
+      textareaRef.current.style.height = `${nextHeight}px`;
+    }
+    if (mobileTextareaRef.current) {
+      mobileTextareaRef.current.style.height = "auto";
+      const nextMobileHeight = Math.min(Math.max(mobileTextareaRef.current.scrollHeight, 28), 144);
+      mobileTextareaRef.current.style.height = `${nextMobileHeight}px`;
+    }
+  }, [content]);
+
   // Upload single file and track progress
   const processAndUploadFile = useCallback(
     async (file: File) => {
@@ -692,7 +706,8 @@ export function ChatInput({
                 setContent(e.target.value);
                 if (mobileTextareaRef.current) {
                   mobileTextareaRef.current.style.height = "auto";
-                  mobileTextareaRef.current.style.height = `${Math.min(mobileTextareaRef.current.scrollHeight, 100)}px`;
+                  const nextH = Math.min(Math.max(mobileTextareaRef.current.scrollHeight, 28), 144);
+                  mobileTextareaRef.current.style.height = `${nextH}px`;
                 }
               }}
               onKeyDown={handleKeyDown}
@@ -700,7 +715,7 @@ export function ChatInput({
               placeholder={placeholderText}
               rows={1}
               disabled={disabled}
-              className="w-full bg-transparent text-[14px] leading-snug text-neutral-900 dark:text-neutral-100 placeholder-neutral-400 dark:placeholder-neutral-500 focus:outline-none resize-none font-sans min-h-[28px] max-h-24 py-1"
+              className="w-full bg-transparent text-[14px] leading-snug text-neutral-900 dark:text-neutral-100 placeholder-neutral-400 dark:placeholder-neutral-500 focus:outline-none resize-none font-sans min-h-[28px] max-h-36 overflow-y-auto custom-scrollbar py-1"
             />
           </div>
 
@@ -903,7 +918,8 @@ export function ChatInput({
             setContent(e.target.value);
             if (textareaRef.current) {
               textareaRef.current.style.height = "auto";
-              textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 120)}px`;
+              const nextH = Math.min(Math.max(textareaRef.current.scrollHeight, 40), 240);
+              textareaRef.current.style.height = `${nextH}px`;
             }
           }}
           onKeyDown={handleKeyDown}
@@ -911,7 +927,7 @@ export function ChatInput({
           placeholder={placeholderText}
           rows={1}
           disabled={disabled}
-          className="w-full bg-transparent px-3 py-2 sm:py-2.5 text-sm text-neutral-900 dark:text-neutral-100 placeholder-neutral-400 focus:outline-none resize-none font-sans min-h-[36px] max-h-28"
+          className="w-full bg-transparent px-3 py-2 sm:py-2.5 text-sm text-neutral-900 dark:text-neutral-100 placeholder-neutral-400 focus:outline-none resize-none font-sans min-h-[40px] max-h-60 overflow-y-auto custom-scrollbar leading-relaxed"
         />
 
         {/* File Attachments Staging Area */}
@@ -1125,25 +1141,25 @@ export function ChatInput({
           </div>
 
           {/* Right Side: Desktop Send Button with shortcut */}
-          <div className="flex items-center">
+          <div className="flex items-center space-x-2.5">
+            <span className="text-[11px] text-neutral-400 dark:text-neutral-500 select-none hidden sm:inline">
+              <kbd className="font-sans font-normal">Shift + Enter</kbd> to add a new line
+            </span>
             <button
               type="button"
               onClick={handleSend}
               disabled={!canSend}
-              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl transition shadow-xs cursor-pointer ${
+              className={`w-8 h-8 rounded-lg flex items-center justify-center transition shadow-xs cursor-pointer ${
                 canSend
-                  ? "bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/20 active:scale-95"
-                  : "bg-neutral-200 dark:bg-neutral-700/70 text-neutral-400 dark:text-neutral-500 cursor-not-allowed"
+                  ? "bg-[#007a5a] hover:bg-[#00664b] text-white active:scale-95 shadow-sm"
+                  : "bg-neutral-200 dark:bg-neutral-700/60 text-neutral-400 dark:text-neutral-500 cursor-not-allowed"
               }`}
               title="Send message (Enter)"
             >
               {isAnyUploading ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
+                <Loader2 className="w-4 h-4 animate-spin text-white" />
               ) : (
-                <>
-                  <SendHorizontal className="w-3.5 h-3.5" />
-                  <span className="text-xs font-medium">Send</span>
-                </>
+                <SendHorizontal className="w-4 h-4" />
               )}
             </button>
           </div>
