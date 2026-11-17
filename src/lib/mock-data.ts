@@ -47,7 +47,7 @@ export const CURRENT_USER: WorkspaceMember = {
   id: "user-prajin-prakash",
   name: "Prajin Prakash",
   email: "prajin@kaelixo.com",
-  avatar: "https://api.dicebear.com/7.x/bottts/svg?seed=Prajin",
+  avatar: "https://untypucxdpgxnfezzwuo.supabase.co/storage/v1/object/public/kaelixo-attachments/avatars/user-aparna-sharma/1794211392212-IMG_20260622_000048_052.webp",
   role: "owner",
   department: "management",
   status: "online",

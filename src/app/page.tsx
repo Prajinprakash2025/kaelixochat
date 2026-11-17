@@ -66,6 +66,7 @@ import {
   ArrowLeft,
   Headphones,
   Trash2,
+  Info,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { canRemoveMember } from "@/utils/permissions";
@@ -124,9 +125,22 @@ function uniqueMembers(members: WorkspaceMember[], currentUserId?: string, curre
 
 function findMemberIndex(members: WorkspaceMember[], id: string, name: string) {
   const targetName = name ? name.trim().toLowerCase() : "";
-  const exactIndex = members.findIndex(member => member.id === id);
-  if (exactIndex >= 0) return exactIndex;
-  return targetName ? members.findIndex(member => member.name.trim().toLowerCase() === targetName) : -1;
+  // 1. First priority: match by both id AND name
+  const exactBothIndex = members.findIndex(
+    (member) => member.id === id && member.name.trim().toLowerCase() === targetName
+  );
+  if (exactBothIndex >= 0) return exactBothIndex;
+
+  // 2. Match by exact ID only if the existing member has the same name or is unset
+  const exactIndex = members.findIndex((member) => member.id === id);
+  if (exactIndex >= 0) {
+    if (!targetName || members[exactIndex].name.trim().toLowerCase() === targetName) {
+      return exactIndex;
+    }
+  }
+
+  // 3. Fallback: match by name
+  return targetName ? members.findIndex((member) => member.name.trim().toLowerCase() === targetName) : -1;
 }
 
 function mergeMessageIntoList(currentList: Message[], incoming: Message): Message[] {
@@ -1011,6 +1025,7 @@ export default function KaelixoApp() {
                   merged[idx] = {
                     ...merged[idx],
                     ...memberData,
+                    name: merged[idx].name, // Keep existing member name intact
                     avatar: row.avatar || merged[idx].avatar,
                   };
                 } else {
@@ -1031,9 +1046,11 @@ export default function KaelixoApp() {
               return uniqueMembers(merged, currentUser.id, currentUser.name);
             });
 
-            // If currentUser profile exists in Supabase with a valid avatar, sync it
+            // If currentUser profile exists in Supabase with a valid avatar, sync it ONLY if both id and name match
             const currentDbProfile = dbMembers.find(
-              (m: any) => m.name === currentUser.name || m.user_id === currentUser.id
+              (m: any) =>
+                m.user_id === currentUser.id &&
+                m.name.trim().toLowerCase() === currentUser.name.trim().toLowerCase()
             );
             if (
               currentDbProfile &&
@@ -2750,15 +2767,15 @@ export default function KaelixoApp() {
               <ArrowLeft className="w-5 h-5" />
             </button>
             {activeDmRecipient ? (
-              <div className="flex items-center space-x-2 sm:space-x-2.5 min-w-0">
-                <div
-                  className="relative flex-shrink-0 cursor-pointer group/dmheader"
-                  onClick={() => {
-                    setActiveProfileMember(activeDmRecipient);
-                    setRightPanelMode("profile");
-                  }}
-                  title="View Profile Details"
-                >
+              <div
+                className="flex items-center space-x-2 sm:space-x-2.5 min-w-[140px] cursor-pointer group/dmheader p-1 -m-1 rounded-xl hover:bg-neutral-100/70 dark:hover:bg-neutral-800/50 transition flex-shrink-0"
+                onClick={() => {
+                  setActiveProfileMember(activeDmRecipient);
+                  setRightPanelMode("profile");
+                }}
+                title={`View ${activeDmRecipient.name}'s Profile Details`}
+              >
+                <div className="relative flex-shrink-0">
                   <img
                     src={
                       activeDmRecipient.avatar ||
@@ -2776,23 +2793,17 @@ export default function KaelixoApp() {
                   <span
                     className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full ring-2 ring-white dark:ring-neutral-900 ${
                       activeDmRecipient.online || activeDmRecipient.status === "online"
-                        ? "bg-emerald-500"
+                        ? "bg-emerald-500 shadow-xs"
                         : activeDmRecipient.status === "away"
                         ? "bg-amber-500"
                         : activeDmRecipient.status === "in_call"
                         ? "bg-rose-500 animate-pulse"
-                        : "bg-neutral-400"
+                        : "border border-neutral-400 dark:border-neutral-500 bg-transparent"
                     }`}
                   />
                 </div>
-                <div
-                  className="min-w-0 truncate cursor-pointer"
-                  onClick={() => {
-                    setActiveProfileMember(activeDmRecipient);
-                    setRightPanelMode("profile");
-                  }}
-                >
-                  <h2 className="font-bold text-sm sm:text-base text-neutral-900 dark:text-white tracking-tight truncate hover:underline hover:text-indigo-600 dark:hover:text-indigo-400">
+                <div className="min-w-0 truncate">
+                  <h2 className="font-bold text-sm sm:text-base text-neutral-900 dark:text-white tracking-tight truncate group-hover/dmheader:text-indigo-600 dark:group-hover/dmheader:text-indigo-400">
                     {activeDmRecipient.name}
                   </h2>
                   <p className="text-[10px] sm:text-[11px] text-neutral-500 dark:text-neutral-400 capitalize truncate flex items-center space-x-1">
@@ -2849,7 +2860,7 @@ export default function KaelixoApp() {
             <button
               type="button"
               onClick={() => setIsSearchModalOpen(true)}
-              className="hidden sm:flex items-center justify-between w-40 md:w-56 lg:w-72 h-8 px-2.5 rounded-lg bg-neutral-100 dark:bg-neutral-900 hover:bg-neutral-200/80 dark:hover:bg-neutral-800 border border-neutral-200 dark:border-neutral-800 text-xs text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 transition cursor-pointer"
+              className="hidden xl:flex items-center justify-between w-36 lg:w-48 h-8 px-2.5 rounded-lg bg-neutral-100 dark:bg-neutral-900 hover:bg-neutral-200/80 dark:hover:bg-neutral-800 border border-neutral-200 dark:border-neutral-800 text-xs text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 transition cursor-pointer flex-shrink-0"
               title="Search messages & channels (Ctrl+K)"
             >
               <div className="flex items-center space-x-2">
@@ -2863,7 +2874,7 @@ export default function KaelixoApp() {
             <button
               type="button"
               onClick={() => setIsSearchModalOpen(true)}
-              className="sm:hidden p-2 rounded-lg text-neutral-500 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition cursor-pointer"
+              className="xl:hidden p-2 rounded-lg text-neutral-500 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition cursor-pointer"
               title="Search (Ctrl+K)"
             >
               <Search className="w-4 h-4" />
@@ -2878,7 +2889,32 @@ export default function KaelixoApp() {
               onSelectNotification={handleSelectNotification}
             />
 
-            {/* 3. Member Directory Trigger (Users) */}
+            {/* 3. Details/Profile Trigger for Current Channel or DM */}
+            <button
+              type="button"
+              onClick={() => {
+                if (activeDmRecipient) {
+                  setActiveProfileMember(activeDmRecipient);
+                  setRightPanelMode((prev) =>
+                    prev === "profile" && activeProfileMember?.id === activeDmRecipient.id
+                      ? "none"
+                      : "profile"
+                  );
+                } else {
+                  setRightPanelMode((prev) => (prev === "details" ? "none" : "details"));
+                }
+              }}
+              className={`p-2 rounded-lg transition cursor-pointer ${
+                rightPanelMode === "profile" && activeProfileMember?.id === activeDmRecipient?.id
+                  ? "bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400"
+                  : "text-neutral-500 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800"
+              }`}
+              title={activeDmRecipient ? `View ${activeDmRecipient.name}'s Profile` : "Channel Details"}
+            >
+              <Info className="w-4 h-4" />
+            </button>
+
+            {/* 4. Member Directory Trigger (Users) */}
             <button
               type="button"
               onClick={() => setIsMemberDirectoryOpen(true)}
@@ -2888,15 +2924,19 @@ export default function KaelixoApp() {
               <Users className="w-4 h-4" />
             </button>
 
-            {/* 4. User Profile Avatar Trigger */}
+            {/* 5. User Profile Avatar Trigger */}
             <button
               type="button"
               onClick={() => {
                 setActiveProfileMember(currentUser);
-                setRightPanelMode((prev) => (prev === "profile" ? "none" : "profile"));
+                setRightPanelMode((prev) =>
+                  prev === "profile" && activeProfileMember?.id === currentUser.id
+                    ? "none"
+                    : "profile"
+                );
               }}
               className="relative p-0.5 rounded-lg hover:ring-2 hover:ring-indigo-500/50 transition cursor-pointer flex-shrink-0"
-              title={`${currentUser.name} — Profile & Settings`}
+              title={`Your Profile & Settings (${currentUser.name})`}
             >
               {currentUser.avatar ? (
                 <img

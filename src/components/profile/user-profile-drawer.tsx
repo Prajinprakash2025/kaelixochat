@@ -102,17 +102,27 @@ export function UserProfileDrawer({
   };
 
   const isOnline = member.online || member.status === "online";
+  const isSvgAvatar =
+    !member.avatar ||
+    member.avatar.includes("dicebear.com") ||
+    member.avatar.endsWith(".svg") ||
+    member.avatar.includes("/svg");
 
   return (
     <aside className="fixed inset-0 z-50 sm:static sm:inset-auto sm:z-auto w-full sm:w-80 md:w-96 border-l border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 flex flex-col h-full flex-shrink-0 animate-in slide-in-from-right duration-200 overflow-hidden shadow-xl sm:shadow-none">
       {/* Top Header */}
-      <div className="px-5 py-4 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between">
-        <h3 className="font-extrabold text-base text-neutral-900 dark:text-neutral-100">
-          Profile
-        </h3>
+      <div className="px-5 py-3.5 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between gap-2">
+        <div className="flex items-center space-x-2 min-w-0">
+          <h3 className="font-extrabold text-base text-neutral-900 dark:text-neutral-100 flex-shrink-0">
+            Profile
+          </h3>
+          <span className="text-xs text-neutral-400 dark:text-neutral-500 font-medium truncate max-w-[160px]">
+            {member.name}
+          </span>
+        </div>
         <button
           onClick={onClose}
-          className="p-1 rounded-lg text-neutral-400 hover:text-neutral-700 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition cursor-pointer"
+          className="p-1.5 rounded-lg text-neutral-400 hover:text-neutral-700 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition cursor-pointer flex-shrink-0"
           title="Close Profile (Esc)"
         >
           <X className="w-5 h-5" />
@@ -122,16 +132,31 @@ export function UserProfileDrawer({
       {/* Scrollable Profile Body */}
       <div className="flex-1 overflow-y-auto p-5 space-y-5 custom-scrollbar">
         {/* Full-width Cover Photo Preview */}
-        <div className="w-full aspect-[4/3] rounded-lg overflow-hidden border border-neutral-200 dark:border-neutral-800 bg-neutral-100 dark:bg-neutral-800 shadow-xs">
-          <img
-            src={
-              member.avatar ||
-              `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(member.name)}`
-            }
-            alt={member.name}
-            className="w-full h-full object-cover"
-          />
-        </div>
+        {isSvgAvatar ? (
+          <div className="w-full h-44 rounded-xl overflow-hidden border border-neutral-200 dark:border-neutral-800 bg-gradient-to-b from-neutral-50 to-neutral-100 dark:from-neutral-800/80 dark:to-neutral-900 flex items-center justify-center p-4 relative shadow-xs">
+            <div className="w-24 h-24 rounded-2xl bg-white dark:bg-[#1a1d21] p-2 shadow-sm border border-neutral-200/80 dark:border-neutral-700/80 flex items-center justify-center">
+              <img
+                src={
+                  member.avatar ||
+                  `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(member.name)}`
+                }
+                alt={member.name}
+                className="w-full h-full object-contain"
+              />
+            </div>
+          </div>
+        ) : (
+          <div className="w-full aspect-[4/3] max-h-64 rounded-xl overflow-hidden border border-neutral-200 dark:border-neutral-800 bg-neutral-100 dark:bg-neutral-800 shadow-xs">
+            <img
+              src={member.avatar}
+              alt={member.name}
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(member.name)}`;
+              }}
+            />
+          </div>
+        )}
 
         {/* Identity & Header Row */}
         <div>
