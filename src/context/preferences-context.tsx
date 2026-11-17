@@ -130,13 +130,29 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
       ? currentTheme.headerTextColorDark || "#ffffff"
       : currentTheme.headerTextColorLight || "#0f172a";
 
+    root.style.setProperty("--theme-accent", currentTheme.accentColor);
     root.style.setProperty("--theme-header-tint", headerTint);
     root.style.setProperty("--theme-header-text", headerTextColor);
     root.style.setProperty(
       "--theme-header-border",
-      isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.1)"
+      isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.08)"
     );
-    root.style.setProperty("--theme-sidebar-active", currentTheme.accentColor);
+
+    // Header Search styling (matches Slack's translucent search box)
+    const isHeaderDark =
+      headerTextColor === "#ffffff" ||
+      headerTint === "#3F0E40" ||
+      headerTint === "#1e3a8a" ||
+      isDark;
+    const headerSearchBg = isHeaderDark ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.07)";
+    const headerSearchText = isHeaderDark ? "#ffffff" : "#0f172a";
+    const headerSearchBorder = isHeaderDark ? "rgba(255,255,255,0.25)" : "rgba(0,0,0,0.12)";
+    const headerSearchPlaceholder = isHeaderDark ? "rgba(255,255,255,0.7)" : "rgba(0,0,0,0.55)";
+
+    root.style.setProperty("--theme-header-search-bg", headerSearchBg);
+    root.style.setProperty("--theme-header-search-text", headerSearchText);
+    root.style.setProperty("--theme-header-search-border", headerSearchBorder);
+    root.style.setProperty("--theme-header-search-placeholder", headerSearchPlaceholder);
 
     // Sync PWA / browser theme color
     try {
@@ -153,13 +169,32 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
       ? currentTheme.sidebarBgDark || "#111217"
       : currentTheme.sidebarBgLight || "#ffffff";
 
-    // For Aubergine, text stays white even in light mode
-    const isSpecialDarkSidebar = !isDark && currentTheme.id === "aubergine";
-    const sidebarText = isDark || isSpecialDarkSidebar ? "#f4f4f5" : "#0f172a";
-    const sidebarMuted = isDark || isSpecialDarkSidebar ? "#a1a1aa" : "#64748b";
-    const sidebarBorder = isDark || isSpecialDarkSidebar ? "rgba(255,255,255,0.12)" : "#e2e8f0";
-    const sidebarHover = isDark || isSpecialDarkSidebar ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)";
-    const sidebarCard = isDark || isSpecialDarkSidebar ? "rgba(255,255,255,0.06)" : "#f1f5f9";
+    // Determine if sidebar itself is dark (in Slack, Aubergine and Mood Indigo have dark sidebars in light mode)
+    const isSidebarDark =
+      isDark ||
+      currentTheme.id === "aubergine" ||
+      currentTheme.id === "mood-indigo" ||
+      (currentTheme.sidebarBgLight && currentTheme.sidebarBgLight !== "#ffffff");
+
+    const sidebarText = isSidebarDark ? "#f4f4f5" : "#0f172a";
+    const sidebarMuted = isSidebarDark ? "#cbd5e1" : "#64748b";
+    const sidebarBorder = isSidebarDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.08)";
+    const sidebarHover = isSidebarDark ? "rgba(255,255,255,0.10)" : "rgba(0,0,0,0.06)";
+    const sidebarCard = isSidebarDark ? "rgba(255,255,255,0.08)" : "#f1f5f9";
+
+    // Active pill background & text colors
+    let activePillBg = currentTheme.accentColor;
+    let activePillText = "#ffffff";
+
+    if (!isDark) {
+      if (currentTheme.id === "aubergine") {
+        activePillBg = "#ffffff";
+        activePillText = "#3F0E40";
+      } else if (currentTheme.id === "mood-indigo") {
+        activePillBg = "#ffffff";
+        activePillText = "#1e3a8a";
+      }
+    }
 
     root.style.setProperty("--theme-sidebar-bg", sidebarBg);
     root.style.setProperty("--theme-sidebar-text", sidebarText);
@@ -167,6 +202,9 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
     root.style.setProperty("--theme-sidebar-border", sidebarBorder);
     root.style.setProperty("--theme-sidebar-hover", sidebarHover);
     root.style.setProperty("--theme-sidebar-card", sidebarCard);
+    root.style.setProperty("--theme-sidebar-active-bg", activePillBg);
+    root.style.setProperty("--theme-sidebar-active-text", activePillText);
+    root.style.setProperty("--theme-sidebar-active", activePillBg);
   }, [themeId, currentTheme, resolvedMode]);
 
   // Apply font family

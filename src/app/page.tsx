@@ -67,6 +67,9 @@ import {
   Headphones,
   Trash2,
   Info,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { canRemoveMember } from "@/utils/permissions";
@@ -2676,32 +2679,157 @@ export default function KaelixoApp() {
   const isPinnedOpen = rightPanelMode === "pinned";
 
   return (
-    <div className="flex h-screen bg-white dark:bg-neutral-950 overflow-hidden font-sans antialiased text-neutral-900 dark:text-neutral-100">
-      {/* Sidebar with Company Switcher & DMs */}
-      {/* Mobile-Only Slack Navigation (Tabs View matching screenshots) */}
-      <div className={`md:hidden w-full h-full ${mobileViewMode === "tabs" ? "block" : "hidden"}`}>
-        <MobileSlackView
+    <div className="flex flex-col h-screen bg-white dark:bg-neutral-950 overflow-hidden font-sans antialiased text-neutral-900 dark:text-neutral-100">
+      {/* ============================================================== */}
+      {/* SLACK TOP NAVIGATION BAR (Themed Header matching Slack UI)     */}
+      {/* ============================================================== */}
+      <div
+        style={{
+          backgroundColor: "var(--theme-header-tint, #171717)",
+          borderColor: "var(--theme-header-border, rgba(255,255,255,0.12))",
+          color: "var(--theme-header-text, #ffffff)",
+        }}
+        className="hidden md:flex h-10 w-full items-center justify-between px-3 border-b select-none flex-shrink-0 z-40 transition-colors duration-200"
+      >
+        {/* Left: History Nav arrows */}
+        <div className="flex items-center space-x-1">
+          <button
+            type="button"
+            className="p-1 rounded-md opacity-75 hover:opacity-100 hover:bg-white/15 dark:hover:bg-white/15 transition cursor-pointer"
+            title="Back"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <button
+            type="button"
+            className="p-1 rounded-md opacity-75 hover:opacity-100 hover:bg-white/15 dark:hover:bg-white/15 transition cursor-pointer"
+            title="Forward"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() =>
+              setActiveToast({
+                id: `history-${Date.now()}`,
+                senderName: "History",
+                content: `Recently visited: #${activeChannel.name}`,
+                channelName: activeChannel.name,
+                channelId: activeChannelId,
+                messageId: "",
+              })
+            }
+            className="p-1 rounded-md opacity-75 hover:opacity-100 hover:bg-white/15 dark:hover:bg-white/15 transition cursor-pointer"
+            title="History"
+          >
+            <Clock className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Center: Search Kaelixo Pill */}
+        <button
+          type="button"
+          onClick={() => setIsSearchModalOpen(true)}
+          style={{
+            backgroundColor: "var(--theme-header-search-bg, rgba(255,255,255,0.2))",
+            borderColor: "var(--theme-header-search-border, rgba(255,255,255,0.25))",
+            color: "var(--theme-header-search-text, #ffffff)",
+          }}
+          className="flex items-center justify-between w-96 max-w-md h-7 px-3 rounded-lg border text-xs shadow-xs hover:opacity-95 transition cursor-pointer"
+          title="Search Kaelixo (Ctrl+K)"
+        >
+          <div className="flex items-center space-x-2 truncate">
+            <Search className="w-3.5 h-3.5 opacity-80 flex-shrink-0" />
+            <span className="truncate opacity-90">Search {activeOrg.name || "Kaelixo"}</span>
+          </div>
+          <kbd
+            style={{
+              backgroundColor: "rgba(255,255,255,0.15)",
+              borderColor: "rgba(255,255,255,0.25)",
+            }}
+            className="text-[10px] px-1.5 py-0.5 rounded border font-mono opacity-85"
+          >
+            Ctrl K
+          </kbd>
+        </button>
+
+        {/* Right Tools */}
+        <div className="flex items-center space-x-2">
+          <NotificationCenter
+            notifications={notifications}
+            unreadCount={unreadNotificationCount}
+            onMarkAsRead={handleMarkNotificationAsRead}
+            onMarkAllAsRead={handleMarkAllNotificationsAsRead}
+            onSelectNotification={handleSelectNotification}
+          />
+          <button
+            type="button"
+            onClick={() => openPreferences("appearance")}
+            className="p-1 rounded-md opacity-75 hover:opacity-100 hover:bg-white/15 dark:hover:bg-white/15 transition cursor-pointer"
+            title="Preferences (Themes & Appearance)"
+          >
+            <Settings className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* Main Workspace Frame (Sidebar + Chat Area) */}
+      <div className="flex flex-1 min-h-0 overflow-hidden">
+        {/* Sidebar with Company Switcher & DMs */}
+        {/* Mobile-Only Slack Navigation (Tabs View matching screenshots) */}
+        <div className={`md:hidden w-full h-full ${mobileViewMode === "tabs" ? "block" : "hidden"}`}>
+          <MobileSlackView
+            organizations={organizations}
+            activeOrg={activeOrg}
+            onSelectOrg={setActiveOrg}
+            channels={channels}
+            activeChannelId={activeChannelId}
+            onSelectChannel={(chId) => {
+              handleSelectRegularChannel(chId);
+              setMobileViewMode("chat");
+            }}
+            teamMembers={membersWithPresence}
+            currentUser={currentUser}
+            onSelectDirectMessage={(member) => {
+              handleSelectDirectMessage(member);
+              setMobileViewMode("chat");
+            }}
+            messagesByChannel={messagesByChannel}
+            notifications={notifications}
+            presenceMap={presenceMap}
+            activeTab={mobileActiveTab}
+            onChangeTab={setMobileActiveTab}
+            onOpenNewChannelModal={() => setIsNewChannelModalOpen(true)}
+            onOpenInviteModal={() => setIsInviteModalOpen(true)}
+            onOpenMemberDirectory={() => setIsMemberDirectoryOpen(true)}
+            onOpenGamesModal={() => setIsGamesModalOpen(true)}
+            onOpenPreferences={() => openPreferences("appearance")}
+            onOpenUserProfile={(member) => {
+              setActiveProfileMember(member);
+              setRightPanelMode("profile");
+            }}
+            onLogout={handleLogout}
+            onRemoveMember={handleRemoveMember}
+          />
+        </div>
+
+        <Sidebar
           organizations={organizations}
           activeOrg={activeOrg}
           onSelectOrg={setActiveOrg}
+          onOpenNewCompanyModal={() => setIsNewCompanyModalOpen(true)}
+          onOpenEditCompanyModal={() => setIsEditCompanyModalOpen(true)}
+          departments={departments}
+          selectedDepartment={selectedDepartment}
+          onSelectDepartment={setSelectedDepartment}
+          onOpenNewDepartmentModal={() => setIsNewDepartmentModalOpen(true)}
           channels={channels}
           activeChannelId={activeChannelId}
-          onSelectChannel={(chId) => {
-            handleSelectRegularChannel(chId);
-            setMobileViewMode("chat");
-          }}
+          onSelectChannel={handleSelectRegularChannel}
           teamMembers={membersWithPresence}
           currentUser={currentUser}
-          onSelectDirectMessage={(member) => {
-            handleSelectDirectMessage(member);
-            setMobileViewMode("chat");
-          }}
-          messagesByChannel={messagesByChannel}
-          notifications={notifications}
-          presenceMap={presenceMap}
-          activeTab={mobileActiveTab}
-          onChangeTab={setMobileActiveTab}
           onOpenNewChannelModal={() => setIsNewChannelModalOpen(true)}
+          onOpenAuthModal={() => setIsAuthModalOpen(true)}
           onOpenInviteModal={() => setIsInviteModalOpen(true)}
           onOpenMemberDirectory={() => setIsMemberDirectoryOpen(true)}
           onOpenGamesModal={() => setIsGamesModalOpen(true)}
@@ -2710,51 +2838,21 @@ export default function KaelixoApp() {
             setActiveProfileMember(member);
             setRightPanelMode("profile");
           }}
+          onSelectDirectMessage={handleSelectDirectMessage}
           onLogout={handleLogout}
           onRemoveMember={handleRemoveMember}
+          isMobileOpen={isMobileSidebarOpen}
+          onCloseMobile={() => setIsMobileSidebarOpen(false)}
         />
-      </div>
 
-      <Sidebar
-        organizations={organizations}
-        activeOrg={activeOrg}
-        onSelectOrg={setActiveOrg}
-        onOpenNewCompanyModal={() => setIsNewCompanyModalOpen(true)}
-        onOpenEditCompanyModal={() => setIsEditCompanyModalOpen(true)}
-        departments={departments}
-        selectedDepartment={selectedDepartment}
-        onSelectDepartment={setSelectedDepartment}
-        onOpenNewDepartmentModal={() => setIsNewDepartmentModalOpen(true)}
-        channels={channels}
-        activeChannelId={activeChannelId}
-        onSelectChannel={handleSelectRegularChannel}
-        teamMembers={membersWithPresence}
-        currentUser={currentUser}
-        onOpenNewChannelModal={() => setIsNewChannelModalOpen(true)}
-        onOpenAuthModal={() => setIsAuthModalOpen(true)}
-        onOpenInviteModal={() => setIsInviteModalOpen(true)}
-        onOpenMemberDirectory={() => setIsMemberDirectoryOpen(true)}
-        onOpenGamesModal={() => setIsGamesModalOpen(true)}
-        onOpenPreferences={() => openPreferences("appearance")}
-        onOpenUserProfile={(member) => {
-          setActiveProfileMember(member);
-          setRightPanelMode("profile");
-        }}
-        onSelectDirectMessage={handleSelectDirectMessage}
-        onLogout={handleLogout}
-        onRemoveMember={handleRemoveMember}
-        isMobileOpen={isMobileSidebarOpen}
-        onCloseMobile={() => setIsMobileSidebarOpen(false)}
-      />
-
-      {/* Main Chat Stage */}
-      <main
-        className={`flex-1 flex flex-col h-screen min-w-0 bg-white dark:bg-neutral-950 transition-all duration-300 ${
-          mobileViewMode === "tabs" ? "hidden md:flex" : "flex"
-        } ${
-          !isAuthenticated ? "filter blur-[2px] pointer-events-none select-none opacity-40" : ""
-        }`}
-      >
+        {/* Main Chat Stage */}
+        <main
+          className={`flex-1 flex flex-col h-full min-w-0 bg-white dark:bg-neutral-950 transition-all duration-300 ${
+            mobileViewMode === "tabs" ? "hidden md:flex" : "flex"
+          } ${
+            !isAuthenticated ? "filter blur-[2px] pointer-events-none select-none opacity-40" : ""
+          }`}
+        >
         {/* Top Header */}
         <header className="h-14 sm:h-16 px-3 sm:px-6 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between flex-shrink-0 bg-white/95 dark:bg-neutral-950/95 backdrop-blur-md transition-colors duration-200">
           <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1 mr-2">
@@ -3164,6 +3262,8 @@ export default function KaelixoApp() {
           </div>
         </aside>
       )}
+
+      </div>
 
       {/* Toast Alert Banner */}
       {activeToast && (

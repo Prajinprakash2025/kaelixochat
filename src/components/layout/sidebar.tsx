@@ -160,7 +160,12 @@ export function Sidebar({
         {/* 1. SLACK LEFT ACTIVITY RAIL (Themed Workspace Bar)             */}
         {/* ============================================================== */}
         <div
-          className="w-16 flex-shrink-0 flex flex-col items-center justify-between py-3.5 bg-neutral-900 text-neutral-300 border-r border-neutral-800 select-none"
+          style={{
+            backgroundColor: "var(--theme-header-tint, #171717)",
+            borderColor: "var(--theme-header-border, rgba(255,255,255,0.1))",
+            color: "var(--theme-header-text, #ffffff)",
+          }}
+          className="w-16 flex-shrink-0 flex flex-col items-center justify-between py-3.5 border-r select-none transition-colors duration-200"
         >
           {/* Top workspace / app icons */}
           <div className="flex flex-col items-center space-y-4 w-full">
@@ -189,10 +194,18 @@ export function Sidebar({
             <div className="flex flex-col items-center space-y-2 w-full pt-1">
               <button
                 onClick={() => setActiveRailTab("home")}
+                style={
+                  activeRailTab === "home"
+                    ? {
+                        backgroundColor: "var(--theme-sidebar-active-bg, rgba(255,255,255,0.22))",
+                        color: "var(--theme-sidebar-active-text, #ffffff)",
+                      }
+                    : { color: "var(--theme-header-text, #ffffff)" }
+                }
                 className={`flex flex-col items-center justify-center w-12 py-1.5 rounded-xl transition cursor-pointer ${
                   activeRailTab === "home"
-                    ? "bg-white/20 text-white font-bold shadow-xs"
-                    : "text-neutral-400 hover:text-white hover:bg-white/10"
+                    ? "font-bold shadow-xs"
+                    : "opacity-80 hover:opacity-100 hover:bg-white/10 dark:hover:bg-white/10"
                 }`}
                 title="Home"
               >
@@ -202,10 +215,18 @@ export function Sidebar({
 
               <button
                 onClick={() => setActiveRailTab("dms")}
+                style={
+                  activeRailTab === "dms"
+                    ? {
+                        backgroundColor: "var(--theme-sidebar-active-bg, rgba(255,255,255,0.22))",
+                        color: "var(--theme-sidebar-active-text, #ffffff)",
+                      }
+                    : { color: "var(--theme-header-text, #ffffff)" }
+                }
                 className={`flex flex-col items-center justify-center w-12 py-1.5 rounded-xl transition cursor-pointer ${
                   activeRailTab === "dms"
-                    ? "bg-white/20 text-white font-bold shadow-xs"
-                    : "text-neutral-400 hover:text-white hover:bg-white/10"
+                    ? "font-bold shadow-xs"
+                    : "opacity-80 hover:opacity-100 hover:bg-white/10 dark:hover:bg-white/10"
                 }`}
                 title="Direct Messages"
               >
@@ -218,10 +239,18 @@ export function Sidebar({
                   setActiveRailTab("activity");
                   if (onOpenMemberDirectory) onOpenMemberDirectory();
                 }}
+                style={
+                  activeRailTab === "activity"
+                    ? {
+                        backgroundColor: "var(--theme-sidebar-active-bg, rgba(255,255,255,0.22))",
+                        color: "var(--theme-sidebar-active-text, #ffffff)",
+                      }
+                    : { color: "var(--theme-header-text, #ffffff)" }
+                }
                 className={`flex flex-col items-center justify-center w-12 py-1.5 rounded-xl transition cursor-pointer ${
                   activeRailTab === "activity"
-                    ? "bg-white/20 text-white font-bold shadow-xs"
-                    : "text-neutral-400 hover:text-white hover:bg-white/10"
+                    ? "font-bold shadow-xs"
+                    : "opacity-80 hover:opacity-100 hover:bg-white/10 dark:hover:bg-white/10"
                 }`}
                 title="Activity & Directory"
               >
@@ -234,10 +263,18 @@ export function Sidebar({
                   setActiveRailTab("games");
                   if (onOpenGamesModal) onOpenGamesModal();
                 }}
+                style={
+                  activeRailTab === "games"
+                    ? {
+                        backgroundColor: "var(--theme-sidebar-active-bg, rgba(255,255,255,0.22))",
+                        color: "var(--theme-sidebar-active-text, #ffffff)",
+                      }
+                    : { color: "var(--theme-header-text, #ffffff)" }
+                }
                 className={`flex flex-col items-center justify-center w-12 py-1.5 rounded-xl transition cursor-pointer ${
                   activeRailTab === "games"
-                    ? "bg-white/20 text-white font-bold shadow-xs"
-                    : "text-neutral-400 hover:text-white hover:bg-white/10"
+                    ? "font-bold shadow-xs"
+                    : "opacity-80 hover:opacity-100 hover:bg-white/10 dark:hover:bg-white/10"
                 }`}
                 title="Team Arcade"
               >
@@ -252,7 +289,8 @@ export function Sidebar({
             {onOpenPreferences && (
               <button
                 onClick={onOpenPreferences}
-                className="w-9 h-9 rounded-xl flex items-center justify-center text-neutral-400 hover:text-white hover:bg-white/10 transition cursor-pointer"
+                style={{ color: "var(--theme-header-text, #ffffff)" }}
+                className="w-9 h-9 rounded-xl flex items-center justify-center opacity-80 hover:opacity-100 hover:bg-white/10 dark:hover:bg-white/10 transition cursor-pointer"
                 title="Preferences [Ctrl+,]"
               >
                 <Settings className="w-4 h-4" />
@@ -295,15 +333,19 @@ export function Sidebar({
           style={{
             backgroundColor: "var(--theme-sidebar-bg, #ffffff)",
             borderColor: "var(--theme-sidebar-border, #e2e8f0)",
+            color: "var(--theme-sidebar-text, #0f172a)",
           }}
-          className="w-64 sm:w-72 border-r flex flex-col h-full bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100"
+          className="w-64 sm:w-72 border-r flex flex-col h-full select-none transition-colors duration-200"
         >
           {/* Workspace Switcher Header */}
-          <div className="relative p-3.5 border-b border-neutral-200 dark:border-neutral-800">
+          <div
+            style={{ borderColor: "var(--theme-sidebar-border, #e2e8f0)" }}
+            className="relative p-3.5 border-b"
+          >
             <div className="flex items-center justify-between">
               <button
                 onClick={() => setShowOrgDropdown(!showOrgDropdown)}
-                className="flex-1 flex items-center justify-between p-1.5 rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-800 transition text-left group min-w-0 cursor-pointer"
+                className="flex-1 flex items-center justify-between p-1.5 rounded-xl hover:bg-black/5 dark:hover:bg-white/10 transition text-left group min-w-0 cursor-pointer"
               >
                 <div className="flex items-center space-x-2.5 min-w-0">
                   {activeOrg.logo_url ? (
@@ -319,12 +361,18 @@ export function Sidebar({
                   )}
                   <div className="truncate">
                     <div className="flex items-center space-x-1.5">
-                      <h1 className="font-bold text-sm tracking-tight text-neutral-900 dark:text-white truncate">
+                      <h1
+                        style={{ color: "var(--theme-sidebar-text, #0f172a)" }}
+                        className="font-bold text-sm tracking-tight truncate"
+                      >
                         {activeOrg.name}
                       </h1>
-                      <ChevronDown className="w-3.5 h-3.5 text-neutral-500 dark:text-neutral-400 group-hover:text-neutral-900 dark:group-hover:text-white transition flex-shrink-0" />
+                      <ChevronDown className="w-3.5 h-3.5 opacity-60 group-hover:opacity-100 transition flex-shrink-0" />
                     </div>
-                    <p className="text-[11px] text-neutral-500 dark:text-neutral-400 truncate">
+                    <p
+                      style={{ color: "var(--theme-sidebar-muted, #64748b)" }}
+                      className="text-[11px] truncate capitalize"
+                    >
                       {activeOrg.slug || "Enterprise Workspace"}
                     </p>
                   </div>
@@ -457,15 +505,22 @@ export function Sidebar({
           </div>
 
           {/* Department Filter Bar */}
-          <div className="p-3 border-b border-neutral-200 dark:border-neutral-800">
+          <div
+            style={{ borderColor: "var(--theme-sidebar-border, #e2e8f0)" }}
+            className="p-3 border-b"
+          >
             <div className="flex items-center justify-between mb-2 px-1">
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
+              <span
+                style={{ color: "var(--theme-sidebar-muted, #64748b)" }}
+                className="text-[11px] font-semibold uppercase tracking-wider"
+              >
                 Departments
               </span>
               <button
                 onClick={onOpenNewDepartmentModal}
                 title="Create New Department"
-                className="flex items-center space-x-1 text-[10px] text-indigo-600 dark:text-indigo-400 hover:underline font-semibold p-0.5 rounded cursor-pointer"
+                style={{ color: "var(--theme-sidebar-active-bg, #4f46e5)" }}
+                className="flex items-center space-x-1 text-[10px] hover:underline font-semibold p-0.5 rounded cursor-pointer"
               >
                 <FolderPlus className="w-3 h-3" />
                 <span>+ Add</span>
@@ -479,11 +534,18 @@ export function Sidebar({
                   <button
                     key={dept.id}
                     onClick={() => onSelectDepartment(dept.code)}
-                    className={`flex items-center space-x-1 text-xs px-2.5 py-1 rounded-lg font-medium transition cursor-pointer ${
+                    style={
                       isActive
-                        ? "bg-indigo-600 text-white shadow-xs font-semibold"
-                        : "bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700"
-                    }`}
+                        ? {
+                            backgroundColor: "var(--theme-sidebar-active-bg, #4f46e5)",
+                            color: "var(--theme-sidebar-active-text, #ffffff)",
+                          }
+                        : {
+                            backgroundColor: "var(--theme-sidebar-card, rgba(0,0,0,0.05))",
+                            color: "var(--theme-sidebar-text, #0f172a)",
+                          }
+                    }
+                    className="flex items-center space-x-1 text-xs px-2.5 py-1 rounded-lg font-medium transition cursor-pointer shadow-2xs"
                   >
                     <span>{getDeptIcon(dept.code)}</span>
                     <span>{dept.code === "all" ? "All" : dept.name.split(" ")[0]}</span>
@@ -497,12 +559,15 @@ export function Sidebar({
           <div className="flex-1 overflow-y-auto px-3 py-3 space-y-6 custom-scrollbar">
             {/* Channels Section */}
             <div>
-              <div className="flex items-center justify-between px-2 mb-1.5 text-xs font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">
+              <div
+                style={{ color: "var(--theme-sidebar-muted, #64748b)" }}
+                className="flex items-center justify-between px-2 mb-1.5 text-xs font-semibold uppercase tracking-wider"
+              >
                 <span>Channels</span>
                 <button
                   onClick={onOpenNewChannelModal}
                   title="Add New Channel"
-                  className="p-1 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-md text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition cursor-pointer"
+                  className="p-1 rounded-md opacity-75 hover:opacity-100 hover:bg-black/5 dark:hover:bg-white/10 transition cursor-pointer"
                 >
                   <Plus className="w-3.5 h-3.5" />
                 </button>
@@ -518,17 +583,27 @@ export function Sidebar({
                         onSelectChannel(ch.id);
                         if (onCloseMobile) onCloseMobile();
                       }}
+                      style={
+                        isActive
+                          ? {
+                              backgroundColor: "var(--theme-sidebar-active-bg, #4f46e5)",
+                              color: "var(--theme-sidebar-active-text, #ffffff)",
+                            }
+                          : {
+                              color: "var(--theme-sidebar-text, #0f172a)",
+                            }
+                      }
                       className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-sm font-medium transition cursor-pointer ${
                         isActive
-                          ? "bg-indigo-600 text-white shadow-xs font-semibold"
-                          : "text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800/70 hover:text-neutral-900 dark:hover:text-white"
+                          ? "shadow-xs font-semibold"
+                          : "hover:bg-black/5 dark:hover:bg-white/10"
                       }`}
                     >
                       <div className="flex items-center space-x-2 truncate">
                         {ch.isPrivate ? (
-                          <Lock className="w-3.5 h-3.5 text-neutral-500 flex-shrink-0" />
+                          <Lock className="w-3.5 h-3.5 opacity-60 flex-shrink-0" />
                         ) : (
-                          <Hash className="w-4 h-4 text-neutral-500 flex-shrink-0" />
+                          <Hash className="w-4 h-4 opacity-60 flex-shrink-0" />
                         )}
                         <span className="truncate">{ch.name}</span>
                       </div>
@@ -546,9 +621,12 @@ export function Sidebar({
 
             {/* Direct Messages Section */}
             <div>
-              <div className="px-2 mb-2 text-xs font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider flex items-center justify-between">
+              <div
+                style={{ color: "var(--theme-sidebar-muted, #64748b)" }}
+                className="px-2 mb-2 text-xs font-semibold uppercase tracking-wider flex items-center justify-between"
+              >
                 <span>Direct Messages</span>
-                <MessageCircle className="w-3 h-3 text-neutral-400" />
+                <MessageCircle className="w-3 h-3 opacity-60" />
               </div>
 
               <div className="space-y-1">
@@ -568,84 +646,100 @@ export function Sidebar({
                       const isDmActive = activeChannelId === dmChannelId;
                       const isOnline = Boolean(member.online || member.status === "online");
 
-                    return (
-                      <button
-                        key={member.id}
-                        onClick={() => {
-                          onSelectDirectMessage(member);
-                          if (onCloseMobile) onCloseMobile();
-                        }}
-                        className={`w-full group flex items-center justify-between px-2.5 py-1.5 rounded-xl text-sm transition text-left cursor-pointer ${
-                          isDmActive
-                            ? "bg-indigo-600 text-white font-medium shadow-xs"
-                            : "hover:bg-neutral-100 dark:hover:bg-neutral-800/70 text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white"
-                        }`}
-                        title={`${member.name}${member.department ? ` • ${member.department.toUpperCase()}` : ""}${isOnline ? " (Online)" : " (Offline)"}`}
-                      >
-                        <div className="flex items-center space-x-2.5 min-w-0">
-                          <div className="relative flex-shrink-0">
-                            <img
-                              src={member.avatar}
-                              alt={member.name}
-                              className="w-6 h-6 rounded-lg bg-neutral-200 dark:bg-neutral-800 object-cover"
-                              onError={(e) => {
-                                e.currentTarget.onerror = null;
-                                e.currentTarget.src = `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(
-                                  member.name
-                                )}`;
-                              }}
-                            />
-                            {isOnline ? (
-                              <span
-                                className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-neutral-900 shadow-xs"
-                                title="Online"
+                      return (
+                        <button
+                          key={member.id}
+                          onClick={() => {
+                            onSelectDirectMessage(member);
+                            if (onCloseMobile) onCloseMobile();
+                          }}
+                          style={
+                            isDmActive
+                              ? {
+                                  backgroundColor: "var(--theme-sidebar-active-bg, #4f46e5)",
+                                  color: "var(--theme-sidebar-active-text, #ffffff)",
+                                }
+                              : {
+                                  color: "var(--theme-sidebar-text, #0f172a)",
+                                }
+                          }
+                          className={`w-full group flex items-center justify-between px-2.5 py-1.5 rounded-xl text-sm transition text-left cursor-pointer ${
+                            isDmActive
+                              ? "font-semibold shadow-xs"
+                              : "hover:bg-black/5 dark:hover:bg-white/10"
+                          }`}
+                          title={`${member.name}${member.department ? ` • ${member.department.toUpperCase()}` : ""}${isOnline ? " (Online)" : " (Offline)"}`}
+                        >
+                          <div className="flex items-center space-x-2.5 min-w-0">
+                            <div className="relative flex-shrink-0">
+                              <img
+                                src={member.avatar}
+                                alt={member.name}
+                                className="w-6 h-6 rounded-lg bg-neutral-200 dark:bg-neutral-800 object-cover"
+                                onError={(e) => {
+                                  e.currentTarget.onerror = null;
+                                  e.currentTarget.src = `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(
+                                    member.name
+                                  )}`;
+                                }}
                               />
-                            ) : (
+                              {isOnline ? (
+                                <span
+                                  className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-neutral-900 shadow-xs"
+                                  title="Online"
+                                />
+                              ) : (
+                                <span
+                                  className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full border border-neutral-400 dark:border-neutral-500 bg-transparent ring-1 ring-white dark:ring-neutral-900"
+                                  title="Offline"
+                                />
+                              )}
+                            </div>
+                            <div className="truncate">
+                              <p className="text-xs truncate">{member.name}</p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center space-x-1.5 flex-shrink-0">
+                            {onRemoveMember && canRemoveMember(currentUser, member).allowed && (
                               <span
-                                className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full border border-neutral-400 dark:border-neutral-500 bg-transparent ring-1 ring-white dark:ring-neutral-900"
-                                title="Offline"
+                                role="button"
+                                tabIndex={0}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (window.confirm(`Are you sure you want to remove ${member.name} from the company?`)) {
+                                    onRemoveMember(member.id);
+                                  }
+                                }}
+                                className="opacity-0 group-hover:opacity-100 p-1 text-neutral-400 hover:text-rose-500 rounded transition cursor-pointer"
+                                title={`Remove ${member.name} from company`}
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </span>
+                            )}
+                            {isOnline && (
+                              <span
+                                className="w-2 h-2 rounded-full bg-emerald-500 shadow-xs flex-shrink-0"
+                                title="Online"
                               />
                             )}
                           </div>
-                          <div className="truncate">
-                            <p className="text-xs truncate">{member.name}</p>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center space-x-1.5 flex-shrink-0">
-                          {onRemoveMember && canRemoveMember(currentUser, member).allowed && (
-                            <span
-                              role="button"
-                              tabIndex={0}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (window.confirm(`Are you sure you want to remove ${member.name} from the company?`)) {
-                                  onRemoveMember(member.id);
-                                }
-                              }}
-                              className="opacity-0 group-hover:opacity-100 p-1 text-neutral-400 hover:text-rose-500 rounded transition cursor-pointer"
-                              title={`Remove ${member.name} from company`}
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </span>
-                          )}
-                          {isOnline && (
-                            <span
-                              className="w-2 h-2 rounded-full bg-emerald-500 shadow-xs flex-shrink-0"
-                              title="Online"
-                            />
-                          )}
-                        </div>
-                      </button>
-                    );
-                  });
+                        </button>
+                      );
+                    });
                 })()}
               </div>
             </div>
           </div>
 
           {/* User Footer Profile */}
-          <div className="p-3 border-t border-neutral-200 dark:border-neutral-800 bg-neutral-50/60 dark:bg-neutral-900/95 flex items-center justify-between">
+          <div
+            style={{
+              borderColor: "var(--theme-sidebar-border, #e2e8f0)",
+              backgroundColor: "var(--theme-sidebar-card, rgba(0,0,0,0.03))",
+            }}
+            className="p-3 border-t flex items-center justify-between"
+          >
             <div
               onClick={() => {
                 if (onOpenUserProfile) {
@@ -676,11 +770,17 @@ export function Sidebar({
                 />
               </div>
               <div className="truncate">
-                <p className="text-xs font-semibold text-neutral-900 dark:text-neutral-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-300 transition truncate">
+                <p
+                  style={{ color: "var(--theme-sidebar-text, #0f172a)" }}
+                  className="text-xs font-semibold group-hover:underline transition truncate"
+                >
                   {currentUser.name}
                 </p>
-                <p className="text-[11px] text-emerald-600 dark:text-emerald-400 truncate flex items-center space-x-1">
-                  <span>●</span>
+                <p
+                  style={{ color: "var(--theme-sidebar-muted, #64748b)" }}
+                  className="text-[11px] truncate flex items-center space-x-1"
+                >
+                  <span className="text-emerald-500">●</span>
                   <span>{currentUser.statusText || currentUser.department.toUpperCase()}</span>
                 </p>
               </div>
