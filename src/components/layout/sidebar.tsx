@@ -27,6 +27,8 @@ import {
   MessageSquare,
   Compass,
   FileText,
+  Files,
+  SquarePen,
   Bot,
   Home as HomeIcon,
   Trash2,
@@ -54,6 +56,7 @@ interface SidebarProps {
   onOpenInviteModal?: () => void;
   onOpenMemberDirectory?: () => void;
   onOpenGamesModal?: () => void;
+  onOpenFiles?: () => void;
   onOpenPreferences?: () => void;
   onOpenUserProfile?: (member: WorkspaceMember) => void;
   onSelectDirectMessage: (member: WorkspaceMember) => void;
@@ -83,6 +86,7 @@ export function Sidebar({
   onOpenInviteModal,
   onOpenMemberDirectory,
   onOpenGamesModal,
+  onOpenFiles,
   onOpenPreferences,
   onOpenUserProfile,
   onSelectDirectMessage,
@@ -260,6 +264,30 @@ export function Sidebar({
 
               <button
                 onClick={() => {
+                  setActiveRailTab("files");
+                  if (onOpenFiles) onOpenFiles();
+                }}
+                style={
+                  activeRailTab === "files"
+                    ? {
+                        backgroundColor: "var(--theme-sidebar-active-bg, rgba(255,255,255,0.22))",
+                        color: "var(--theme-sidebar-active-text, #ffffff)",
+                      }
+                    : { color: "var(--theme-header-text, #ffffff)" }
+                }
+                className={`flex flex-col items-center justify-center w-12 py-1.5 rounded-xl transition cursor-pointer ${
+                  activeRailTab === "files"
+                    ? "font-bold shadow-xs"
+                    : "opacity-80 hover:opacity-100 hover:bg-white/10 dark:hover:bg-white/10"
+                }`}
+                title="Files & Documents"
+              >
+                <Files className="w-4 h-4" />
+                <span className="text-[10px] mt-0.5 font-medium leading-none">Files</span>
+              </button>
+
+              <button
+                onClick={() => {
                   setActiveRailTab("games");
                   if (onOpenGamesModal) onOpenGamesModal();
                 }}
@@ -337,106 +365,63 @@ export function Sidebar({
           }}
           className="w-64 sm:w-72 border-r flex flex-col h-full select-none transition-colors duration-200"
         >
-          {/* Workspace Switcher Header */}
+          {/* Workspace Switcher Header (Slack-parity: clean single title, no duplicate logo, quick compose button) */}
           <div
             style={{ borderColor: "var(--theme-sidebar-border, #e2e8f0)" }}
-            className="relative p-3.5 border-b"
+            className="relative px-3.5 py-3 border-b"
           >
             <div className="flex items-center justify-between">
               <button
                 onClick={() => setShowOrgDropdown(!showOrgDropdown)}
-                className="flex-1 flex items-center justify-between p-1.5 rounded-xl hover:bg-black/5 dark:hover:bg-white/10 transition text-left group min-w-0 cursor-pointer"
-              >
-                <div className="flex items-center space-x-2.5 min-w-0">
-                  {activeOrg.logo_url ? (
-                    <img
-                      src={activeOrg.logo_url}
-                      alt={activeOrg.name}
-                      className="w-8 h-8 rounded-xl object-cover ring-1 ring-black/10 dark:ring-white/10 flex-shrink-0"
-                    />
-                  ) : (
-                    <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center shadow-md shadow-purple-500/20 flex-shrink-0 text-white font-extrabold text-xs">
-                      {activeOrg.name.charAt(0).toUpperCase()}
-                    </div>
-                  )}
-                  <div className="truncate">
-                    <div className="flex items-center space-x-1.5">
-                      <h1
-                        style={{ color: "var(--theme-sidebar-text, #0f172a)" }}
-                        className="font-bold text-sm tracking-tight truncate"
-                      >
-                        {activeOrg.name}
-                      </h1>
-                      <ChevronDown className="w-3.5 h-3.5 opacity-60 group-hover:opacity-100 transition flex-shrink-0" />
-                    </div>
-                    <p
-                      style={{ color: "var(--theme-sidebar-muted, #64748b)" }}
-                      className="text-[11px] truncate capitalize"
-                    >
-                      {activeOrg.slug || "Enterprise Workspace"}
-                    </p>
-                  </div>
-                </div>
-              </button>
-
-              {/* Edit Company Settings Button */}
-              {onOpenEditCompanyModal && (
-                <button
-                  onClick={onOpenEditCompanyModal}
-                  className="p-1.5 rounded-xl text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition cursor-pointer ml-1"
-                  title="Edit Company Name & Logo (Manager)"
-                >
-                  <Settings className="w-4 h-4" />
-                </button>
-              )}
-
-              {/* Mobile close button */}
-              <button
-                onClick={onCloseMobile}
-                className="p-1.5 rounded-xl text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white md:hidden hover:bg-neutral-100 dark:hover:bg-neutral-800 transition ml-1"
-                title="Close sidebar"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Invite Code Bar */}
-            <div className="mt-2.5 flex items-center space-x-1.5">
-              <button
-                onClick={onOpenInviteModal}
-                className="flex-1 flex items-center justify-between px-2.5 py-1.5 rounded-xl bg-neutral-100 dark:bg-neutral-800/80 hover:bg-neutral-200 dark:hover:bg-neutral-800 border border-neutral-200 dark:border-neutral-700/60 text-xs transition group cursor-pointer"
-                title="Invite Team Members"
+                className="flex-1 flex items-center justify-between p-1.5 rounded-xl hover:bg-black/5 dark:hover:bg-white/10 transition text-left group min-w-0 cursor-pointer mr-1"
+                title={`${activeOrg.name} — Workspace Menu`}
               >
                 <div className="flex items-center space-x-1.5 min-w-0">
-                  <Share2 className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
-                  <span className="text-[11px] font-semibold text-neutral-700 dark:text-neutral-300 truncate">
-                    Invite Team
-                  </span>
+                  <h1
+                    style={{ color: "var(--theme-sidebar-text, #0f172a)" }}
+                    className="font-extrabold text-[15px] tracking-tight truncate"
+                  >
+                    {activeOrg.name}
+                  </h1>
+                  <ChevronDown className="w-4 h-4 opacity-70 group-hover:opacity-100 transition flex-shrink-0" />
                 </div>
-                {activeOrg.invite_code && (
-                  <span className="font-mono text-[10px] text-indigo-600 dark:text-indigo-400 font-bold bg-indigo-50 dark:bg-indigo-950/60 px-1.5 py-0.5 rounded border border-indigo-200 dark:border-indigo-800/50">
-                    {activeOrg.invite_code}
-                  </span>
-                )}
               </button>
-              {activeOrg.invite_code && (
+
+              <div className="flex items-center space-x-1 flex-shrink-0">
+                {/* Slack-style Compose New Message / Channel Button */}
                 <button
-                  onClick={handleCopyInvite}
-                  className="p-1.5 rounded-xl bg-neutral-100 dark:bg-neutral-800/80 hover:bg-neutral-200 dark:hover:bg-neutral-800 border border-neutral-200 dark:border-neutral-700/60 text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition flex-shrink-0 cursor-pointer"
-                  title="Copy Invite Code"
+                  onClick={onOpenNewChannelModal}
+                  className="p-1.5 rounded-xl text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 transition cursor-pointer"
+                  title="New message or channel [Ctrl+N]"
                 >
-                  {copiedCode ? (
-                    <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                  ) : (
-                    <Copy className="w-3.5 h-3.5" />
-                  )}
+                  <SquarePen className="w-4 h-4" />
                 </button>
-              )}
+
+                {/* Edit Company Settings Button */}
+                {onOpenEditCompanyModal && (
+                  <button
+                    onClick={onOpenEditCompanyModal}
+                    className="p-1.5 rounded-xl text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 transition cursor-pointer"
+                    title="Edit Company Name & Logo (Manager)"
+                  >
+                    <Settings className="w-4 h-4" />
+                  </button>
+                )}
+
+                {/* Mobile close button */}
+                <button
+                  onClick={onCloseMobile}
+                  className="p-1.5 rounded-xl text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white md:hidden hover:bg-black/5 dark:hover:bg-white/10 transition"
+                  title="Close sidebar"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
             {/* Workspace Dropdown */}
             {showOrgDropdown && (
-              <div className="absolute top-16 left-3 right-3 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-2xl shadow-2xl p-2 z-30 space-y-1">
+              <div className="absolute top-14 left-3 right-3 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-2xl shadow-2xl p-2 z-30 space-y-1 animate-in fade-in zoom-in-95 duration-100">
                 <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
                   Workspaces
                 </div>
@@ -462,6 +447,25 @@ export function Sidebar({
                 ))}
 
                 <div className="pt-1.5 border-t border-neutral-200 dark:border-neutral-800 space-y-0.5">
+                  {onOpenInviteModal && (
+                    <button
+                      onClick={() => {
+                        setShowOrgDropdown(false);
+                        onOpenInviteModal();
+                      }}
+                      className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs font-semibold text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition cursor-pointer"
+                    >
+                      <div className="flex items-center space-x-2">
+                        <Share2 className="w-3.5 h-3.5 text-indigo-500" />
+                        <span>Invite people to {activeOrg.name}</span>
+                      </div>
+                      {activeOrg.invite_code && (
+                        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 font-bold border border-indigo-200 dark:border-indigo-800/50">
+                          {activeOrg.invite_code}
+                        </span>
+                      )}
+                    </button>
+                  )}
                   {onOpenEditCompanyModal && (
                     <button
                       onClick={() => {

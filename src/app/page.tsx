@@ -45,6 +45,7 @@ import { EditProfileModal } from "@/components/profile/edit-profile-modal";
 import { GamesModal } from "@/components/games/games-modal";
 import { PreferencesModal } from "@/components/preferences/preferences-modal";
 import { InstallPwaButton } from "@/components/layout/install-pwa-button";
+import { FilesDrawer } from "@/components/files/files-drawer";
 import { usePreferences } from "@/context/preferences-context";
 import { MobileSlackView, MobileTabType } from "@/components/mobile/mobile-slack-view";
 import {
@@ -70,6 +71,12 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock,
+  Star,
+  Files,
+  FileText,
+  SquarePen,
+  Copy,
+  ExternalLink,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { canRemoveMember } from "@/utils/permissions";
@@ -352,6 +359,11 @@ export default function KaelixoApp() {
   const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
   const [isEditProfileModalOpen, setIsEditProfileModalOpen] = useState(false);
   const [isGamesModalOpen, setIsGamesModalOpen] = useState(false);
+  const [isFilesDrawerOpen, setIsFilesDrawerOpen] = useState(false);
+  const [channelViewTab, setChannelViewTab] = useState<"messages" | "canvas" | "files">("messages");
+  const [channelCanvasNotes, setChannelCanvasNotes] = useState<Record<string, string>>({
+    "33333333-3333-3333-3333-333333333331": "### Dev Sprint Board & Architecture\n- Slack 1:1 Theme Engine (aubergine, clementine, banana, mood-indigo)\n- Workspace files & attachments browser\n- Single unified top bar search",
+  });
   const [activeProfileMember, setActiveProfileMember] = useState<WorkspaceMember | null>(null);
 
   const [initialInviteCode, setInitialInviteCode] = useState("");
@@ -2065,6 +2077,17 @@ export default function KaelixoApp() {
   const activeMessages = messagesByChannel[activeChannelId] || [];
   const mainFeedMessages = activeMessages.filter((m) => !m.parentId);
 
+  const channelFiles = useMemo(() => {
+    const list: Attachment[] = [];
+    const msgs = messagesByChannel[activeChannelId] || [];
+    for (const m of msgs) {
+      if (m.attachments && m.attachments.length > 0) {
+        list.push(...m.attachments);
+      }
+    }
+    return list;
+  }, [messagesByChannel, activeChannelId]);
+
   // Send message
   const handleSendMessage = async (content: string, attachments?: Attachment[]) => {
     const now = new Date();
@@ -2982,6 +3005,7 @@ export default function KaelixoApp() {
           onOpenInviteModal={() => setIsInviteModalOpen(true)}
           onOpenMemberDirectory={() => setIsMemberDirectoryOpen(true)}
           onOpenGamesModal={() => setIsGamesModalOpen(true)}
+          onOpenFiles={() => setIsFilesDrawerOpen(true)}
           onOpenPreferences={() => openPreferences("appearance")}
           onOpenUserProfile={(member) => {
             setActiveProfileMember(member);
@@ -3002,246 +3026,377 @@ export default function KaelixoApp() {
             !isAuthenticated ? "filter blur-[2px] pointer-events-none select-none opacity-40" : ""
           }`}
         >
-        {/* Top Header */}
-        <header className="h-14 sm:h-16 px-3 sm:px-6 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between flex-shrink-0 bg-white/95 dark:bg-neutral-950/95 backdrop-blur-md transition-colors duration-200">
-          <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1 mr-2">
-            {/* Mobile Back Button to return to Mobile Tabs */}
-            <button
-              onClick={() => setMobileViewMode("tabs")}
-              className="p-2 -ml-1 rounded-xl text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 md:hidden transition flex-shrink-0 cursor-pointer"
-              title="Back to Channels & DMs"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-            {activeDmRecipient ? (
-              <div
-                className="flex items-center space-x-2 sm:space-x-2.5 min-w-[140px] cursor-pointer group/dmheader p-1 -m-1 rounded-xl hover:bg-neutral-100/70 dark:hover:bg-neutral-800/50 transition flex-shrink-0"
-                onClick={() => {
-                  setActiveProfileMember(activeDmRecipient);
-                  setRightPanelMode("profile");
-                }}
-                title={`View ${activeDmRecipient.name}'s Profile Details`}
+        {/* Top Header matching Slack 1:1 Parity */}
+        <header className="px-3 sm:px-6 border-b border-neutral-200 dark:border-neutral-800 flex flex-col justify-between flex-shrink-0 bg-white/95 dark:bg-neutral-950/95 backdrop-blur-md transition-colors duration-200 select-none">
+          {/* Row 1: Title and Channel Tools */}
+          <div className="h-12 sm:h-13 flex items-center justify-between">
+            <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1 mr-2">
+              {/* Mobile Back Button */}
+              <button
+                onClick={() => setMobileViewMode("tabs")}
+                className="p-1.5 -ml-1 rounded-xl text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 md:hidden transition flex-shrink-0 cursor-pointer"
+                title="Back to Channels & DMs"
               >
-                <div className="relative flex-shrink-0">
-                  <img
-                    src={
-                      activeDmRecipient.avatar ||
-                      `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(activeDmRecipient.name)}`
-                    }
-                    alt={activeDmRecipient.name}
-                    onError={(e) => {
-                      e.currentTarget.onerror = null;
-                      e.currentTarget.src = `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(
-                        activeDmRecipient.name
-                      )}`;
-                    }}
-                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-neutral-200 dark:bg-neutral-800 ring-1 ring-neutral-300 dark:ring-neutral-700 group-hover/dmheader:ring-2 group-hover/dmheader:ring-indigo-500 transition object-cover"
-                  />
-                  <span
-                    className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full ring-2 ring-white dark:ring-neutral-900 ${
-                      activeDmRecipient.online || activeDmRecipient.status === "online"
-                        ? "bg-emerald-500 shadow-xs"
-                        : activeDmRecipient.status === "away"
-                        ? "bg-amber-500"
-                        : activeDmRecipient.status === "in_call"
-                        ? "bg-rose-500 animate-pulse"
-                        : "border border-neutral-400 dark:border-neutral-500 bg-transparent"
-                    }`}
-                  />
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+
+              {activeDmRecipient ? (
+                <div
+                  className="flex items-center space-x-2 sm:space-x-2.5 min-w-[140px] cursor-pointer group/dmheader p-1 -m-1 rounded-xl hover:bg-neutral-100/70 dark:hover:bg-neutral-800/50 transition flex-shrink-0"
+                  onClick={() => {
+                    setActiveProfileMember(activeDmRecipient);
+                    setRightPanelMode("profile");
+                  }}
+                  title={`View ${activeDmRecipient.name}'s Profile Details`}
+                >
+                  <div className="relative flex-shrink-0">
+                    <img
+                      src={
+                        activeDmRecipient.avatar ||
+                        `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(activeDmRecipient.name)}`
+                      }
+                      alt={activeDmRecipient.name}
+                      onError={(e) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src = `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(
+                          activeDmRecipient.name
+                        )}`;
+                      }}
+                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-neutral-200 dark:bg-neutral-800 ring-1 ring-neutral-300 dark:ring-neutral-700 group-hover/dmheader:ring-2 group-hover/dmheader:ring-indigo-500 transition object-cover"
+                    />
+                    <span
+                      className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full ring-2 ring-white dark:ring-neutral-900 ${
+                        activeDmRecipient.online || activeDmRecipient.status === "online"
+                          ? "bg-emerald-500 shadow-xs"
+                          : activeDmRecipient.status === "away"
+                          ? "bg-amber-500"
+                          : activeDmRecipient.status === "in_call"
+                          ? "bg-rose-500 animate-pulse"
+                          : "border border-neutral-400 dark:border-neutral-500 bg-transparent"
+                      }`}
+                    />
+                  </div>
+                  <div className="min-w-0 truncate">
+                    <div className="flex items-center space-x-1.5">
+                      <h2 className="font-bold text-sm sm:text-base text-neutral-900 dark:text-white tracking-tight truncate group-hover/dmheader:text-indigo-600 dark:group-hover/dmheader:text-indigo-400">
+                        {activeDmRecipient.name}
+                      </h2>
+                    </div>
+                    <p className="text-[10px] sm:text-[11px] text-neutral-500 dark:text-neutral-400 capitalize truncate flex items-center space-x-1">
+                      <span>{activeDmRecipient.role || "Member"}</span>
+                      <span className="hidden sm:inline">• {activeDmRecipient.department} Department</span>
+                    </p>
+                  </div>
                 </div>
-                <div className="min-w-0 truncate">
-                  <h2 className="font-bold text-sm sm:text-base text-neutral-900 dark:text-white tracking-tight truncate group-hover/dmheader:text-indigo-600 dark:group-hover/dmheader:text-indigo-400">
-                    {activeDmRecipient.name}
-                  </h2>
-                  <p className="text-[10px] sm:text-[11px] text-neutral-500 dark:text-neutral-400 capitalize truncate flex items-center space-x-1">
-                    <span>{activeDmRecipient.role || "Member"}</span>
-                    <span className="hidden sm:inline">• {activeDmRecipient.department} Department</span>
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <div className="flex items-center space-x-1.5 sm:space-x-2 min-w-0">
-                {activeChannel.isPrivate ? (
-                  <Lock className="w-4 h-4 text-neutral-400 flex-shrink-0" />
-                ) : (
-                  <Hash className="w-4 h-4 sm:w-5 sm:h-5 text-neutral-400 flex-shrink-0" />
-                )}
-                <h2 className="font-bold text-sm sm:text-base text-neutral-900 dark:text-white tracking-tight truncate flex-shrink-0 max-w-[130px] sm:max-w-none">
-                  {activeChannel.name}
-                </h2>
-                {activeChannel.departmentCode && activeChannel.departmentCode !== "all" && (
-                  <span className="hidden sm:inline-block text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/40 flex-shrink-0">
-                    {activeChannel.departmentCode}
-                  </span>
-                )}
-                {activeChannel.topic && (
-                  <span className="text-xs text-neutral-500 dark:text-neutral-400 border-l border-neutral-200 dark:border-neutral-800 pl-3 truncate max-w-[180px] md:max-w-xs lg:max-w-md hidden md:inline">
-                    {activeChannel.topic}
-                  </span>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Action Tools: Minimal Slack-Parity Navbar (Search, Notifications, Members, Profile) */}
-          <div className="flex items-center space-x-2 sm:space-x-3 flex-shrink-0">
-            {/* Mobile Headphones Icon matching Screenshot */}
-            <button
-              type="button"
-              onClick={() => {
-                setActiveToast({
-                  id: `huddle-${Date.now()}`,
-                  senderName: "Huddle Audio",
-                  content: `Connected to live audio huddle with ${activeDmRecipient ? activeDmRecipient.name : activeChannel.name}`,
-                  channelName: activeChannel.name,
-                  channelId: activeChannelId,
-                  messageId: "",
-                });
-              }}
-              className="md:hidden p-1.5 rounded-xl text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition cursor-pointer"
-              title="Huddle"
-            >
-              <Headphones className="w-5 h-5" />
-            </button>
-            {/* 1. Global Search Pill */}
-            <button
-              type="button"
-              onClick={() => setIsSearchModalOpen(true)}
-              className="hidden xl:flex items-center justify-between w-36 lg:w-48 h-8 px-2.5 rounded-lg bg-neutral-100 dark:bg-neutral-900 hover:bg-neutral-200/80 dark:hover:bg-neutral-800 border border-neutral-200 dark:border-neutral-800 text-xs text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 transition cursor-pointer flex-shrink-0"
-              title="Search messages & channels (Ctrl+K)"
-            >
-              <div className="flex items-center space-x-2">
-                <Search className="w-3.5 h-3.5 text-neutral-400" />
-                <span>Search...</span>
-              </div>
-              <kbd className="text-[10px] bg-white dark:bg-neutral-800 px-1.5 py-0.5 rounded border border-neutral-300 dark:border-neutral-700 font-mono text-neutral-400 shadow-2xs">
-                Ctrl K
-              </kbd>
-            </button>
-            <button
-              type="button"
-              onClick={() => setIsSearchModalOpen(true)}
-              className="xl:hidden p-2 rounded-lg text-neutral-500 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition cursor-pointer"
-              title="Search (Ctrl+K)"
-            >
-              <Search className="w-4 h-4" />
-            </button>
-
-            {/* 2. In-App Notifications Center (Bell) */}
-            <NotificationCenter
-              notifications={notifications}
-              unreadCount={unreadNotificationCount}
-              onMarkAsRead={handleMarkNotificationAsRead}
-              onMarkAllAsRead={handleMarkAllNotificationsAsRead}
-              onSelectNotification={handleSelectNotification}
-            />
-
-            {/* 3. Details/Profile Trigger for Current Channel or DM */}
-            <button
-              type="button"
-              onClick={() => {
-                if (activeDmRecipient) {
-                  setActiveProfileMember(activeDmRecipient);
-                  setRightPanelMode((prev) =>
-                    prev === "profile" && activeProfileMember?.id === activeDmRecipient.id
-                      ? "none"
-                      : "profile"
-                  );
-                } else {
-                  setRightPanelMode((prev) => (prev === "details" ? "none" : "details"));
-                }
-              }}
-              className={`p-2 rounded-lg transition cursor-pointer ${
-                rightPanelMode === "profile" && activeProfileMember?.id === activeDmRecipient?.id
-                  ? "bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400"
-                  : "text-neutral-500 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800"
-              }`}
-              title={activeDmRecipient ? `View ${activeDmRecipient.name}'s Profile` : "Channel Details"}
-            >
-              <Info className="w-4 h-4" />
-            </button>
-
-            {/* 4. Member Directory Trigger (Users) */}
-            <button
-              type="button"
-              onClick={() => setIsMemberDirectoryOpen(true)}
-              className="p-2 rounded-lg text-neutral-500 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition cursor-pointer"
-              title="People & Member Directory"
-            >
-              <Users className="w-4 h-4" />
-            </button>
-
-            {/* 5. User Profile Avatar Trigger */}
-            <button
-              type="button"
-              onClick={() => {
-                setActiveProfileMember(currentUser);
-                setRightPanelMode((prev) =>
-                  prev === "profile" && activeProfileMember?.id === currentUser.id
-                    ? "none"
-                    : "profile"
-                );
-              }}
-              className="relative p-0.5 rounded-lg hover:ring-2 hover:ring-indigo-500/50 transition cursor-pointer flex-shrink-0"
-              title={`Your Profile & Settings (${currentUser.name})`}
-            >
-              {currentUser.avatar ? (
-                <img
-                  src={currentUser.avatar}
-                  alt={currentUser.name}
-                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg object-cover ring-1 ring-neutral-200 dark:ring-neutral-700"
-                />
               ) : (
-                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-bold text-xs">
-                  {currentUser.name.charAt(0).toUpperCase()}
+                <div className="flex items-center space-x-1.5 sm:space-x-2 min-w-0">
+                  {activeChannel.isPrivate ? (
+                    <Lock className="w-4 h-4 text-neutral-400 flex-shrink-0" />
+                  ) : (
+                    <Hash className="w-4 h-4 sm:w-5 sm:h-5 text-neutral-400 flex-shrink-0" />
+                  )}
+                  <h2 className="font-bold text-sm sm:text-base text-neutral-900 dark:text-white tracking-tight truncate flex-shrink-0 max-w-[130px] sm:max-w-none">
+                    {activeChannel.name}
+                  </h2>
+                  {activeChannel.departmentCode && activeChannel.departmentCode !== "all" && (
+                    <span className="hidden sm:inline-block text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/40 flex-shrink-0">
+                      {activeChannel.departmentCode}
+                    </span>
+                  )}
+                  {activeChannel.topic && (
+                    <span className="text-xs text-neutral-500 dark:text-neutral-400 border-l border-neutral-200 dark:border-neutral-800 pl-3 truncate max-w-[180px] md:max-w-xs lg:max-w-md hidden md:inline">
+                      {activeChannel.topic}
+                    </span>
+                  )}
                 </div>
               )}
-              <span
-                className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full ring-2 ring-white dark:ring-neutral-950 ${
-                  currentUser.online || currentUser.status === "online"
-                    ? "bg-emerald-500"
-                    : "bg-neutral-400"
+            </div>
+
+            {/* Action Tools: Slack Clean Header Toolbar */}
+            <div className="flex items-center space-x-1.5 sm:space-x-2 flex-shrink-0">
+              {/* Mobile Search button */}
+              <button
+                type="button"
+                onClick={() => setIsSearchModalOpen(true)}
+                className="md:hidden p-2 rounded-lg text-neutral-500 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition cursor-pointer"
+                title="Search (Ctrl+K)"
+              >
+                <Search className="w-4 h-4" />
+              </button>
+
+              {/* Huddle / Call */}
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveToast({
+                    id: `huddle-${Date.now()}`,
+                    senderName: "Huddle Audio",
+                    content: `Connected to live audio huddle in ${activeDmRecipient ? activeDmRecipient.name : `#${activeChannel.name}`}`,
+                    channelName: activeChannel.name,
+                    channelId: activeChannelId,
+                    messageId: "",
+                  });
+                }}
+                className="p-1.5 sm:p-2 rounded-lg text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition cursor-pointer"
+                title="Start Huddle [Ctrl+Shift+H]"
+              >
+                <Headphones className="w-4 h-4" />
+              </button>
+
+              {/* Member Directory */}
+              <button
+                type="button"
+                onClick={() => setIsMemberDirectoryOpen(true)}
+                className="p-1.5 sm:p-2 rounded-lg text-neutral-500 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition cursor-pointer flex items-center space-x-1 text-xs"
+                title="People & Members"
+              >
+                <Users className="w-4 h-4" />
+                <span className="hidden sm:inline font-semibold">{membersWithPresence.length}</span>
+              </button>
+
+              {/* Details / Profile Drawer */}
+              <button
+                type="button"
+                onClick={() => {
+                  if (activeDmRecipient) {
+                    setActiveProfileMember(activeDmRecipient);
+                    setRightPanelMode((prev) =>
+                      prev === "profile" && activeProfileMember?.id === activeDmRecipient.id
+                        ? "none"
+                        : "profile"
+                    );
+                  } else {
+                    setRightPanelMode((prev) => (prev === "details" ? "none" : "details"));
+                  }
+                }}
+                className={`p-1.5 sm:p-2 rounded-lg transition cursor-pointer ${
+                  rightPanelMode === "profile" || rightPanelMode === "details"
+                    ? "bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400"
+                    : "text-neutral-500 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800"
                 }`}
-              />
+                title="Details & Information"
+              >
+                <Info className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* Row 2: Slack Channel Tabs (Messages, Canvas, Files & links, +) */}
+          <div className="flex items-center space-x-1 overflow-x-auto scrollbar-none pt-0.5 pb-2 -mb-px text-xs font-semibold">
+            <button
+              onClick={() => setChannelViewTab("messages")}
+              className={`px-3 py-1.5 rounded-lg transition cursor-pointer flex items-center space-x-1.5 ${
+                channelViewTab === "messages"
+                  ? "bg-neutral-200/80 dark:bg-neutral-800 text-neutral-900 dark:text-white font-bold shadow-2xs"
+                  : "text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-900/60"
+              }`}
+            >
+              <span>Messages</span>
+            </button>
+
+            <button
+              onClick={() => setChannelViewTab("canvas")}
+              className={`px-3 py-1.5 rounded-lg transition cursor-pointer flex items-center space-x-1.5 ${
+                channelViewTab === "canvas"
+                  ? "bg-neutral-200/80 dark:bg-neutral-800 text-neutral-900 dark:text-white font-bold shadow-2xs"
+                  : "text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-900/60"
+              }`}
+            >
+              <span>Canvas</span>
+            </button>
+
+            <button
+              onClick={() => setChannelViewTab("files")}
+              className={`px-3 py-1.5 rounded-lg transition cursor-pointer flex items-center space-x-1.5 ${
+                channelViewTab === "files"
+                  ? "bg-neutral-200/80 dark:bg-neutral-800 text-neutral-900 dark:text-white font-bold shadow-2xs"
+                  : "text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-900/60"
+              }`}
+            >
+              <Files className="w-3.5 h-3.5" />
+              <span>Files & links</span>
+            </button>
+
+            <button
+              onClick={() => setIsFilesDrawerOpen(true)}
+              className="px-2 py-1.5 rounded-lg text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-900/60 transition cursor-pointer"
+              title="All Workspace Files"
+            >
+              +
             </button>
           </div>
         </header>
 
-        {/* Specialized Department Toolbar (only for channels, not in DMs) */}
-        {!activeDmRecipient && (
-          <DepartmentToolbar
-            departmentCode={activeChannel.departmentCode}
-            onApplyTemplate={(text) => setExternalTemplateText(text)}
-          />
+        {channelViewTab === "canvas" ? (
+          <div className="flex-1 flex flex-col p-4 sm:p-6 overflow-y-auto bg-neutral-50/50 dark:bg-neutral-900/40">
+            <div className="max-w-4xl w-full mx-auto bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 shadow-xs p-5 sm:p-7 flex flex-col space-y-4 min-h-[500px]">
+              <div className="flex items-center justify-between border-b border-neutral-200 dark:border-neutral-800 pb-4">
+                <div className="flex items-center space-x-3">
+                  <div className="p-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400">
+                    <FileText className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-base text-neutral-900 dark:text-white">
+                      {activeDmRecipient ? `Notes with ${activeDmRecipient.name}` : `Canvas for #${activeChannel.name}`}
+                    </h3>
+                    <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                      Collaborative scratchpad & sprint documentation
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    const text = channelCanvasNotes[activeChannelId] || "";
+                    navigator.clipboard.writeText(text);
+                    setActiveToast({
+                      id: `canvas-copy-${Date.now()}`,
+                      senderName: "Canvas",
+                      content: "Canvas markdown copied to clipboard!",
+                      channelName: activeChannel.name,
+                      channelId: activeChannelId,
+                      messageId: "",
+                    });
+                  }}
+                  className="px-3 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-xs font-semibold text-neutral-700 dark:text-neutral-300 transition flex items-center space-x-1.5 cursor-pointer"
+                >
+                  <Copy className="w-3.5 h-3.5" />
+                  <span>Copy Markdown</span>
+                </button>
+              </div>
+
+              <textarea
+                value={
+                  channelCanvasNotes[activeChannelId] ??
+                  `# ${activeDmRecipient ? activeDmRecipient.name : activeChannel.name} Notes\n\n- Welcome to the collaborative Canvas.\n- Use this space to document sprint goals, specs, links, and meeting notes.\n- Changes are saved automatically.`
+                }
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setChannelCanvasNotes((prev) => ({
+                    ...prev,
+                    [activeChannelId]: val,
+                  }));
+                }}
+                placeholder="Start typing notes, specifications, checklist items..."
+                className="w-full flex-1 min-h-[360px] p-4 font-mono text-sm leading-relaxed rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-950/50 text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition resize-y"
+              />
+            </div>
+          </div>
+        ) : channelViewTab === "files" ? (
+          <div className="flex-1 flex flex-col p-4 sm:p-6 overflow-y-auto bg-neutral-50/50 dark:bg-neutral-900/40">
+            <div className="max-w-4xl w-full mx-auto space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-bold text-base text-neutral-900 dark:text-white flex items-center space-x-2">
+                    <Files className="w-4 h-4 text-indigo-500" />
+                    <span>Files in {activeDmRecipient ? activeDmRecipient.name : `#${activeChannel.name}`}</span>
+                  </h3>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                    {channelFiles.length} {channelFiles.length === 1 ? "file" : "files"} shared in this conversation
+                  </p>
+                </div>
+                <button
+                  onClick={() => setIsFilesDrawerOpen(true)}
+                  className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition shadow-xs flex items-center space-x-1.5 cursor-pointer"
+                >
+                  <Files className="w-3.5 h-3.5" />
+                  <span>Browse All Workspace Files</span>
+                </button>
+              </div>
+
+              {channelFiles.length === 0 ? (
+                <div className="p-12 text-center bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 flex flex-col items-center justify-center space-y-3">
+                  <div className="w-12 h-12 rounded-2xl bg-neutral-100 dark:bg-neutral-800 text-neutral-400 flex items-center justify-center">
+                    <FileText className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-sm text-neutral-800 dark:text-neutral-200">
+                      No files shared in this conversation yet
+                    </h4>
+                    <p className="text-xs text-neutral-500 dark:text-neutral-400 max-w-sm mt-1">
+                      Attachments, PDFs, documents, and screenshots shared in this channel will show up here.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setIsFilesDrawerOpen(true)}
+                    className="mt-2 px-4 py-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-xs font-semibold text-neutral-800 dark:text-neutral-200 transition cursor-pointer"
+                  >
+                    View All Company Files & PDFs
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {channelFiles.map((file, idx) => (
+                    <div
+                      key={idx}
+                      className="p-3.5 bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700 transition flex items-center justify-between group"
+                    >
+                      <div className="flex items-center space-x-3 min-w-0 flex-1 mr-2">
+                        <div className="w-9 h-9 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center flex-shrink-0">
+                          <FileText className="w-4 h-4" />
+                        </div>
+                        <div className="min-w-0 truncate">
+                          <p className="text-xs font-semibold text-neutral-800 dark:text-neutral-200 truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-400">
+                            {file.name}
+                          </p>
+                          <p className="text-[10px] text-neutral-400 truncate">
+                            {file.size} • {file.type}
+                          </p>
+                        </div>
+                      </div>
+                      <a
+                        href={file.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-2 rounded-lg text-neutral-400 hover:text-neutral-800 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition"
+                        title="Open file"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                      </a>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Specialized Department Toolbar (only for channels, not in DMs) */}
+            {!activeDmRecipient && (
+              <DepartmentToolbar
+                departmentCode={activeChannel.departmentCode}
+                onApplyTemplate={(text) => setExternalTemplateText(text)}
+              />
+            )}
+
+            {/* Message Feed (Features 14, 15, 16, 17, 18) */}
+            <MessageFeed
+              messages={mainFeedMessages}
+              currentUser={currentUser}
+              onAddReaction={handleAddReaction}
+              members={membersWithPresence}
+              onOpenThread={handleOpenThread}
+              onTogglePin={handleTogglePin}
+              onEditMessage={handleEditMessage}
+              onDeleteMessage={handleDeleteMessage}
+              onOpenProfile={(member) => {
+                setActiveProfileMember(member);
+                setRightPanelMode("profile");
+              }}
+              channelId={activeChannelId}
+            />
+
+            {/* Input Composer */}
+            <ChatInput
+              channelId={activeChannelId}
+              channelName={activeChannel.name}
+              isDm={Boolean(activeDmRecipient || activeChannel.isDm)}
+              recipientName={activeDmRecipient?.name}
+              onSendMessage={handleSendMessage}
+              externalText={externalTemplateText}
+              onClearExternalText={() => setExternalTemplateText("")}
+            />
+          </>
         )}
-
-        {/* Message Feed (Features 14, 15, 16, 17, 18) */}
-        <MessageFeed
-          messages={mainFeedMessages}
-          currentUser={currentUser}
-          onAddReaction={handleAddReaction}
-          members={membersWithPresence}
-          onOpenThread={handleOpenThread}
-          onTogglePin={handleTogglePin}
-          onEditMessage={handleEditMessage}
-          onDeleteMessage={handleDeleteMessage}
-          onOpenProfile={(member) => {
-            setActiveProfileMember(member);
-            setRightPanelMode("profile");
-          }}
-          channelId={activeChannelId}
-        />
-
-        {/* Input Composer */}
-        <ChatInput
-          channelId={activeChannelId}
-          channelName={activeChannel.name}
-          isDm={Boolean(activeDmRecipient || activeChannel.isDm)}
-          recipientName={activeDmRecipient?.name}
-          onSendMessage={handleSendMessage}
-          externalText={externalTemplateText}
-          onClearExternalText={() => setExternalTemplateText("")}
-        />
       </main>
 
       {/* Feature 12 & Feature 27: Unified Multi-Dock Right Rail Architecture */}
@@ -3577,6 +3732,15 @@ export default function KaelixoApp() {
         isOpen={isPreferencesOpen}
         onClose={closePreferences}
         defaultTab={initialTab}
+      />
+
+      {/* Slack Files Hub & Documents Browser */}
+      <FilesDrawer
+        isOpen={isFilesDrawerOpen}
+        onClose={() => setIsFilesDrawerOpen(false)}
+        currentUser={currentUser}
+        messagesByChannel={messagesByChannel}
+        channelName={activeDmRecipient ? activeDmRecipient.name : activeChannel.name}
       />
     </div>
   );
