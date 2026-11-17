@@ -2732,19 +2732,19 @@ export default function KaelixoApp() {
 
       {/* Main Chat Stage */}
       <main
-        className={`flex-1 flex flex-col h-screen min-w-0 bg-[#121517] md:bg-white md:dark:bg-neutral-950 transition-all duration-300 ${
+        className={`flex-1 flex flex-col h-screen min-w-0 bg-white dark:bg-neutral-950 transition-all duration-300 ${
           mobileViewMode === "tabs" ? "hidden md:flex" : "flex"
         } ${
           !isAuthenticated ? "filter blur-[2px] pointer-events-none select-none opacity-40" : ""
         }`}
       >
         {/* Top Header */}
-        <header className="h-14 sm:h-16 px-3 sm:px-6 border-b border-[#1e2227] md:border-neutral-200 md:dark:border-neutral-800 flex items-center justify-between flex-shrink-0 bg-[#14171a] md:bg-white/95 md:dark:bg-neutral-950/95 backdrop-blur-md transition-colors duration-200">
+        <header className="h-14 sm:h-16 px-3 sm:px-6 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between flex-shrink-0 bg-white/95 dark:bg-neutral-950/95 backdrop-blur-md transition-colors duration-200">
           <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1 mr-2">
             {/* Mobile Back Button to return to Mobile Tabs */}
             <button
               onClick={() => setMobileViewMode("tabs")}
-              className="p-2 -ml-1 rounded-xl text-neutral-300 hover:text-white hover:bg-neutral-800 md:hidden transition flex-shrink-0 cursor-pointer"
+              className="p-2 -ml-1 rounded-xl text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 md:hidden transition flex-shrink-0 cursor-pointer"
               title="Back to Channels & DMs"
             >
               <ArrowLeft className="w-5 h-5" />
@@ -2762,10 +2762,10 @@ export default function KaelixoApp() {
                   <img
                     src={activeDmRecipient.avatar}
                     alt={activeDmRecipient.name}
-                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-neutral-200 dark:bg-neutral-800 ring-1 ring-neutral-700 md:ring-neutral-300 md:dark:ring-neutral-700 group-hover/dmheader:ring-2 group-hover/dmheader:ring-indigo-500 transition object-cover"
+                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-neutral-200 dark:bg-neutral-800 ring-1 ring-neutral-300 dark:ring-neutral-700 group-hover/dmheader:ring-2 group-hover/dmheader:ring-indigo-500 transition object-cover"
                   />
                   <span
-                    className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full ring-2 ring-[#14171a] md:ring-white md:dark:ring-neutral-900 ${
+                    className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full ring-2 ring-white dark:ring-neutral-900 ${
                       activeDmRecipient.online || activeDmRecipient.status === "online"
                         ? "bg-emerald-500"
                         : activeDmRecipient.status === "away"
@@ -2783,10 +2783,10 @@ export default function KaelixoApp() {
                     setRightPanelMode("profile");
                   }}
                 >
-                  <h2 className="font-bold text-sm sm:text-base text-white md:text-neutral-900 md:dark:text-white tracking-tight truncate hover:underline hover:text-indigo-400">
+                  <h2 className="font-bold text-sm sm:text-base text-neutral-900 dark:text-white tracking-tight truncate hover:underline hover:text-indigo-600 dark:hover:text-indigo-400">
                     {activeDmRecipient.name}
                   </h2>
-                  <p className="text-[10px] sm:text-[11px] text-neutral-400 capitalize truncate flex items-center space-x-1">
+                  <p className="text-[10px] sm:text-[11px] text-neutral-500 dark:text-neutral-400 capitalize truncate flex items-center space-x-1">
                     <span>{activeDmRecipient.role || "Member"}</span>
                     <span className="hidden sm:inline">• {activeDmRecipient.department} Department</span>
                   </p>
@@ -2799,7 +2799,7 @@ export default function KaelixoApp() {
                 ) : (
                   <Hash className="w-4 h-4 sm:w-5 sm:h-5 text-neutral-400 flex-shrink-0" />
                 )}
-                <h2 className="font-bold text-sm sm:text-base text-white md:text-neutral-900 md:dark:text-white tracking-tight truncate flex-shrink-0 max-w-[130px] sm:max-w-none">
+                <h2 className="font-bold text-sm sm:text-base text-neutral-900 dark:text-white tracking-tight truncate flex-shrink-0 max-w-[130px] sm:max-w-none">
                   {activeChannel.name}
                 </h2>
                 {activeChannel.departmentCode && activeChannel.departmentCode !== "all" && (
@@ -2808,7 +2808,7 @@ export default function KaelixoApp() {
                   </span>
                 )}
                 {activeChannel.topic && (
-                  <span className="text-xs text-neutral-400 border-l border-neutral-700 md:border-neutral-200 md:dark:border-neutral-800 pl-3 truncate max-w-[180px] md:max-w-xs lg:max-w-md hidden md:inline">
+                  <span className="text-xs text-neutral-500 dark:text-neutral-400 border-l border-neutral-200 dark:border-neutral-800 pl-3 truncate max-w-[180px] md:max-w-xs lg:max-w-md hidden md:inline">
                     {activeChannel.topic}
                   </span>
                 )}
@@ -2831,7 +2831,7 @@ export default function KaelixoApp() {
                   messageId: "",
                 });
               }}
-              className="md:hidden p-1.5 rounded-xl text-neutral-300 hover:text-white hover:bg-neutral-800 transition cursor-pointer"
+              className="md:hidden p-1.5 rounded-xl text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition cursor-pointer"
               title="Huddle"
             >
               <Headphones className="w-5 h-5" />

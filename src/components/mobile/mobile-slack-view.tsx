@@ -140,7 +140,7 @@ export function MobileSlackView({
   );
 
   return (
-    <div className="flex flex-col h-screen w-full bg-[#121517] text-neutral-100 select-none overflow-hidden">
+    <div className="flex flex-col h-screen w-full bg-white dark:bg-[#121517] text-neutral-900 dark:text-neutral-100 select-none overflow-hidden">
       {/* =========================================================================
           TOP MOBILE BRANDED HEADER (Slack Forest Green / Branded Bar)
           ========================================================================= */}
@@ -268,12 +268,12 @@ export function MobileSlackView({
             1. HOME TAB (Channels, DMs, Apps matching Screenshot 1)
             ------------------------------------------------------------------- */}
         {activeTab === "home" && (
-          <div className="divide-y divide-neutral-800/80">
+          <div className="divide-y divide-neutral-200 dark:divide-neutral-800/80">
             {/* Channels Section */}
             <div className="py-2">
               <div
                 onClick={() => setIsChannelsExpanded(!isChannelsExpanded)}
-                className="flex items-center justify-between px-4 py-2 cursor-pointer text-neutral-300 hover:text-white"
+                className="flex items-center justify-between px-4 py-2 cursor-pointer text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white"
               >
                 <div className="flex items-center space-x-2">
                   <ChevronDown
@@ -295,14 +295,14 @@ export function MobileSlackView({
                         onClick={() => onSelectChannel(c.id)}
                         className={`flex items-center space-x-3 px-3 py-2.5 rounded-xl cursor-pointer transition ${
                           isActive
-                            ? "bg-neutral-800/80 text-white font-semibold"
-                            : "text-neutral-300 hover:bg-neutral-800/50 hover:text-white"
+                            ? "bg-neutral-200/80 dark:bg-neutral-800/80 text-neutral-900 dark:text-white font-semibold"
+                            : "text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800/50 hover:text-neutral-900 dark:hover:text-white"
                         }`}
                       >
                         {c.isPrivate ? (
-                          <Lock className="w-4 h-4 text-neutral-400 flex-shrink-0" />
+                          <Lock className="w-4 h-4 text-neutral-500 dark:text-neutral-400 flex-shrink-0" />
                         ) : (
-                          <Hash className="w-4 h-4 text-neutral-400 flex-shrink-0" />
+                          <Hash className="w-4 h-4 text-neutral-500 dark:text-neutral-400 flex-shrink-0" />
                         )}
                         <span className="text-sm tracking-tight truncate flex-1">
                           {c.name}
@@ -314,7 +314,7 @@ export function MobileSlackView({
                   {/* + Add Channel Button */}
                   <div
                     onClick={onOpenNewChannelModal}
-                    className="flex items-center space-x-3 px-3 py-2.5 text-neutral-400 hover:text-white cursor-pointer transition rounded-xl hover:bg-neutral-800/50"
+                    className="flex items-center space-x-3 px-3 py-2.5 text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white cursor-pointer transition rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-800/50"
                   >
                     <Plus className="w-4 h-4" />
                     <span className="text-sm">Add channel</span>
@@ -327,16 +327,16 @@ export function MobileSlackView({
             <div className="py-2">
               <div
                 onClick={() => setIsDmsExpanded(!isDmsExpanded)}
-                className="flex items-center justify-between px-4 py-2 cursor-pointer text-neutral-300 hover:text-white"
+                className="flex items-center justify-between px-4 py-2 cursor-pointer text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white"
               >
                 <div className="flex items-center space-x-2">
-                  <MessageCircle className="w-4 h-4 text-neutral-400" />
+                  <MessageCircle className="w-4 h-4 text-neutral-500 dark:text-neutral-400" />
                   <span className="text-sm font-semibold tracking-wide">
                     Direct messages
                   </span>
                 </div>
                 <ChevronDown
-                  className={`w-4 h-4 text-neutral-400 transition-transform duration-200 ${
+                  className={`w-4 h-4 text-neutral-500 dark:text-neutral-400 transition-transform duration-200 ${
                     isDmsExpanded ? "" : "-rotate-90"
                   }`}
                 />
@@ -347,15 +347,15 @@ export function MobileSlackView({
                   {/* Current User (You) */}
                   <div
                     onClick={() => onSelectDirectMessage(currentUser)}
-                    className="flex items-center space-x-3 px-3 py-2 rounded-xl cursor-pointer hover:bg-neutral-800/50 transition text-neutral-300 hover:text-white"
+                    className="flex items-center space-x-3 px-3 py-2 rounded-xl cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-800/50 transition text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white"
                   >
                     <div className="relative flex-shrink-0">
                       <img
                         src={currentUser.avatar}
                         alt={currentUser.name}
-                        className="w-7 h-7 rounded-xl object-cover bg-neutral-800"
+                        className="w-7 h-7 rounded-xl object-cover bg-neutral-200 dark:bg-neutral-800"
                       />
-                      <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-[#121517]" />
+                      <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-[#121517]" />
                     </div>
                     <span className="text-sm truncate">
                       {currentUser.name} <span className="text-neutral-500 text-xs">(you)</span>
@@ -369,18 +369,18 @@ export function MobileSlackView({
                       <div
                         key={member.id}
                         onClick={() => onSelectDirectMessage(member)}
-                        className="flex items-center justify-between px-3 py-2 rounded-xl cursor-pointer hover:bg-neutral-800/50 transition text-neutral-300 hover:text-white"
+                        className="flex items-center justify-between px-3 py-2 rounded-xl cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-800/50 transition text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white"
                       >
                         <div className="flex items-center space-x-3 min-w-0">
                           <div className="relative flex-shrink-0">
                             <img
                               src={member.avatar}
                               alt={member.name}
-                              className="w-7 h-7 rounded-xl object-cover bg-neutral-800"
+                              className="w-7 h-7 rounded-xl object-cover bg-neutral-200 dark:bg-neutral-800"
                             />
                             <span
-                              className={`absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full ring-2 ring-[#121517] ${
-                                online ? "bg-emerald-500" : "bg-neutral-500"
+                              className={`absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full ring-2 ring-white dark:ring-[#121517] ${
+                                online ? "bg-emerald-500" : "bg-neutral-400 dark:bg-neutral-500"
                               }`}
                             />
                           </div>
@@ -472,8 +472,8 @@ export function MobileSlackView({
                 onClick={() => setDmFilter("all")}
                 className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
                   dmFilter === "all"
-                    ? "bg-[#14532d] text-white border border-[#22c55e]/40 shadow-xs"
-                    : "bg-neutral-800/80 text-neutral-300 hover:text-white border border-neutral-700/60"
+                    ? "bg-emerald-600 dark:bg-[#14532d] text-white border border-emerald-500/40 dark:border-[#22c55e]/40 shadow-xs"
+                    : "bg-neutral-100 dark:bg-neutral-800/80 text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white border border-neutral-300 dark:border-neutral-700/60"
                 }`}
               >
                 All
@@ -483,8 +483,8 @@ export function MobileSlackView({
                 onClick={() => setDmFilter("unread")}
                 className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer ${
                   dmFilter === "unread"
-                    ? "bg-[#14532d] text-white border border-[#22c55e]/40 shadow-xs"
-                    : "bg-neutral-800/80 text-neutral-300 hover:text-white border border-neutral-700/60"
+                    ? "bg-emerald-600 dark:bg-[#14532d] text-white border border-emerald-500/40 dark:border-[#22c55e]/40 shadow-xs"
+                    : "bg-neutral-100 dark:bg-neutral-800/80 text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white border border-neutral-300 dark:border-neutral-700/60"
                 }`}
               >
                 <MessageSquare className="w-3.5 h-3.5" />
@@ -495,8 +495,8 @@ export function MobileSlackView({
                 onClick={() => setDmFilter("external")}
                 className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer ${
                   dmFilter === "external"
-                    ? "bg-[#14532d] text-white border border-[#22c55e]/40 shadow-xs"
-                    : "bg-neutral-800/80 text-neutral-300 hover:text-white border border-neutral-700/60"
+                    ? "bg-emerald-600 dark:bg-[#14532d] text-white border border-emerald-500/40 dark:border-[#22c55e]/40 shadow-xs"
+                    : "bg-neutral-100 dark:bg-neutral-800/80 text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white border border-neutral-300 dark:border-neutral-700/60"
                 }`}
               >
                 <Building2 className="w-3.5 h-3.5" />
@@ -505,7 +505,7 @@ export function MobileSlackView({
             </div>
 
             {/* Rich DM Conversations List */}
-            <div className="divide-y divide-neutral-800/60">
+            <div className="divide-y divide-neutral-200 dark:divide-neutral-800/60">
               {otherMembers.map((member) => {
                 const snippet = getDmSnippet(member);
                 const online = isUserOnline(member);
@@ -513,18 +513,18 @@ export function MobileSlackView({
                   <div
                     key={member.id}
                     onClick={() => onSelectDirectMessage(member)}
-                    className="flex items-start space-x-3 px-4 py-3 hover:bg-neutral-800/40 transition cursor-pointer"
+                    className="flex items-start space-x-3 px-4 py-3 hover:bg-neutral-100/70 dark:hover:bg-neutral-800/40 transition cursor-pointer"
                   >
                     {/* Avatar with Status Dot */}
                     <div className="relative flex-shrink-0 mt-0.5">
                       <img
                         src={member.avatar}
                         alt={member.name}
-                        className="w-10 h-10 rounded-2xl object-cover bg-neutral-800"
+                        className="w-10 h-10 rounded-2xl object-cover bg-neutral-200 dark:bg-neutral-800"
                       />
                       <span
-                        className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full ring-2 ring-[#121517] ${
-                          online ? "bg-emerald-500" : "bg-neutral-500"
+                        className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full ring-2 ring-white dark:ring-[#121517] ${
+                          online ? "bg-emerald-500" : "bg-neutral-400 dark:bg-neutral-500"
                         }`}
                       />
                     </div>
@@ -532,11 +532,11 @@ export function MobileSlackView({
                     {/* Middle: Name + Snippet */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-0.5">
-                        <h3 className="font-semibold text-sm text-neutral-100 truncate">
+                        <h3 className="font-semibold text-sm text-neutral-900 dark:text-neutral-100 truncate">
                           {member.name}
                         </h3>
                         <div className="flex items-center space-x-2">
-                          <span className="text-[11px] text-neutral-400">
+                          <span className="text-[11px] text-neutral-500 dark:text-neutral-400">
                             {snippet ? "2h" : "active"}
                           </span>
                           {onRemoveMember && canRemoveMember(currentUser, member).allowed && (
@@ -548,7 +548,7 @@ export function MobileSlackView({
                                   onRemoveMember(member.id);
                                 }
                               }}
-                              className="p-1 text-neutral-500 hover:text-rose-400 rounded hover:bg-neutral-800 transition cursor-pointer"
+                              className="p-1 text-neutral-400 hover:text-rose-500 rounded hover:bg-neutral-200 dark:hover:bg-neutral-800 transition cursor-pointer"
                               title={`Remove ${member.name}`}
                             >
                               <Trash2 className="w-3.5 h-3.5" />
@@ -559,22 +559,22 @@ export function MobileSlackView({
 
                       {snippet ? (
                         snippet.attachments && snippet.attachments.length > 0 ? (
-                          <div className="mt-1 flex items-center space-x-2 bg-neutral-800/80 border border-neutral-700/70 px-2.5 py-1 rounded-xl max-w-fit">
-                            <FileText className="w-4 h-4 text-rose-400" />
-                            <span className="text-xs text-neutral-200 font-medium truncate max-w-[170px]">
+                          <div className="mt-1 flex items-center space-x-2 bg-neutral-100 dark:bg-neutral-800/80 border border-neutral-200 dark:border-neutral-700/70 px-2.5 py-1 rounded-xl max-w-fit">
+                            <FileText className="w-4 h-4 text-rose-500 dark:text-rose-400" />
+                            <span className="text-xs text-neutral-800 dark:text-neutral-200 font-medium truncate max-w-[170px]">
                               {snippet.attachments[0].name}
                             </span>
-                            <span className="text-[10px] text-neutral-400">
+                            <span className="text-[10px] text-neutral-500 dark:text-neutral-400">
                               pdf
                             </span>
                           </div>
                         ) : (
-                          <p className="text-xs text-neutral-400 truncate">
+                          <p className="text-xs text-neutral-600 dark:text-neutral-400 truncate">
                             {snippet.content || "Started a conversation"}
                           </p>
                         )
                       ) : (
-                        <p className="text-xs text-neutral-500 truncate">
+                        <p className="text-xs text-neutral-500 dark:text-neutral-500 truncate">
                           {member.role || "Member"} • {member.department}
                         </p>
                       )}
@@ -591,14 +591,14 @@ export function MobileSlackView({
             ------------------------------------------------------------------- */}
         {activeTab === "activity" && (
           <div className="p-4">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-neutral-400 mb-3">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 mb-3">
               Recent Notifications
             </h2>
             {notifications.length === 0 ? (
-              <div className="py-12 text-center text-neutral-500">
-                <Bell className="w-10 h-10 mx-auto mb-2 text-neutral-600" />
-                <p className="text-sm font-medium">All caught up!</p>
-                <p className="text-xs text-neutral-500 mt-1">
+              <div className="py-12 text-center text-neutral-500 dark:text-neutral-400">
+                <Bell className="w-10 h-10 mx-auto mb-2 text-neutral-400 dark:text-neutral-600" />
+                <p className="text-sm font-medium text-neutral-800 dark:text-neutral-200">All caught up!</p>
+                <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
                   You have no unread notifications or mentions.
                 </p>
               </div>
@@ -607,14 +607,14 @@ export function MobileSlackView({
                 {notifications.map((n) => (
                   <div
                     key={n.id}
-                    className="p-3 bg-neutral-800/60 rounded-xl border border-neutral-800 flex items-start space-x-3"
+                    className="p-3 bg-neutral-100 dark:bg-neutral-800/60 rounded-xl border border-neutral-200 dark:border-neutral-800 flex items-start space-x-3 shadow-xs"
                   >
-                    <Bell className="w-4 h-4 text-indigo-400 mt-0.5 flex-shrink-0" />
+                    <Bell className="w-4 h-4 text-indigo-600 dark:text-indigo-400 mt-0.5 flex-shrink-0" />
                     <div>
-                      <p className="text-xs font-semibold text-neutral-200">
+                      <p className="text-xs font-semibold text-neutral-900 dark:text-neutral-200">
                         {n.senderName || "New notification"} • #{n.channelName || "general"}
                       </p>
-                      <p className="text-xs text-neutral-400 mt-0.5">
+                      <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">
                         {n.content}
                       </p>
                     </div>
@@ -637,13 +637,13 @@ export function MobileSlackView({
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search messages, channels, or files..."
-                className="w-full pl-9 pr-3 py-2 bg-neutral-800/80 border border-neutral-700/80 rounded-xl text-sm text-neutral-100 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full pl-9 pr-3 py-2 bg-neutral-100 dark:bg-neutral-800/80 border border-neutral-300 dark:border-neutral-700/80 rounded-xl text-sm text-neutral-900 dark:text-neutral-100 placeholder-neutral-500 dark:placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
             </div>
 
             <div className="space-y-4">
               <div>
-                <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-wider mb-2">
+                <h3 className="text-xs font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider mb-2">
                   Matching Channels
                 </h3>
                 <div className="space-y-1">
@@ -656,9 +656,9 @@ export function MobileSlackView({
                       <div
                         key={c.id}
                         onClick={() => onSelectChannel(c.id)}
-                        className="p-2.5 bg-neutral-800/40 rounded-xl flex items-center space-x-2 text-sm text-neutral-200 cursor-pointer hover:bg-neutral-800"
+                        className="p-2.5 bg-neutral-100 dark:bg-neutral-800/40 rounded-xl flex items-center space-x-2 text-sm text-neutral-800 dark:text-neutral-200 cursor-pointer hover:bg-neutral-200/80 dark:hover:bg-neutral-800 transition"
                       >
-                        <Hash className="w-4 h-4 text-neutral-400" />
+                        <Hash className="w-4 h-4 text-neutral-500 dark:text-neutral-400" />
                         <span>{c.name}</span>
                       </div>
                     ))}
@@ -666,7 +666,7 @@ export function MobileSlackView({
               </div>
 
               <div>
-                <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-wider mb-2">
+                <h3 className="text-xs font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider mb-2">
                   People
                 </h3>
                 <div className="space-y-1">
@@ -679,7 +679,7 @@ export function MobileSlackView({
                       <div
                         key={m.id}
                         onClick={() => onSelectDirectMessage(m)}
-                        className="p-2.5 bg-neutral-800/40 rounded-xl flex items-center space-x-3 text-sm text-neutral-200 cursor-pointer hover:bg-neutral-800"
+                        className="p-2.5 bg-neutral-100 dark:bg-neutral-800/40 rounded-xl flex items-center space-x-3 text-sm text-neutral-800 dark:text-neutral-200 cursor-pointer hover:bg-neutral-200/80 dark:hover:bg-neutral-800 transition"
                       >
                         <img
                           src={m.avatar}
@@ -701,16 +701,16 @@ export function MobileSlackView({
         {activeTab === "more" && (
           <div className="p-4 space-y-4">
             {/* Options List matching Screenshot 3 */}
-            <div className="bg-neutral-800/50 border border-neutral-800 rounded-2xl divide-y divide-neutral-800/80 overflow-hidden">
+            <div className="bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-200 dark:border-neutral-800 rounded-2xl divide-y divide-neutral-200 dark:divide-neutral-800/80 overflow-hidden shadow-xs">
               {/* Files */}
               <div
                 onClick={onOpenPreferences}
-                className="flex items-start space-x-3 p-4 hover:bg-neutral-800 transition cursor-pointer"
+                className="flex items-start space-x-3 p-4 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition cursor-pointer"
               >
-                <FileText className="w-5 h-5 text-neutral-300 mt-0.5 flex-shrink-0" />
+                <FileText className="w-5 h-5 text-neutral-500 dark:text-neutral-300 mt-0.5 flex-shrink-0" />
                 <div className="flex-1">
-                  <h3 className="text-sm font-semibold text-neutral-100">Files</h3>
-                  <p className="text-xs text-neutral-400 mt-0.5">
+                  <h3 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">Files</h3>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
                     Browse your canvases, lists and attachments
                   </p>
                 </div>
@@ -719,19 +719,19 @@ export function MobileSlackView({
               {/* External Connections [PRO] */}
               <div
                 onClick={onOpenInviteModal}
-                className="flex items-start space-x-3 p-4 hover:bg-neutral-800 transition cursor-pointer"
+                className="flex items-start space-x-3 p-4 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition cursor-pointer"
               >
-                <Building2 className="w-5 h-5 text-neutral-300 mt-0.5 flex-shrink-0" />
+                <Building2 className="w-5 h-5 text-neutral-500 dark:text-neutral-300 mt-0.5 flex-shrink-0" />
                 <div className="flex-1">
                   <div className="flex items-center space-x-2">
-                    <h3 className="text-sm font-semibold text-neutral-100">
+                    <h3 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">
                       External connections
                     </h3>
-                    <span className="px-1.5 py-0.5 rounded bg-purple-900/60 border border-purple-500/40 text-[10px] font-bold text-purple-300 uppercase">
+                    <span className="px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 dark:bg-purple-900/60 border border-purple-200 dark:border-purple-500/40 text-[10px] font-bold dark:text-purple-300 uppercase">
                       PRO
                     </span>
                   </div>
-                  <p className="text-xs text-neutral-400 mt-0.5">
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
                     Work with people from other organisations
                   </p>
                 </div>
@@ -740,14 +740,14 @@ export function MobileSlackView({
               {/* Member Directory */}
               <div
                 onClick={onOpenMemberDirectory}
-                className="flex items-start space-x-3 p-4 hover:bg-neutral-800 transition cursor-pointer"
+                className="flex items-start space-x-3 p-4 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition cursor-pointer"
               >
-                <Users className="w-5 h-5 text-neutral-300 mt-0.5 flex-shrink-0" />
+                <Users className="w-5 h-5 text-neutral-500 dark:text-neutral-300 mt-0.5 flex-shrink-0" />
                 <div className="flex-1">
-                  <h3 className="text-sm font-semibold text-neutral-100">
+                  <h3 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">
                     Member Directory
                   </h3>
-                  <p className="text-xs text-neutral-400 mt-0.5">
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
                     View team roles, departments and contact info
                   </p>
                 </div>
@@ -756,14 +756,14 @@ export function MobileSlackView({
               {/* Preferences & Appearance */}
               <div
                 onClick={onOpenPreferences}
-                className="flex items-start space-x-3 p-4 hover:bg-neutral-800 transition cursor-pointer"
+                className="flex items-start space-x-3 p-4 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition cursor-pointer"
               >
-                <Settings className="w-5 h-5 text-neutral-300 mt-0.5 flex-shrink-0" />
+                <Settings className="w-5 h-5 text-neutral-500 dark:text-neutral-300 mt-0.5 flex-shrink-0" />
                 <div className="flex-1">
-                  <h3 className="text-sm font-semibold text-neutral-100">
+                  <h3 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">
                     Preferences & Themes
                   </h3>
-                  <p className="text-xs text-neutral-400 mt-0.5">
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
                     Dark mode, notifications, language & sounds
                   </p>
                 </div>
@@ -772,14 +772,14 @@ export function MobileSlackView({
               {/* Arcade / Games */}
               <div
                 onClick={onOpenGamesModal}
-                className="flex items-start space-x-3 p-4 hover:bg-neutral-800 transition cursor-pointer"
+                className="flex items-start space-x-3 p-4 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition cursor-pointer"
               >
-                <Gamepad2 className="w-5 h-5 text-emerald-400 mt-0.5 flex-shrink-0" />
+                <Gamepad2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 mt-0.5 flex-shrink-0" />
                 <div className="flex-1">
-                  <h3 className="text-sm font-semibold text-neutral-100">
+                  <h3 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">
                     Team Games & Arcade
                   </h3>
-                  <p className="text-xs text-neutral-400 mt-0.5">
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
                     Play multiplayer mini-games during team breaks
                   </p>
                 </div>
@@ -856,18 +856,18 @@ export function MobileSlackView({
       {/* =========================================================================
           FIXED MOBILE BOTTOM TAB NAVIGATION BAR (Home, DMs, Activity, Search, More)
           ========================================================================= */}
-      <nav className="fixed bottom-0 inset-x-0 bg-[#121517] border-t border-neutral-800/90 h-16 z-40 px-2 flex items-center justify-around select-none">
+      <nav className="fixed bottom-0 inset-x-0 bg-white dark:bg-[#121517] border-t border-neutral-200 dark:border-neutral-800/90 h-16 z-40 px-2 flex items-center justify-around select-none">
         {/* Home */}
         <button
           type="button"
           onClick={() => onChangeTab("home")}
           className={`flex flex-col items-center justify-center flex-1 py-1 transition cursor-pointer ${
-            activeTab === "home" ? "text-white" : "text-neutral-400 hover:text-neutral-200"
+            activeTab === "home" ? "text-emerald-800 dark:text-white font-semibold" : "text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-200"
           }`}
         >
           <div
             className={`flex items-center justify-center px-4 py-1 rounded-full transition ${
-              activeTab === "home" ? "bg-[#14532d]" : ""
+              activeTab === "home" ? "bg-emerald-100 text-emerald-800 dark:bg-[#14532d] dark:text-white" : ""
             }`}
           >
             <HomeIcon className="w-5 h-5" />
@@ -880,12 +880,12 @@ export function MobileSlackView({
           type="button"
           onClick={() => onChangeTab("dms")}
           className={`flex flex-col items-center justify-center flex-1 py-1 transition cursor-pointer ${
-            activeTab === "dms" ? "text-white" : "text-neutral-400 hover:text-neutral-200"
+            activeTab === "dms" ? "text-emerald-800 dark:text-white font-semibold" : "text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-200"
           }`}
         >
           <div
             className={`flex items-center justify-center px-4 py-1 rounded-full transition ${
-              activeTab === "dms" ? "bg-[#14532d]" : ""
+              activeTab === "dms" ? "bg-emerald-100 text-emerald-800 dark:bg-[#14532d] dark:text-white" : ""
             }`}
           >
             <MessageSquare className="w-5 h-5" />
@@ -898,12 +898,12 @@ export function MobileSlackView({
           type="button"
           onClick={() => onChangeTab("activity")}
           className={`flex flex-col items-center justify-center flex-1 py-1 transition cursor-pointer relative ${
-            activeTab === "activity" ? "text-white" : "text-neutral-400 hover:text-neutral-200"
+            activeTab === "activity" ? "text-emerald-800 dark:text-white font-semibold" : "text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-200"
           }`}
         >
           <div
             className={`flex items-center justify-center px-4 py-1 rounded-full transition ${
-              activeTab === "activity" ? "bg-[#14532d]" : ""
+              activeTab === "activity" ? "bg-emerald-100 text-emerald-800 dark:bg-[#14532d] dark:text-white" : ""
             }`}
           >
             <Bell className="w-5 h-5" />
@@ -919,12 +919,12 @@ export function MobileSlackView({
           type="button"
           onClick={() => onChangeTab("search")}
           className={`flex flex-col items-center justify-center flex-1 py-1 transition cursor-pointer ${
-            activeTab === "search" ? "text-white" : "text-neutral-400 hover:text-neutral-200"
+            activeTab === "search" ? "text-emerald-800 dark:text-white font-semibold" : "text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-200"
           }`}
         >
           <div
             className={`flex items-center justify-center px-4 py-1 rounded-full transition ${
-              activeTab === "search" ? "bg-[#14532d]" : ""
+              activeTab === "search" ? "bg-emerald-100 text-emerald-800 dark:bg-[#14532d] dark:text-white" : ""
             }`}
           >
             <Search className="w-5 h-5" />
@@ -937,12 +937,12 @@ export function MobileSlackView({
           type="button"
           onClick={() => onChangeTab("more")}
           className={`flex flex-col items-center justify-center flex-1 py-1 transition cursor-pointer ${
-            activeTab === "more" ? "text-white" : "text-neutral-400 hover:text-neutral-200"
+            activeTab === "more" ? "text-emerald-800 dark:text-white font-semibold" : "text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-200"
           }`}
         >
           <div
             className={`flex items-center justify-center px-4 py-1 rounded-full transition ${
-              activeTab === "more" ? "bg-[#14532d]" : ""
+              activeTab === "more" ? "bg-emerald-100 text-emerald-800 dark:bg-[#14532d] dark:text-white" : ""
             }`}
           >
             <MoreHorizontal className="w-5 h-5" />

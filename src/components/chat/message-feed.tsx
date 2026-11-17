@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { Message, WorkspaceMember, reactionsMapToArray } from "@/types";
-import { Pin, MessageSquare, MoreHorizontal, Check, SmilePlus, Pencil, Trash2, ArrowDown, ChevronDown } from "lucide-react";
+import { Pin, MessageSquare, Copy, Check, SmilePlus, Pencil, Trash2, ArrowDown, ChevronDown } from "lucide-react";
 import { AttachmentPreview } from "./attachment-preview";
 import { EmojiPicker } from "./emoji-picker";
 import { DeleteMessageModal } from "@/components/modals/delete-message-modal";
@@ -292,13 +292,13 @@ export function MessageFeed({
     const parseLine = (raw: string): string => {
       let out = raw;
       if (out.startsWith("### ")) {
-        return `<h3 class="text-sm font-bold text-white mt-1">${out.slice(4)}</h3>`;
+        return `<h3 class="text-sm font-bold text-neutral-900 dark:text-white mt-1">${out.slice(4)}</h3>`;
       }
       if (out.startsWith("## ")) {
-        return `<h2 class="text-base font-bold text-white mt-1.5">${out.slice(3)}</h2>`;
+        return `<h2 class="text-base font-bold text-neutral-900 dark:text-white mt-1.5">${out.slice(3)}</h2>`;
       }
       if (out.startsWith("# ")) {
-        return `<h1 class="text-lg font-extrabold text-white mt-2">${out.slice(2)}</h1>`;
+        return `<h1 class="text-lg font-extrabold text-neutral-900 dark:text-white mt-2">${out.slice(2)}</h1>`;
       }
       if (out.startsWith("> ")) {
         return `<blockquote class="border-l-2 border-indigo-500 pl-2.5 my-1 text-neutral-400 italic">${out.slice(2)}</blockquote>`;
@@ -795,12 +795,12 @@ export function MessageFeed({
                     type="button"
                     onClick={() => handleCopy(msg.id, msg.content)}
                     className="p-1 hover:bg-neutral-100 dark:hover:bg-neutral-700 rounded-lg text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 transition cursor-pointer"
-                    title="Copy message"
+                    title={copiedId === msg.id ? "Copied!" : "Copy message"}
                   >
                     {copiedId === msg.id ? (
                       <Check className="w-4 h-4 text-emerald-500" />
                     ) : (
-                      <MoreHorizontal className="w-4 h-4" />
+                      <Copy className="w-4 h-4" />
                     )}
                   </button>
                 </div>

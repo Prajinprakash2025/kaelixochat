@@ -438,7 +438,7 @@ export function ChatInput({
 
   return (
     <div
-      className="p-2 md:p-4 border-t border-[#1e2227] md:border-neutral-200 md:dark:border-neutral-800 bg-[#121517] md:bg-white md:dark:bg-neutral-900/70 relative"
+      className="p-2 md:p-4 border-t border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900/70 relative"
       onDragEnter={handleDragEnter}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
@@ -517,7 +517,7 @@ export function ChatInput({
             {stagedFiles.map((item) => (
               <div
                 key={item.id}
-                className="flex items-center space-x-1.5 px-2 py-1 rounded-xl bg-[#1e2227] border border-[#2d3239] text-xs text-neutral-200 shadow-xs"
+                className="flex items-center space-x-1.5 px-2 py-1 rounded-xl bg-neutral-100 dark:bg-[#1e2227] border border-neutral-200 dark:border-[#2d3239] text-xs text-neutral-800 dark:text-neutral-200 shadow-xs"
               >
                 {item.previewUrl && item.category === "image" ? (
                   <img src={item.previewUrl} alt={item.name} className="w-5 h-5 rounded object-cover" />
@@ -541,11 +541,11 @@ export function ChatInput({
 
         {/* Collapsible Mobile Formatting Bar (Toggled via Aa button) */}
         {showFormatting && (
-          <div className="flex items-center space-x-1 py-1.5 px-2 bg-[#1a1d21] border border-neutral-800 rounded-xl overflow-x-auto no-scrollbar text-neutral-300 shadow-md">
+          <div className="flex items-center space-x-1 py-1.5 px-2 bg-neutral-100 dark:bg-[#1a1d21] border border-neutral-200 dark:border-neutral-800 rounded-xl overflow-x-auto no-scrollbar text-neutral-700 dark:text-neutral-300 shadow-md">
             <button
               type="button"
               onClick={() => insertFormatting("**", "**", "bold text")}
-              className="p-1.5 hover:bg-neutral-800 rounded-lg transition cursor-pointer"
+              className="p-1.5 hover:bg-neutral-200 dark:hover:bg-neutral-800 rounded-lg transition cursor-pointer"
               title="Bold"
             >
               <Bold className="w-4 h-4" />
@@ -553,7 +553,7 @@ export function ChatInput({
             <button
               type="button"
               onClick={() => insertFormatting("*", "*", "italic text")}
-              className="p-1.5 hover:bg-neutral-800 rounded-lg transition cursor-pointer"
+              className="p-1.5 hover:bg-neutral-200 dark:hover:bg-neutral-800 rounded-lg transition cursor-pointer"
               title="Italic"
             >
               <Italic className="w-4 h-4" />
@@ -561,7 +561,7 @@ export function ChatInput({
             <button
               type="button"
               onClick={() => insertFormatting("<u>", "</u>", "underline text")}
-              className="p-1.5 hover:bg-neutral-800 rounded-lg transition cursor-pointer"
+              className="p-1.5 hover:bg-neutral-200 dark:hover:bg-neutral-800 rounded-lg transition cursor-pointer"
               title="Underline"
             >
               <Underline className="w-4 h-4" />
@@ -569,7 +569,7 @@ export function ChatInput({
             <button
               type="button"
               onClick={() => insertFormatting("~", "~", "strikethrough text")}
-              className="p-1.5 hover:bg-neutral-800 rounded-lg transition cursor-pointer"
+              className="p-1.5 hover:bg-neutral-200 dark:hover:bg-neutral-800 rounded-lg transition cursor-pointer"
               title="Strikethrough"
             >
               <Strikethrough className="w-4 h-4" />
@@ -577,7 +577,7 @@ export function ChatInput({
             <button
               type="button"
               onClick={() => insertFormatting("`", "`", "code")}
-              className="p-1.5 hover:bg-neutral-800 rounded-lg transition cursor-pointer"
+              className="p-1.5 hover:bg-neutral-200 dark:hover:bg-neutral-800 rounded-lg transition cursor-pointer"
               title="Code"
             >
               <Code className="w-4 h-4" />
@@ -585,7 +585,7 @@ export function ChatInput({
             <button
               type="button"
               onClick={() => insertFormatting("```\n", "\n```", "code block")}
-              className="p-1.5 hover:bg-neutral-800 rounded-lg transition cursor-pointer"
+              className="p-1.5 hover:bg-neutral-200 dark:hover:bg-neutral-800 rounded-lg transition cursor-pointer"
               title="Code Block"
             >
               <SquareCode className="w-4 h-4" />
@@ -593,7 +593,7 @@ export function ChatInput({
             <button
               type="button"
               onClick={() => insertFormatting("> ", "", "quote")}
-              className="p-1.5 hover:bg-neutral-800 rounded-lg transition cursor-pointer"
+              className="p-1.5 hover:bg-neutral-200 dark:hover:bg-neutral-800 rounded-lg transition cursor-pointer"
               title="Quote"
             >
               <Quote className="w-4 h-4" />
@@ -601,7 +601,7 @@ export function ChatInput({
             <button
               type="button"
               onClick={() => insertFormatting("• ", "", "list item")}
-              className="p-1.5 hover:bg-neutral-800 rounded-lg transition cursor-pointer"
+              className="p-1.5 hover:bg-neutral-200 dark:hover:bg-neutral-800 rounded-lg transition cursor-pointer"
               title="Bullet"
             >
               <List className="w-4 h-4" />
@@ -609,7 +609,7 @@ export function ChatInput({
             <button
               type="button"
               onClick={handleInsertLink}
-              className="p-1.5 hover:bg-neutral-800 rounded-lg transition cursor-pointer"
+              className="p-1.5 hover:bg-neutral-200 dark:hover:bg-neutral-800 rounded-lg transition cursor-pointer"
               title="Link"
             >
               <Link2 className="w-4 h-4" />
@@ -618,14 +618,14 @@ export function ChatInput({
         )}
 
         {/* Mobile Input Row matching Slack Mobile Screenshot */}
-        <div className="relative flex items-center bg-[#1a1d21] border border-neutral-800/90 rounded-2xl px-2 py-1 shadow-sm focus-within:border-neutral-700">
+        <div className="relative flex items-center bg-neutral-100 dark:bg-[#1a1d21] border border-neutral-200 dark:border-neutral-800/90 rounded-2xl px-2 py-1 shadow-xs focus-within:border-indigo-500 dark:focus-within:border-neutral-700">
           {/* Left Slack-Style Quick Action Buttons */}
-          <div className="flex items-center space-x-1.5 text-neutral-400 flex-shrink-0">
+          <div className="flex items-center space-x-1.5 text-neutral-500 dark:text-neutral-400 flex-shrink-0">
             {/* (+) Add Attachment Button */}
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="w-7 h-7 rounded-full bg-neutral-800/90 hover:bg-neutral-700 flex items-center justify-center text-neutral-300 transition active:scale-95 cursor-pointer"
+              className="w-7 h-7 rounded-full bg-neutral-200 dark:bg-neutral-800/90 hover:bg-neutral-300 dark:hover:bg-neutral-700 flex items-center justify-center text-neutral-600 dark:text-neutral-300 transition active:scale-95 cursor-pointer"
               title="Add attachment"
             >
               <Plus className="w-4 h-4 stroke-[2.5]" />
@@ -638,7 +638,7 @@ export function ChatInput({
               className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs tracking-tight transition cursor-pointer ${
                 showFormatting
                   ? "bg-emerald-950 text-emerald-400 border border-emerald-600/40"
-                  : "text-neutral-400 hover:text-white"
+                  : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white"
               }`}
               title="Formatting"
             >
@@ -651,8 +651,8 @@ export function ChatInput({
               onClick={() => setShowEmojiPicker(!showEmojiPicker)}
               className={`w-7 h-7 rounded-lg flex items-center justify-center transition cursor-pointer ${
                 showEmojiPicker
-                  ? "text-emerald-400"
-                  : "text-neutral-400 hover:text-white"
+                  ? "text-emerald-500 dark:text-emerald-400"
+                  : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white"
               }`}
               title="Emoji"
             >
@@ -663,7 +663,7 @@ export function ChatInput({
             <button
               type="button"
               onClick={() => insertFormatting("@", "", "colleague")}
-              className="w-7 h-7 rounded-lg flex items-center justify-center text-neutral-400 hover:text-white transition cursor-pointer"
+              className="w-7 h-7 rounded-lg flex items-center justify-center text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition cursor-pointer"
               title="Mention"
             >
               <AtSign className="w-4 h-4" />
@@ -676,7 +676,7 @@ export function ChatInput({
                 setContent((prev) => (prev.startsWith("/") ? prev : "/" + prev));
                 mobileTextareaRef.current?.focus();
               }}
-              className="w-5 h-5 rounded border border-neutral-600/80 flex items-center justify-center text-[10px] font-mono font-bold text-neutral-400 hover:text-white transition cursor-pointer"
+              className="w-5 h-5 rounded border border-neutral-300 dark:border-neutral-600/80 flex items-center justify-center text-[10px] font-mono font-bold text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition cursor-pointer"
               title="Shortcuts"
             >
               /
@@ -700,7 +700,7 @@ export function ChatInput({
               placeholder={placeholderText}
               rows={1}
               disabled={disabled}
-              className="w-full bg-transparent text-[14px] leading-snug text-neutral-100 placeholder-neutral-500 focus:outline-none resize-none font-sans min-h-[28px] max-h-24 py-1"
+              className="w-full bg-transparent text-[14px] leading-snug text-neutral-900 dark:text-neutral-100 placeholder-neutral-400 dark:placeholder-neutral-500 focus:outline-none resize-none font-sans min-h-[28px] max-h-24 py-1"
             />
           </div>
 
