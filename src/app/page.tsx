@@ -1034,7 +1034,11 @@ export default function KaelixoApp() {
         const { data: dbOrgs } = await supabase.from("organizations").select("*");
         if (dbOrgs && dbOrgs.length > 0) {
           setOrganizations(dbOrgs);
-          setActiveOrg(dbOrgs[0]);
+          setActiveOrg((prev) => {
+            const currentId = prev?.id || "11111111-1111-1111-1111-111111111111";
+            const match = dbOrgs.find((o: any) => o.id === currentId);
+            return match || dbOrgs[0];
+          });
         }
 
         // Fetch Departments
@@ -2792,23 +2796,64 @@ export default function KaelixoApp() {
     orgId: string,
     updates: { name: string; logo_url?: string | null }
   ) => {
-    const updatedOrg = { ...activeOrg, ...updates };
+    const targetId = orgId || activeOrg.id || "11111111-1111-1111-1111-111111111111";
+    const updatedOrg: Organization = {
+      ...activeOrg,
+      id: targetId,
+      name: updates.name,
+      logo_url: updates.logo_url ?? null,
+    };
+
     setActiveOrg(updatedOrg);
-    setOrganizations((prev) =>
-      prev.map((o) => (o.id === orgId ? { ...o, ...updates } : o))
-    );
+    setOrganizations((prev) => {
+      const exists = prev.some((o) => o.id === targetId);
+      if (exists) {
+        return prev.map((o) => (o.id === targetId ? { ...o, ...updates } : o));
+      }
+      return [...prev, updatedOrg];
+    });
+
     try {
       localStorage.setItem("kaelixo_org", JSON.stringify(updatedOrg));
     } catch {}
 
+    if (typeof document !== "undefined") {
+      document.title = `${updates.name} — Enterprise Workspace`;
+    }
+
+    setActiveToast({
+      id: `org-update-${Date.now()}`,
+      senderName: "Workspace Updated",
+      content: `Workspace details updated to "${updates.name}"`,
+      channelName: activeChannel.name,
+      channelId: activeChannelId,
+      messageId: "",
+    });
+
     try {
-      await supabase
+      const { data, error } = await supabase
         .from("organizations")
         .update({
           name: updates.name,
           logo_url: updates.logo_url ?? null,
+          updated_at: new Date().toISOString(),
         })
-        .eq("id", orgId);
+        .eq("id", targetId)
+        .select();
+
+      if (error) {
+        console.warn("Direct update warning, attempting upsert:", error);
+      }
+
+      if (!data || data.length === 0) {
+        await supabase.from("organizations").upsert({
+          id: targetId,
+          name: updates.name,
+          logo_url: updates.logo_url ?? null,
+          slug: updates.name.toLowerCase().replace(/[^a-z0-9]/g, "-") || "workspace",
+          updated_at: new Date().toISOString(),
+        });
+      }
     } catch (err) {
       console.error("Failed to update organization in Supabase:", err);
     }

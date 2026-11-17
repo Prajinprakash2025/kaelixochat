@@ -148,12 +148,21 @@ export function MobileSlackView({
         {activeTab === "home" ? (
           <div className="flex items-center space-x-2.5">
             {/* Workspace Logo Squircle */}
-            <div
-              onClick={() => setShowOrgDropdown(!showOrgDropdown)}
-              className="w-8 h-8 rounded-xl bg-gradient-to-tr from-rose-500 via-indigo-600 to-amber-500 flex items-center justify-center text-white font-extrabold text-xs shadow-md cursor-pointer flex-shrink-0"
-            >
-              {activeOrg.name.charAt(0)}
-            </div>
+            {activeOrg.logo_url ? (
+              <img
+                src={activeOrg.logo_url}
+                alt={activeOrg.name}
+                onClick={() => setShowOrgDropdown(!showOrgDropdown)}
+                className="w-8 h-8 rounded-xl object-cover ring-1 ring-white/20 shadow-md cursor-pointer flex-shrink-0"
+              />
+            ) : (
+              <div
+                onClick={() => setShowOrgDropdown(!showOrgDropdown)}
+                className="w-8 h-8 rounded-xl bg-gradient-to-tr from-rose-500 via-indigo-600 to-amber-500 flex items-center justify-center text-white font-extrabold text-xs shadow-md cursor-pointer flex-shrink-0"
+              >
+                {activeOrg.name.charAt(0).toUpperCase()}
+              </div>
+            )}
             {/* Workspace Name + Dropdown Chevron */}
             <button
               type="button"

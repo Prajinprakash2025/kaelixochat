@@ -20,6 +20,7 @@ export function EditCompanyModal({
 }: EditCompanyModalProps) {
   const [name, setName] = useState(activeOrg.name);
   const [logoUrl, setLogoUrl] = useState(activeOrg.logo_url || "");
+  const [imageError, setImageError] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -29,9 +30,10 @@ export function EditCompanyModal({
     if (isOpen) {
       setName(activeOrg.name);
       setLogoUrl(activeOrg.logo_url || "");
+      setImageError(false);
       setError(null);
     }
-  }, [isOpen, activeOrg]);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -46,6 +48,7 @@ export function EditCompanyModal({
 
     setUploading(true);
     setError(null);
+    setImageError(false);
     try {
       const attachment = await uploadAttachment(file, "company-logos");
       if (attachment?.url) {
@@ -59,6 +62,7 @@ export function EditCompanyModal({
       reader.readAsDataURL(file);
     } finally {
       setUploading(false);
+      if (e.target) e.target.value = "";
     }
   };
 
@@ -151,12 +155,12 @@ export function EditCompanyModal({
             <div className="grid grid-cols-[100px_1fr] gap-4 items-center">
               {/* Logo Preview Box */}
               <div className="w-24 h-24 rounded-lg bg-neutral-100 dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 flex items-center justify-center overflow-hidden shadow-xs flex-shrink-0">
-                {logoUrl ? (
+                {logoUrl && !imageError ? (
                   <img
                     src={logoUrl}
                     alt="Company Logo Preview"
                     className="w-full h-full object-cover"
-                    onError={() => setLogoUrl("")}
+                    onError={() => setImageError(true)}
                   />
                 ) : (
                   <span className="font-extrabold text-2xl text-neutral-600 dark:text-neutral-300">
@@ -186,7 +190,10 @@ export function EditCompanyModal({
                 {logoUrl && (
                   <button
                     type="button"
-                    onClick={() => setLogoUrl("")}
+                    onClick={() => {
+                      setLogoUrl("");
+                      setImageError(false);
+                    }}
                     className="text-xs font-medium text-sky-600 dark:text-sky-400 hover:underline cursor-pointer block"
                   >
                     Remove photo
@@ -208,8 +215,11 @@ export function EditCompanyModal({
                   <button
                     key={idx}
                     type="button"
-                    onClick={() => setLogoUrl(preset)}
-                    className={`w-9 h-9 rounded-lg overflow-hidden border-2 transition cursor-pointer ${
+                    onClick={() => {
+                      setImageError(false);
+                      setLogoUrl(preset);
+                    }}
+                    className={`w-9 h-9 rounded-lg overflow-hidden border-2 transition cursor-pointer relative ${
                       logoUrl === preset ? "border-emerald-600 ring-2 ring-emerald-500/40" : "border-neutral-300 dark:border-neutral-700 hover:opacity-80"
                     }`}
                   >
