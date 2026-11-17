@@ -15,6 +15,7 @@ import {
 import { AttachmentPreview } from "./attachment-preview";
 import { EmojiPicker } from "./emoji-picker";
 import { formatReactorsTooltip } from "./message-feed";
+import { YouTubePreviews } from "./youtube-embed-card";
 import { uploadAttachment } from "@/utils/storage";
 
 export interface ThreadSidePanelProps {
@@ -144,11 +145,18 @@ export function ThreadSidePanel({
       });
     }
 
+    const formatLine = (raw: string) => {
+      let out = raw.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+      out = out.replace(/\[(.*?)\]\((https?:\/\/[^\s)]+)\)/g, "<a href='$2' target='_blank' rel='noopener noreferrer' class='text-indigo-500 dark:text-indigo-400 hover:underline font-medium break-all'>$1</a>");
+      out = out.replace(/(^|[^'">])(https?:\/\/[^\s<]+)/g, "$1<a href='$2' target='_blank' rel='noopener noreferrer' class='text-indigo-500 dark:text-indigo-400 hover:underline font-medium break-all'>$2</a>");
+      out = out.replace(/(^|[^'">/])((?:www\.)?(?:youtube\.com|youtu\.be)\/[^\s<]+)/g, "$1<a href='https://$2' target='_blank' rel='noopener noreferrer' class='text-indigo-500 dark:text-indigo-400 hover:underline font-medium break-all'>$2</a>");
+      return out;
+    };
+
     return (
       <div className="whitespace-pre-wrap leading-relaxed space-y-1">
         {content.split("\n").map((line, i) => {
-          const boldFormatted = line.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
-          return <div key={i} dangerouslySetInnerHTML={{ __html: boldFormatted }} />;
+          return <div key={i} dangerouslySetInnerHTML={{ __html: formatLine(line) }} />;
         })}
       </div>
     );
@@ -266,6 +274,11 @@ export function ThreadSidePanel({
                 <div className="text-xs text-neutral-800 dark:text-neutral-200 leading-relaxed whitespace-pre-wrap break-words">
                   {formatContent(parentMessage.content)}
                 </div>
+              )}
+
+              {/* YouTube Live Embed Previews */}
+              {parentMessage.content && (
+                <YouTubePreviews content={parentMessage.content} />
               )}
 
               {/* Attachments if any */}
@@ -403,6 +416,11 @@ export function ThreadSidePanel({
                         <div className="text-xs text-neutral-800 dark:text-neutral-200 leading-relaxed whitespace-pre-wrap break-words">
                           {formatContent(reply.content)}
                         </div>
+                      )}
+
+                      {/* YouTube Live Embed Previews */}
+                      {reply.content && (
+                        <YouTubePreviews content={reply.content} />
                       )}
 
                       {reply.attachments && reply.attachments.length > 0 && (

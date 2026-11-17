@@ -6,6 +6,7 @@ import { Pin, MessageSquare, Copy, Check, SmilePlus, Pencil, Trash2, ArrowDown, 
 import { AttachmentPreview } from "./attachment-preview";
 import { EmojiPicker } from "./emoji-picker";
 import { DeleteMessageModal } from "@/components/modals/delete-message-modal";
+import { YouTubePreviews } from "./youtube-embed-card";
 
 interface MessageFeedProps {
   messages: Message[];
@@ -313,8 +314,12 @@ export function MessageFeed({
       out = out.replace(/~(.*?)~/g, "<del class='line-through text-neutral-400'>$1</del>");
       // Inline code `code`
       out = out.replace(/`([^`]+)`/g, "<code class='px-1.5 py-0.5 rounded bg-neutral-200 dark:bg-neutral-800 text-rose-500 dark:text-rose-400 font-mono text-xs'>$1</code>");
-      // Links [text](url)
-      out = out.replace(/\[(.*?)\]\((https?:\/\/[^\s)]+)\)/g, "<a href='$2' target='_blank' rel='noopener noreferrer' class='text-indigo-400 hover:underline'>$1</a>");
+      // Markdown links [text](url)
+      out = out.replace(/\[(.*?)\]\((https?:\/\/[^\s)]+)\)/g, "<a href='$2' target='_blank' rel='noopener noreferrer' class='text-indigo-500 dark:text-indigo-400 hover:underline font-medium break-all'>$1</a>");
+      // Bare http/https URLs not already wrapped
+      out = out.replace(/(^|[^'">])(https?:\/\/[^\s<]+)/g, "$1<a href='$2' target='_blank' rel='noopener noreferrer' class='text-indigo-500 dark:text-indigo-400 hover:underline font-medium break-all'>$2</a>");
+      // Bare youtube.com or youtu.be without protocol (e.g. youtube.com/shorts/...)
+      out = out.replace(/(^|[^'">/])((?:www\.)?(?:youtube\.com|youtu\.be)\/[^\s<]+)/g, "$1<a href='https://$2' target='_blank' rel='noopener noreferrer' class='text-indigo-500 dark:text-indigo-400 hover:underline font-medium break-all'>$2</a>");
       return out;
     };
 
@@ -594,6 +599,11 @@ export function MessageFeed({
                       {formatContent(msg.content)}
                     </div>
                   )
+                )}
+
+                {/* YouTube Live Embed Previews */}
+                {!msg.isDeleted && msg.content && (
+                  <YouTubePreviews content={msg.content} />
                 )}
 
                 {/* Attachments (only if not deleted) */}
