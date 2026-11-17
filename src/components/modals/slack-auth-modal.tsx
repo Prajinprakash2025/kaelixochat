@@ -21,6 +21,7 @@ interface SlackAuthModalProps {
   onClose: () => void;
   departments: Department[];
   currentUser: WorkspaceMember;
+  teamMembers?: WorkspaceMember[];
   organizations?: Organization[];
   initialInviteCode?: string;
   onLoginSuccess: (user: WorkspaceMember, org?: Organization) => void;
@@ -67,6 +68,7 @@ export function SlackAuthModal({
   onClose,
   departments,
   currentUser,
+  teamMembers = [],
   organizations = [],
   initialInviteCode = "",
   onLoginSuccess,
@@ -362,13 +364,31 @@ export function SlackAuthModal({
 
     setLoading(true);
     const userId = authUid || currentUser.id || `user-${Date.now()}`;
-    const seed = encodeURIComponent(name.trim());
-    const avatar = `https://api.dicebear.com/7.x/bottts/svg?seed=${seed}`;
+    const cleanName = name.trim();
+    const seed = encodeURIComponent(cleanName);
+
+    // If an existing member has a verified non-bottts uploaded avatar, preserve it
+    const existingMember = teamMembers.find(
+      (m) =>
+        (m.id && m.id === userId) ||
+        (m.name && m.name.trim().toLowerCase() === cleanName.toLowerCase())
+    );
+
+    let avatar = `https://api.dicebear.com/7.x/bottts/svg?seed=${seed}`;
+    if (existingMember?.avatar && !existingMember.avatar.includes("seed=")) {
+      avatar = existingMember.avatar;
+    } else if (cleanName.toLowerCase() === "prajin prakash") {
+      avatar =
+        "https://untypucxdpgxnfezzwuo.supabase.co/storage/v1/object/public/kaelixo-attachments/avatars/user-aparna-sharma/1794211392212-IMG_20260622_000048_052.webp";
+    } else if (cleanName.toLowerCase() === "anagha") {
+      avatar =
+        "https://untypucxdpgxnfezzwuo.supabase.co/storage/v1/object/public/kaelixo-attachments/avatars/user-prajin_prakash/1794041835002-anagha_fish.png";
+    }
 
     const member: WorkspaceMember = {
-      id: userId,
-      name: name.trim(),
-      email: email.trim(),
+      id: existingMember?.id || userId,
+      name: cleanName,
+      email: email.trim() || existingMember?.email || `${cleanName.toLowerCase().replace(/\s+/g, ".")}@kaelixo.com`,
       avatar,
       role,
       department,
@@ -378,7 +398,7 @@ export function SlackAuthModal({
 
     try {
       await supabase.from("profiles").upsert({
-        id: userId,
+        id: member.id,
         email: member.email,
         full_name: member.name,
         avatar_url: member.avatar,
@@ -388,7 +408,7 @@ export function SlackAuthModal({
         const matchedDept = departments.find((d) => d.code === department);
         await supabase.from("workspace_members").upsert({
           organization_id: verifiedOrg.id,
-          user_id: userId,
+          user_id: member.id,
           department_id: matchedDept?.id,
           role: member.role,
           status_text: member.statusText,
@@ -404,13 +424,82 @@ export function SlackAuthModal({
     onClose();
   };
 
-  // Quick Demo Login switch for testing
+  // Quick Demo Login switch for testing (preserves real profile photos)
   const handleQuickDemo = (memberName: string, dept: DepartmentCode, roleVal: any) => {
-    const seed = encodeURIComponent(memberName);
+    const cleanName = memberName.trim();
+    const cleanLower = cleanName.toLowerCase();
+
+    // 1. Search teamMembers first
+    const matched = teamMembers.find(
+      (m) =>
+        (m.name && m.name.trim().toLowerCase() === cleanLower) ||
+        (m.id && m.id.toLowerCase() === `user-${cleanLower.replace(/\s+/g, "-")}`)
+    );
+
+    if (matched) {
+      let preservedAvatar = matched.avatar;
+      if (cleanLower === "prajin prakash" && (!preservedAvatar || preservedAvatar.includes("seed="))) {
+        preservedAvatar =
+          "https://untypucxdpgxnfezzwuo.supabase.co/storage/v1/object/public/kaelixo-attachments/avatars/user-aparna-sharma/1794211392212-IMG_20260622_000048_052.webp";
+      } else if (cleanLower === "anagha" && (!preservedAvatar || preservedAvatar.includes("seed="))) {
+        preservedAvatar =
+          "https://untypucxdpgxnfezzwuo.supabase.co/storage/v1/object/public/kaelixo-attachments/avatars/user-prajin_prakash/1794041835002-anagha_fish.png";
+      }
+
+      const demoUser: WorkspaceMember = {
+        ...matched,
+        avatar: preservedAvatar,
+        role: roleVal || matched.role,
+        department: dept || matched.department,
+        status: "online",
+        statusText: matched.statusText || `🚀 Active in ${dept || matched.department}`,
+      };
+      onLoginSuccess(demoUser, organizations[0]);
+      onClose();
+      return;
+    }
+
+    // 2. Exact fallback for Prajin Prakash
+    if (cleanLower === "prajin prakash") {
+      const demoUser: WorkspaceMember = {
+        id: "user-prajin-prakash",
+        name: "Prajin Prakash",
+        email: "prajin@kaelixo.com",
+        avatar:
+          "https://untypucxdpgxnfezzwuo.supabase.co/storage/v1/object/public/kaelixo-attachments/avatars/user-aparna-sharma/1794211392212-IMG_20260622_000048_052.webp",
+        role: roleVal || "owner",
+        department: dept || "management",
+        status: "online",
+        statusText: "🚀 Building Kaelixo",
+      };
+      onLoginSuccess(demoUser, organizations[0]);
+      onClose();
+      return;
+    }
+
+    // 3. Exact fallback for Anagha
+    if (cleanLower === "anagha") {
+      const demoUser: WorkspaceMember = {
+        id: "user-anagha",
+        name: "Anagha",
+        email: "anagha@kaelixo.com",
+        avatar:
+          "https://untypucxdpgxnfezzwuo.supabase.co/storage/v1/object/public/kaelixo-attachments/avatars/user-prajin_prakash/1794041835002-anagha_fish.png",
+        role: roleVal || "owner",
+        department: dept || "management",
+        status: "online",
+        statusText: "🚀 Active in management",
+      };
+      onLoginSuccess(demoUser, organizations[0]);
+      onClose();
+      return;
+    }
+
+    const seed = encodeURIComponent(cleanName);
     const demoUser: WorkspaceMember = {
-      id: `user-${memberName.toLowerCase().replace(/\s+/g, "-")}`,
-      name: memberName,
-      email: `${memberName.toLowerCase().replace(/\s+/g, ".")}@kaelixo.com`,
+      id: `user-${cleanLower.replace(/\s+/g, "-")}`,
+      name: cleanName,
+      email: `${cleanLower.replace(/\s+/g, ".")}@kaelixo.com`,
       avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=${seed}`,
       role: roleVal,
       department: dept,
@@ -559,46 +648,89 @@ export function SlackAuthModal({
                 <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-2">
                   Quick Switch Accounts (Development):
                 </p>
-                <div className="grid grid-cols-2 gap-1.5">
+                <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
                     onClick={() => handleQuickDemo("Prajin Prakash", "management", "owner")}
-                    className="p-2 rounded-lg bg-neutral-50 dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-left transition border border-neutral-200 dark:border-neutral-700 cursor-pointer"
+                    className="p-2 rounded-xl bg-neutral-50 dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-left transition border border-neutral-200 dark:border-neutral-700 cursor-pointer flex items-center space-x-2.5"
                   >
-                    <p className="text-xs font-bold text-neutral-800 dark:text-neutral-200">
-                      Prajin (Owner)
-                    </p>
-                    <p className="text-[10px] text-neutral-500">Management</p>
+                    <img
+                      src={
+                        teamMembers.find((m) => m.name.toLowerCase() === "prajin prakash")?.avatar ||
+                        "https://untypucxdpgxnfezzwuo.supabase.co/storage/v1/object/public/kaelixo-attachments/avatars/user-aparna-sharma/1794211392212-IMG_20260622_000048_052.webp"
+                      }
+                      alt="Prajin Prakash"
+                      className="w-8 h-8 rounded-lg object-cover flex-shrink-0 border border-neutral-200 dark:border-neutral-700"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-bold text-neutral-800 dark:text-neutral-200 truncate">
+                        Prajin (Owner)
+                      </p>
+                      <p className="text-[10px] text-neutral-500 truncate">Management</p>
+                    </div>
                   </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleQuickDemo("Anagha", "management", "owner")}
+                    className="p-2 rounded-xl bg-neutral-50 dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-left transition border border-neutral-200 dark:border-neutral-700 cursor-pointer flex items-center space-x-2.5"
+                  >
+                    <img
+                      src={
+                        teamMembers.find((m) => m.name.toLowerCase() === "anagha")?.avatar ||
+                        "https://untypucxdpgxnfezzwuo.supabase.co/storage/v1/object/public/kaelixo-attachments/avatars/user-prajin_prakash/1794041835002-anagha_fish.png"
+                      }
+                      alt="Anagha"
+                      className="w-8 h-8 rounded-lg object-cover flex-shrink-0 border border-neutral-200 dark:border-neutral-700"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-bold text-neutral-800 dark:text-neutral-200 truncate">
+                        Anagha (Owner)
+                      </p>
+                      <p className="text-[10px] text-neutral-500 truncate">Management</p>
+                    </div>
+                  </button>
+
                   <button
                     type="button"
                     onClick={() => handleQuickDemo("Arjun Dev", "dev", "manager")}
-                    className="p-2 rounded-lg bg-neutral-50 dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-left transition border border-neutral-200 dark:border-neutral-700 cursor-pointer"
+                    className="p-2 rounded-xl bg-neutral-50 dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-left transition border border-neutral-200 dark:border-neutral-700 cursor-pointer flex items-center space-x-2.5"
                   >
-                    <p className="text-xs font-bold text-neutral-800 dark:text-neutral-200">
-                      Arjun (Tech Lead)
-                    </p>
-                    <p className="text-[10px] text-neutral-500">Development</p>
+                    <img
+                      src={
+                        teamMembers.find((m) => m.name.toLowerCase() === "arjun dev")?.avatar ||
+                        "https://api.dicebear.com/7.x/bottts/svg?seed=Arjun"
+                      }
+                      alt="Arjun Dev"
+                      className="w-8 h-8 rounded-lg object-cover flex-shrink-0 border border-neutral-200 dark:border-neutral-700"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-bold text-neutral-800 dark:text-neutral-200 truncate">
+                        Arjun (Tech Lead)
+                      </p>
+                      <p className="text-[10px] text-neutral-500 truncate">Development</p>
+                    </div>
                   </button>
+
                   <button
                     type="button"
                     onClick={() => handleQuickDemo("Aparna Sharma", "teaching", "member")}
-                    className="p-2 rounded-lg bg-neutral-50 dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-left transition border border-neutral-200 dark:border-neutral-700 cursor-pointer"
+                    className="p-2 rounded-xl bg-neutral-50 dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-left transition border border-neutral-200 dark:border-neutral-700 cursor-pointer flex items-center space-x-2.5"
                   >
-                    <p className="text-xs font-bold text-neutral-800 dark:text-neutral-200">
-                      Aparna (Instructor)
-                    </p>
-                    <p className="text-[10px] text-neutral-500">Training</p>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleQuickDemo("Sneha Patel", "telecalling", "member")}
-                    className="p-2 rounded-lg bg-neutral-50 dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-left transition border border-neutral-200 dark:border-neutral-700 cursor-pointer"
-                  >
-                    <p className="text-xs font-bold text-neutral-800 dark:text-neutral-200">
-                      Sneha (Sales)
-                    </p>
-                    <p className="text-[10px] text-neutral-500">Outreach</p>
+                    <img
+                      src={
+                        teamMembers.find((m) => m.name.toLowerCase() === "aparna sharma")?.avatar ||
+                        "https://api.dicebear.com/7.x/bottts/svg?seed=Aparna"
+                      }
+                      alt="Aparna Sharma"
+                      className="w-8 h-8 rounded-lg object-cover flex-shrink-0 border border-neutral-200 dark:border-neutral-700"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-bold text-neutral-800 dark:text-neutral-200 truncate">
+                        Aparna (Instructor)
+                      </p>
+                      <p className="text-[10px] text-neutral-500 truncate">Training</p>
+                    </div>
                   </button>
                 </div>
               </div>

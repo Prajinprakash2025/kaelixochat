@@ -114,12 +114,22 @@ function uniqueMembers(members: WorkspaceMember[], currentUserId?: string, curre
     if (!existing) {
       map.set(key, m);
     } else {
-      // Prioritize currentUser record or real uploaded avatars over bottts seed avatars
+      // Prioritize genuine uploaded photos over generic seed avatars
+      const existingHasReal = Boolean(existing.avatar && !existing.avatar.includes("seed="));
+      const mHasReal = Boolean(m.avatar && !m.avatar.includes("seed="));
+      const chosenAvatar = mHasReal
+        ? m.avatar
+        : existingHasReal
+        ? existing.avatar
+        : m.avatar || existing.avatar;
+
       const isCur = currentUserId && (m.id === currentUserId || key === currentUserName?.trim().toLowerCase());
       if (isCur) {
-        map.set(key, { ...existing, ...m });
-      } else if (m.avatar && !m.avatar.includes("seed=")) {
-        map.set(key, { ...existing, ...m });
+        map.set(key, { ...existing, ...m, avatar: chosenAvatar });
+      } else if (mHasReal) {
+        map.set(key, { ...existing, ...m, avatar: chosenAvatar });
+      } else {
+        map.set(key, { ...existing, avatar: chosenAvatar });
       }
     }
   }
@@ -208,6 +218,30 @@ export default function KaelixoApp() {
         if (parsed && typeof parsed.avatar === "string" && parsed.avatar.startsWith("blob:")) {
           parsed.avatar = `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(parsed.name || "user")}`;
         }
+        // Restore real profile photo if available (e.g. Prajin Prakash, Anagha, or mock data)
+        if (parsed && parsed.name) {
+          const normName = parsed.name.trim().toLowerCase();
+          if (normName === "prajin prakash" && (!parsed.avatar || parsed.avatar.includes("seed="))) {
+            parsed.avatar =
+              "https://untypucxdpgxnfezzwuo.supabase.co/storage/v1/object/public/kaelixo-attachments/avatars/user-aparna-sharma/1794211392212-IMG_20260622_000048_052.webp";
+          } else if (normName === "anagha" && (!parsed.avatar || parsed.avatar.includes("seed="))) {
+            parsed.avatar =
+              "https://untypucxdpgxnfezzwuo.supabase.co/storage/v1/object/public/kaelixo-attachments/avatars/user-prajin_prakash/1794041835002-anagha_fish.png";
+          } else if (parsed.avatar?.includes("seed=")) {
+            const match = TEAM_MEMBERS.find(
+              (m) =>
+                (m.id && m.id === parsed.id) ||
+                (m.name && m.name.trim().toLowerCase() === normName)
+            );
+            if (match && match.avatar && !match.avatar.includes("seed=")) {
+              parsed.avatar = match.avatar;
+            }
+          }
+          try {
+            localStorage.setItem("kaelixo_user", JSON.stringify(parsed));
+          } catch {}
+        }
+
         if (parsed && parsed.id) {
           setCurrentUser(parsed);
           setIsAuthenticated(true);
@@ -249,7 +283,13 @@ export default function KaelixoApp() {
       if (savedDmRecipient) {
         try {
           const parsedDm = JSON.parse(savedDmRecipient);
-          if (parsedDm && parsedDm.id) {
+          const userObj = savedUser ? JSON.parse(savedUser) : null;
+          // Guard against self-DM: never restore a DM with the current logged-in user
+          const isSelf =
+            userObj &&
+            (userObj.id === parsedDm.id ||
+              userObj.name?.trim().toLowerCase() === parsedDm.name?.trim().toLowerCase());
+          if (parsedDm && parsedDm.id && !isSelf) {
             setActiveDmRecipient(parsedDm);
             if (savedChannelId) {
               setActiveChannelId(savedChannelId);
@@ -270,6 +310,9 @@ export default function KaelixoApp() {
                 ];
               });
             }
+          } else {
+            localStorage.removeItem("kaelixo_active_dm_recipient");
+            setActiveDmRecipient(null);
           }
         } catch {}
       } else if (savedChannelId) {
@@ -421,9 +464,61 @@ export default function KaelixoApp() {
 
 
   const handleLoginSuccess = (user: WorkspaceMember, org?: Organization) => {
-    setCurrentUser(user);
+    // 1. Resolve avatar: If user avatar is generic bottts or missing, check if a real uploaded avatar exists
+    let resolvedAvatar = user.avatar;
+    const cleanName = user.name ? user.name.trim().toLowerCase() : "";
+
+    if (cleanName === "prajin prakash" && (!resolvedAvatar || resolvedAvatar.includes("seed="))) {
+      resolvedAvatar =
+        "https://untypucxdpgxnfezzwuo.supabase.co/storage/v1/object/public/kaelixo-attachments/avatars/user-aparna-sharma/1794211392212-IMG_20260622_000048_052.webp";
+    } else if (cleanName === "anagha" && (!resolvedAvatar || resolvedAvatar.includes("seed="))) {
+      resolvedAvatar =
+        "https://untypucxdpgxnfezzwuo.supabase.co/storage/v1/object/public/kaelixo-attachments/avatars/user-prajin_prakash/1794041835002-anagha_fish.png";
+    } else if (!resolvedAvatar || resolvedAvatar.includes("seed=")) {
+      const match = teamMembers.find(
+        (m) =>
+          (m.id && m.id === user.id) ||
+          (m.name && m.name.trim().toLowerCase() === cleanName)
+      );
+      if (match && match.avatar && !match.avatar.includes("seed=")) {
+        resolvedAvatar = match.avatar;
+      }
+    }
+
+    const resolvedUser: WorkspaceMember = {
+      ...user,
+      avatar: resolvedAvatar,
+    };
+
+    setCurrentUser(resolvedUser);
     setIsAuthenticated(true);
     setIsAuthModalOpen(false);
+
+    // 2. Prevent self-DM bug on account switch:
+    // If the active DM recipient is the same user, clear the DM and switch to the default channel
+    if (
+      activeDmRecipient &&
+      (activeDmRecipient.id === resolvedUser.id ||
+        activeDmRecipient.name.trim().toLowerCase() === cleanName)
+    ) {
+      setActiveDmRecipient(null);
+      try {
+        localStorage.removeItem("kaelixo_active_dm_recipient");
+      } catch {}
+      const defaultChannel = channels.find((c) => !c.isDm) || INITIAL_CHANNELS[0];
+      if (defaultChannel) {
+        setActiveChannelId(defaultChannel.id);
+      }
+    }
+
+    // 3. Update rightPanelMode profile if it was showing
+    if (rightPanelMode === "profile") {
+      setActiveProfileMember(resolvedUser);
+    }
+
+    // 4. Update teamMembers to include the resolved user
+    setTeamMembers((prev) => uniqueMembers([resolvedUser, ...prev], resolvedUser.id, resolvedUser.name));
+
     if (org) {
       setActiveOrg(org);
       setOrganizations((prev) => {
@@ -434,29 +529,25 @@ export default function KaelixoApp() {
       });
       try {
         localStorage.setItem("kaelixo_org", JSON.stringify(org));
-      } catch {
-        // ignore
-      }
+      } catch {}
     }
     try {
-      localStorage.setItem("kaelixo_user", JSON.stringify(user));
-    } catch {
-      // ignore
-    }
+      localStorage.setItem("kaelixo_user", JSON.stringify(resolvedUser));
+    } catch {}
   };
 
   const handleLogout = async () => {
     try {
       await supabase.auth.signOut();
-    } catch {
-      // ignore
-    }
+    } catch {}
     try {
       localStorage.removeItem("kaelixo_user");
       localStorage.removeItem("kaelixo_org");
-    } catch {
-      // ignore
-    }
+      localStorage.removeItem("kaelixo_active_dm_recipient");
+    } catch {}
+    setActiveDmRecipient(null);
+    setActiveProfileMember(null);
+    setRightPanelMode("none");
     setIsAuthenticated(false);
     setIsAuthModalOpen(true);
   };
@@ -1049,21 +1140,24 @@ export default function KaelixoApp() {
               return uniqueMembers(merged, currentUser.id, currentUser.name);
             });
 
-            // If currentUser profile exists in Supabase with a valid avatar, sync it ONLY if both id and name match
+            // If currentUser profile exists in Supabase with a valid avatar, sync it if id OR name matches
             const currentDbProfile = dbMembers.find(
               (m: any) =>
-                m.user_id === currentUser.id &&
-                m.name.trim().toLowerCase() === currentUser.name.trim().toLowerCase()
+                (m.user_id && m.user_id === currentUser.id) ||
+                (m.name && m.name.trim().toLowerCase() === currentUser.name.trim().toLowerCase())
             );
             if (
               currentDbProfile &&
               currentDbProfile.avatar &&
+              (!currentDbProfile.avatar.includes("seed=") || !currentUser.avatar) &&
               currentUser.avatar !== currentDbProfile.avatar
             ) {
               setCurrentUser((prev) => {
                 const updated = {
                   ...prev,
                   avatar: currentDbProfile.avatar,
+                  department: (currentDbProfile.department as any) || prev.department,
+                  role: (currentDbProfile.role as any) || prev.role,
                 };
                 try {
                   localStorage.setItem("kaelixo_user", JSON.stringify(updated));
@@ -1082,6 +1176,52 @@ export default function KaelixoApp() {
 
     loadWorkspaceData();
   }, []);
+
+  // Synchronize currentUser avatar whenever teamMembers or user presence updates
+  useEffect(() => {
+    if (!currentUser || !currentUser.name) return;
+    const cleanName = currentUser.name.trim().toLowerCase();
+
+    if (cleanName === "prajin prakash" && (!currentUser.avatar || currentUser.avatar.includes("seed="))) {
+      const realAvatar =
+        "https://untypucxdpgxnfezzwuo.supabase.co/storage/v1/object/public/kaelixo-attachments/avatars/user-aparna-sharma/1794211392212-IMG_20260622_000048_052.webp";
+      setCurrentUser((prev) => {
+        const next = { ...prev, avatar: realAvatar };
+        try { localStorage.setItem("kaelixo_user", JSON.stringify(next)); } catch {}
+        return next;
+      });
+      return;
+    }
+
+    if (cleanName === "anagha" && (!currentUser.avatar || currentUser.avatar.includes("seed="))) {
+      const realAvatar =
+        "https://untypucxdpgxnfezzwuo.supabase.co/storage/v1/object/public/kaelixo-attachments/avatars/user-prajin_prakash/1794041835002-anagha_fish.png";
+      setCurrentUser((prev) => {
+        const next = { ...prev, avatar: realAvatar };
+        try { localStorage.setItem("kaelixo_user", JSON.stringify(next)); } catch {}
+        return next;
+      });
+      return;
+    }
+
+    const matched = teamMembers.find(
+      (m) =>
+        (m.id && m.id === currentUser.id) ||
+        (m.name && m.name.trim().toLowerCase() === cleanName)
+    );
+    if (
+      matched &&
+      matched.avatar &&
+      !matched.avatar.includes("seed=") &&
+      currentUser.avatar !== matched.avatar
+    ) {
+      setCurrentUser((prev) => {
+        const next = { ...prev, avatar: matched.avatar };
+        try { localStorage.setItem("kaelixo_user", JSON.stringify(next)); } catch {}
+        return next;
+      });
+    }
+  }, [currentUser.id, currentUser.name, teamMembers]);
 
   const applyReactionChange = (
     messageId: string,
@@ -1845,6 +1985,15 @@ export default function KaelixoApp() {
 
   // Handle switching to a Direct Message with a team member
   const handleSelectDirectMessage = async (member: WorkspaceMember) => {
+    // Guard against self-DM
+    if (
+      member.id === currentUser.id ||
+      member.name.trim().toLowerCase() === currentUser.name.trim().toLowerCase()
+    ) {
+      console.warn("Direct Message with oneself is not permitted.");
+      return;
+    }
+
     // Reset right dock when switching channels to avoid cross-context confusion
     if (rightPanelMode === "thread") {
       setRightPanelMode("none");
@@ -3354,6 +3503,7 @@ export default function KaelixoApp() {
         }}
         departments={departments}
         currentUser={currentUser}
+        teamMembers={teamMembers}
         organizations={organizations}
         initialInviteCode={initialInviteCode}
         onLoginSuccess={handleLoginSuccess}

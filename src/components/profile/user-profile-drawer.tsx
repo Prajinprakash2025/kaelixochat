@@ -63,7 +63,9 @@ export function UserProfileDrawer({
   const [copiedEmail, setCopiedEmail] = useState(false);
   const [localTime, setLocalTime] = useState("");
   const [isConfirmRemoveOpen, setIsConfirmRemoveOpen] = useState(false);
-  const isSelf = currentUser.id === member.id;
+  const isSelf =
+    currentUser.id === member.id ||
+    currentUser.name.trim().toLowerCase() === member.name.trim().toLowerCase();
   const removeCheck = canRemoveMember(currentUser, member);
 
   useEffect(() => {
@@ -102,11 +104,20 @@ export function UserProfileDrawer({
   };
 
   const isOnline = member.online || member.status === "online";
+  const effectiveAvatar =
+    member.avatar && !member.avatar.includes("seed=")
+      ? member.avatar
+      : member.name.trim().toLowerCase() === "prajin prakash"
+      ? "https://untypucxdpgxnfezzwuo.supabase.co/storage/v1/object/public/kaelixo-attachments/avatars/user-aparna-sharma/1794211392212-IMG_20260622_000048_052.webp"
+      : member.name.trim().toLowerCase() === "anagha"
+      ? "https://untypucxdpgxnfezzwuo.supabase.co/storage/v1/object/public/kaelixo-attachments/avatars/user-prajin_prakash/1794041835002-anagha_fish.png"
+      : member.avatar;
+
   const isSvgAvatar =
-    !member.avatar ||
-    member.avatar.includes("dicebear.com") ||
-    member.avatar.endsWith(".svg") ||
-    member.avatar.includes("/svg");
+    !effectiveAvatar ||
+    effectiveAvatar.includes("dicebear.com") ||
+    effectiveAvatar.endsWith(".svg") ||
+    effectiveAvatar.includes("/svg");
 
   return (
     <aside className="fixed inset-0 z-50 sm:static sm:inset-auto sm:z-auto w-full sm:w-80 md:w-96 border-l border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 flex flex-col h-full flex-shrink-0 animate-in slide-in-from-right duration-200 overflow-hidden shadow-xl sm:shadow-none">
@@ -137,7 +148,7 @@ export function UserProfileDrawer({
             <div className="w-24 h-24 rounded-2xl bg-white dark:bg-[#1a1d21] p-2 shadow-sm border border-neutral-200/80 dark:border-neutral-700/80 flex items-center justify-center">
               <img
                 src={
-                  member.avatar ||
+                  effectiveAvatar ||
                   `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(member.name)}`
                 }
                 alt={member.name}
@@ -148,7 +159,7 @@ export function UserProfileDrawer({
         ) : (
           <div className="w-full aspect-[4/3] max-h-64 rounded-xl overflow-hidden border border-neutral-200 dark:border-neutral-800 bg-neutral-100 dark:bg-neutral-800 shadow-xs">
             <img
-              src={member.avatar}
+              src={effectiveAvatar}
               alt={member.name}
               className="w-full h-full object-cover"
               onError={(e) => {
