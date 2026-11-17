@@ -491,7 +491,7 @@ export function SlackAuthModal({
                   type="button"
                   onClick={() => handleOAuthSignIn("google")}
                   disabled={loading || !!oauthLoading}
-                  className="w-full py-2.5 px-3 border border-neutral-300 dark:border-neutral-700 rounded-lg text-sm font-semibold text-neutral-800 dark:text-neutral-200 bg-white dark:bg-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-750 transition text-center cursor-pointer shadow-xs flex items-center justify-center space-x-2.5 disabled:opacity-50"
+                  className="w-full py-2.5 px-3 border border-neutral-300 dark:border-neutral-700 rounded-lg text-sm font-semibold text-neutral-800 dark:text-neutral-200 bg-white dark:bg-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-700 transition text-center cursor-pointer shadow-xs flex items-center justify-center space-x-2.5 disabled:opacity-50"
                 >
                   <GoogleIcon />
                   <span>
@@ -503,7 +503,7 @@ export function SlackAuthModal({
                   type="button"
                   onClick={() => handleOAuthSignIn("github")}
                   disabled={loading || !!oauthLoading}
-                  className="w-full py-2.5 px-3 border border-neutral-300 dark:border-neutral-700 rounded-lg text-sm font-semibold text-neutral-800 dark:text-neutral-200 bg-white dark:bg-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-750 transition text-center cursor-pointer shadow-xs flex items-center justify-center space-x-2.5 disabled:opacity-50"
+                  className="w-full py-2.5 px-3 border border-neutral-300 dark:border-neutral-700 rounded-lg text-sm font-semibold text-neutral-800 dark:text-neutral-200 bg-white dark:bg-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-700 transition text-center cursor-pointer shadow-xs flex items-center justify-center space-x-2.5 disabled:opacity-50"
                 >
                   <GitHubIcon />
                   <span>
@@ -563,7 +563,7 @@ export function SlackAuthModal({
                   <button
                     type="button"
                     onClick={() => handleQuickDemo("Prajin Prakash", "management", "owner")}
-                    className="p-2 rounded-lg bg-neutral-50 dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-750 text-left transition border border-neutral-200 dark:border-neutral-700 cursor-pointer"
+                    className="p-2 rounded-lg bg-neutral-50 dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-left transition border border-neutral-200 dark:border-neutral-700 cursor-pointer"
                   >
                     <p className="text-xs font-bold text-neutral-800 dark:text-neutral-200">
                       Prajin (Owner)
@@ -573,7 +573,7 @@ export function SlackAuthModal({
                   <button
                     type="button"
                     onClick={() => handleQuickDemo("Arjun Dev", "dev", "manager")}
-                    className="p-2 rounded-lg bg-neutral-50 dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-750 text-left transition border border-neutral-200 dark:border-neutral-700 cursor-pointer"
+                    className="p-2 rounded-lg bg-neutral-50 dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-left transition border border-neutral-200 dark:border-neutral-700 cursor-pointer"
                   >
                     <p className="text-xs font-bold text-neutral-800 dark:text-neutral-200">
                       Arjun (Tech Lead)
@@ -583,7 +583,7 @@ export function SlackAuthModal({
                   <button
                     type="button"
                     onClick={() => handleQuickDemo("Aparna Sharma", "teaching", "member")}
-                    className="p-2 rounded-lg bg-neutral-50 dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-750 text-left transition border border-neutral-200 dark:border-neutral-700 cursor-pointer"
+                    className="p-2 rounded-lg bg-neutral-50 dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-left transition border border-neutral-200 dark:border-neutral-700 cursor-pointer"
                   >
                     <p className="text-xs font-bold text-neutral-800 dark:text-neutral-200">
                       Aparna (Instructor)
@@ -593,7 +593,7 @@ export function SlackAuthModal({
                   <button
                     type="button"
                     onClick={() => handleQuickDemo("Sneha Patel", "telecalling", "member")}
-                    className="p-2 rounded-lg bg-neutral-50 dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-750 text-left transition border border-neutral-200 dark:border-neutral-700 cursor-pointer"
+                    className="p-2 rounded-lg bg-neutral-50 dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-left transition border border-neutral-200 dark:border-neutral-700 cursor-pointer"
                   >
                     <p className="text-xs font-bold text-neutral-800 dark:text-neutral-200">
                       Sneha (Sales)

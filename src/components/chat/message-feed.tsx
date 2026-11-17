@@ -414,10 +414,12 @@ export function MessageFeed({
                   </div>
                   <button
                     type="button"
-                    className="relative z-10 px-3.5 py-1 rounded-full text-xs font-semibold bg-white dark:bg-neutral-850 text-neutral-700 dark:text-neutral-200 border border-neutral-200 dark:border-neutral-700 shadow-xs hover:bg-neutral-50 dark:hover:bg-neutral-800 transition flex items-center space-x-1.5 cursor-pointer"
+                    className="relative z-10 px-3.5 py-1 rounded-full text-xs font-semibold bg-white dark:bg-[#1a1d21] text-neutral-800 dark:text-neutral-100 border border-neutral-300 dark:border-neutral-700 shadow-xs hover:bg-neutral-50 dark:hover:bg-neutral-800 transition flex items-center space-x-1.5 cursor-pointer"
                   >
-                    <span>{formatSlackDateDivider(msg.rawTimestamp || msg.updatedAt)}</span>
-                    <ChevronDown className="w-3.5 h-3.5 text-neutral-400" />
+                    <span className="font-semibold text-neutral-900 dark:text-neutral-100">
+                      {formatSlackDateDivider(msg.rawTimestamp || msg.updatedAt)}
+                    </span>
+                    <ChevronDown className="w-3.5 h-3.5 text-neutral-500 dark:text-neutral-400" />
                   </button>
                 </div>
               )}

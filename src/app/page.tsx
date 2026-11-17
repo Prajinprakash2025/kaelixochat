@@ -2760,8 +2760,17 @@ export default function KaelixoApp() {
                   title="View Profile Details"
                 >
                   <img
-                    src={activeDmRecipient.avatar}
+                    src={
+                      activeDmRecipient.avatar ||
+                      `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(activeDmRecipient.name)}`
+                    }
                     alt={activeDmRecipient.name}
+                    onError={(e) => {
+                      e.currentTarget.onerror = null;
+                      e.currentTarget.src = `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(
+                        activeDmRecipient.name
+                      )}`;
+                    }}
                     className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-neutral-200 dark:bg-neutral-800 ring-1 ring-neutral-300 dark:ring-neutral-700 group-hover/dmheader:ring-2 group-hover/dmheader:ring-indigo-500 transition object-cover"
                   />
                   <span

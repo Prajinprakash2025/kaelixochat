@@ -365,7 +365,7 @@ export function MemberDirectoryModal({
                                   onSelectMemberForDm(member);
                                   onClose();
                                 }}
-                                className="px-2.5 py-1.5 text-xs font-semibold text-neutral-700 dark:text-neutral-300 hover:text-indigo-600 dark:hover:text-indigo-400 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-750 rounded-xl transition flex items-center space-x-1"
+                                className="px-2.5 py-1.5 text-xs font-semibold text-neutral-700 dark:text-neutral-300 hover:text-indigo-600 dark:hover:text-indigo-400 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded-xl transition flex items-center space-x-1"
                                 title="Send direct message"
                               >
                                 <MessageCircle className="w-3.5 h-3.5" />
@@ -379,7 +379,7 @@ export function MemberDirectoryModal({
                                   onOpenProfileDrawer(member);
                                   onClose();
                                 }}
-                                className="px-2.5 py-1.5 text-xs font-semibold text-neutral-700 dark:text-neutral-300 hover:text-indigo-600 dark:hover:text-indigo-400 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-750 rounded-xl transition flex items-center space-x-1"
+                                className="px-2.5 py-1.5 text-xs font-semibold text-neutral-700 dark:text-neutral-300 hover:text-indigo-600 dark:hover:text-indigo-400 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded-xl transition flex items-center space-x-1"
                                 title="View profile details"
                               >
                                 <User className="w-3.5 h-3.5" />

@@ -190,14 +190,14 @@ export function UserProfileDrawer({
               <button
                 type="button"
                 onClick={onOpenEditProfile}
-                className="flex-1 py-1.5 px-3 text-sm font-semibold text-neutral-800 dark:text-neutral-200 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-750 transition cursor-pointer shadow-xs text-center"
+                className="flex-1 py-1.5 px-3 text-sm font-semibold text-neutral-800 dark:text-neutral-200 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-700 transition cursor-pointer shadow-xs text-center"
               >
                 Set a status
               </button>
               <button
                 type="button"
                 onClick={onOpenEditProfile}
-                className="py-1.5 px-3 text-sm font-semibold text-neutral-800 dark:text-neutral-200 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-750 transition cursor-pointer shadow-xs flex items-center space-x-1"
+                className="py-1.5 px-3 text-sm font-semibold text-neutral-800 dark:text-neutral-200 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-700 transition cursor-pointer shadow-xs flex items-center space-x-1"
               >
                 <span>View as</span>
                 <ChevronDown className="w-3.5 h-3.5 text-neutral-400" />
@@ -205,7 +205,7 @@ export function UserProfileDrawer({
               <button
                 type="button"
                 onClick={onOpenEditProfile}
-                className="p-1.5 text-neutral-700 dark:text-neutral-300 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-750 transition cursor-pointer shadow-xs"
+                className="p-1.5 text-neutral-700 dark:text-neutral-300 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-700 transition cursor-pointer shadow-xs"
                 title="More options"
               >
                 <MoreHorizontal className="w-4 h-4" />
@@ -224,7 +224,7 @@ export function UserProfileDrawer({
               <button
                 type="button"
                 onClick={handleCopyEmail}
-                className="py-2 px-3 text-sm font-semibold text-neutral-700 dark:text-neutral-300 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-750 rounded-lg transition cursor-pointer shadow-xs"
+                className="py-2 px-3 text-sm font-semibold text-neutral-700 dark:text-neutral-300 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-700 rounded-lg transition cursor-pointer shadow-xs"
                 title="Copy email"
               >
                 {copiedEmail ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}

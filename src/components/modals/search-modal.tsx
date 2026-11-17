@@ -137,7 +137,7 @@ export function SearchModal({
                     <img
                       src={senderAvatar}
                       alt={senderName}
-                      className="w-8 h-8 rounded-xl bg-neutral-200 dark:bg-neutral-700 object-cover mt-0.5 flex-shrink-0 ring-1 ring-neutral-300 dark:ring-neutral-750"
+                      className="w-8 h-8 rounded-xl bg-neutral-200 dark:bg-neutral-700 object-cover mt-0.5 flex-shrink-0 ring-1 ring-neutral-300 dark:ring-neutral-700"
                     />
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center space-x-2 mb-1 flex-wrap">

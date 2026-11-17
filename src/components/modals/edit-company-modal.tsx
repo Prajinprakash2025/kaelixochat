@@ -178,7 +178,7 @@ export function EditCompanyModal({
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={uploading}
-                  className="w-full py-2 px-3 border border-neutral-300 dark:border-neutral-700 rounded-lg text-sm font-semibold text-neutral-800 dark:text-neutral-200 bg-white dark:bg-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-750 transition text-center cursor-pointer shadow-xs flex items-center justify-center space-x-1.5 disabled:opacity-50"
+                  className="w-full py-2 px-3 border border-neutral-300 dark:border-neutral-700 rounded-lg text-sm font-semibold text-neutral-800 dark:text-neutral-200 bg-white dark:bg-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-700 transition text-center cursor-pointer shadow-xs flex items-center justify-center space-x-1.5 disabled:opacity-50"
                 >
                   <Upload className="w-4 h-4" />
                   <span>{uploading ? "Uploading..." : "Upload photo"}</span>

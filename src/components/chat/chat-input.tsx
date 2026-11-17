@@ -1142,8 +1142,8 @@ export function ChatInput({
 
           {/* Right Side: Desktop Send Button with shortcut */}
           <div className="flex items-center space-x-2.5">
-            <span className="text-[11px] text-neutral-400 dark:text-neutral-500 select-none hidden sm:inline">
-              <kbd className="font-sans font-normal">Shift + Enter</kbd> to add a new line
+            <span className="text-[11px] text-neutral-500 dark:text-neutral-400 select-none hidden sm:inline">
+              <kbd className="font-sans font-medium text-neutral-600 dark:text-neutral-300">Shift + Enter</kbd> to add a new line
             </span>
             <button
               type="button"
