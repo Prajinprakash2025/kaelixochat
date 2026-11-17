@@ -34,6 +34,8 @@ import {
   Loader2,
   UploadCloud,
   AlertCircle,
+  Clipboard,
+  Camera,
 } from "lucide-react";
 import { Attachment, FileCategory } from "@/types";
 import {
@@ -327,13 +329,122 @@ export function ChatInput({
     }
   };
 
-  // Clipboard paste support (e.g. screenshot paste)
+  // Clipboard paste support (e.g. screenshot paste from mobile & desktop)
   const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const files: File[] = [];
+
+    // 1. Check clipboardData.files (desktop Chrome, Edge, Firefox)
     if (e.clipboardData.files && e.clipboardData.files.length > 0) {
+      for (let i = 0; i < e.clipboardData.files.length; i++) {
+        const f = e.clipboardData.files[i];
+        if (f.type.startsWith("image/") || f.size > 0) {
+          files.push(f);
+        }
+      }
+    }
+
+    // 2. Check clipboardData.items (Crucial for Android/iOS mobile keyboard paste & screenshots)
+    if (e.clipboardData.items && e.clipboardData.items.length > 0) {
+      for (let i = 0; i < e.clipboardData.items.length; i++) {
+        const item = e.clipboardData.items[i];
+        if (item.type.startsWith("image/")) {
+          const file = item.getAsFile();
+          if (file) {
+            const ext = item.type.split("/")[1] || "png";
+            const namedFile =
+              file.name && file.name !== "image.png"
+                ? file
+                : new File([file], `screenshot_${Date.now()}.${ext}`, { type: file.type });
+            if (!files.some((f) => f.name === namedFile.name && f.size === namedFile.size)) {
+              files.push(namedFile);
+            }
+          }
+        }
+      }
+    }
+
+    if (files.length > 0) {
       e.preventDefault();
-      handleFilesAdded(Array.from(e.clipboardData.files));
+      handleFilesAdded(files);
     }
   };
+
+  // Direct Mobile / Button Clipboard Paste (WhatsApp / Slack style "Paste Screenshot")
+  const handlePasteScreenshot = async () => {
+    try {
+      if (typeof navigator !== "undefined" && navigator.clipboard && navigator.clipboard.read) {
+        const clipboardItems = await navigator.clipboard.read();
+        const files: File[] = [];
+        for (const item of clipboardItems) {
+          for (const type of item.types) {
+            if (type.startsWith("image/")) {
+              const blob = await item.getType(type);
+              const ext = type.split("/")[1] || "png";
+              const file = new File([blob], `screenshot_${Date.now()}.${ext}`, { type });
+              files.push(file);
+            }
+          }
+        }
+        if (files.length > 0) {
+          handleFilesAdded(files);
+          return;
+        }
+      }
+    } catch (err) {
+      console.warn("Clipboard read permission or data unavailable:", err);
+    }
+    // Fallback: trigger file input directly for instant selection of screenshot
+    fileInputRef.current?.click();
+  };
+
+  // Window-level paste listener for instant screenshot pasting
+  useEffect(() => {
+    const handleGlobalPaste = (e: ClipboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target && target.tagName === "INPUT") return;
+      if (
+        target &&
+        target.tagName === "TEXTAREA" &&
+        target !== textareaRef.current &&
+        target !== mobileTextareaRef.current
+      ) {
+        return;
+      }
+
+      const files: File[] = [];
+      if (e.clipboardData?.files && e.clipboardData.files.length > 0) {
+        for (let i = 0; i < e.clipboardData.files.length; i++) {
+          const f = e.clipboardData.files[i];
+          if (f.type.startsWith("image/") || f.size > 0) files.push(f);
+        }
+      }
+      if (e.clipboardData?.items && e.clipboardData.items.length > 0) {
+        for (let i = 0; i < e.clipboardData.items.length; i++) {
+          const item = e.clipboardData.items[i];
+          if (item.type.startsWith("image/")) {
+            const file = item.getAsFile();
+            if (file) {
+              const ext = item.type.split("/")[1] || "png";
+              const namedFile =
+                file.name && file.name !== "image.png"
+                  ? file
+                  : new File([file], `screenshot_${Date.now()}.${ext}`, { type: file.type });
+              if (!files.some((f) => f.name === namedFile.name && f.size === namedFile.size)) {
+                files.push(namedFile);
+              }
+            }
+          }
+        }
+      }
+      if (files.length > 0) {
+        e.preventDefault();
+        handleFilesAdded(files);
+      }
+    };
+
+    window.addEventListener("paste", handleGlobalPaste);
+    return () => window.removeEventListener("paste", handleGlobalPaste);
+  }, [handleFilesAdded]);
 
   // Standalone and text sending conditions
   const isAnyUploading = stagedFiles.some((f) => f.status === "uploading");
@@ -695,6 +806,16 @@ export function ChatInput({
             >
               /
             </button>
+
+            {/* 📋 Paste Screenshot (WhatsApp / Slack mobile style) */}
+            <button
+              type="button"
+              onClick={handlePasteScreenshot}
+              className="w-7 h-7 rounded-lg flex items-center justify-center text-neutral-500 dark:text-neutral-400 hover:text-emerald-600 dark:hover:text-emerald-400 active:scale-95 transition cursor-pointer"
+              title="Paste screenshot from clipboard"
+            >
+              <Clipboard className="w-4 h-4" />
+            </button>
           </div>
 
           {/* Center: Message Textarea */}
@@ -1026,6 +1147,16 @@ export function ChatInput({
               title="Add attachment, photo, or document (+)"
             >
               <Plus className="w-4 h-4" />
+            </button>
+
+            {/* 📋 Paste Screenshot / Image */}
+            <button
+              type="button"
+              onClick={handlePasteScreenshot}
+              className="p-1.5 rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-500 hover:text-emerald-600 dark:hover:text-emerald-400 transition cursor-pointer"
+              title="Paste screenshot from clipboard [Ctrl+V]"
+            >
+              <Clipboard className="w-4 h-4" />
             </button>
 
             {/* Aa Toggle Formatting Bar */}

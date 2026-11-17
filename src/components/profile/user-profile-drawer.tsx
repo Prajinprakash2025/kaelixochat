@@ -25,6 +25,7 @@ import {
   Trash2,
   AlertTriangle,
   UserMinus,
+  UserCheck,
 } from "lucide-react";
 import { WorkspaceMember } from "@/types";
 import { formatRoleLabel, canRemoveMember } from "@/utils/permissions";
@@ -42,6 +43,7 @@ export interface UserProfileDrawerProps {
   onOpenGames?: () => void;
   onOpenInvite?: () => void;
   onSignOut?: () => void;
+  onSwitchAccount?: () => void;
   onRemoveMember?: (memberId: string) => void | Promise<void>;
 }
 
@@ -58,6 +60,7 @@ export function UserProfileDrawer({
   onOpenGames,
   onOpenInvite,
   onSignOut,
+  onSwitchAccount,
   onRemoveMember,
 }: UserProfileDrawerProps) {
   const [copiedEmail, setCopiedEmail] = useState(false);
@@ -578,6 +581,26 @@ export function UserProfileDrawer({
                     <span className="text-[11px] text-indigo-600 dark:text-indigo-400 font-bold">
                       Invite
                     </span>
+                  </button>
+                )}
+
+                {/* Switch Account / Change User */}
+                {onSwitchAccount && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onClose();
+                      onSwitchAccount();
+                    }}
+                    className="w-full flex items-center justify-between p-2.5 rounded-xl text-xs font-medium text-sky-600 dark:text-sky-400 hover:bg-sky-50 dark:hover:bg-sky-950/40 transition cursor-pointer mt-1"
+                  >
+                    <div className="flex items-center space-x-2.5">
+                      <div className="w-7 h-7 rounded-lg bg-sky-50 dark:bg-sky-950/60 border border-sky-200 dark:border-sky-800/60 flex items-center justify-center text-sky-500">
+                        <UserCheck className="w-3.5 h-3.5" />
+                      </div>
+                      <span className="font-bold">Switch Account / Change User</span>
+                    </div>
+                    <span className="text-[11px] font-semibold">Switch</span>
                   </button>
                 )}
 

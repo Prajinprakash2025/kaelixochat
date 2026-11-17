@@ -28,6 +28,7 @@ import {
   ExternalLink,
   Filter,
   Trash2,
+  UserCheck,
 } from "lucide-react";
 import {
   Channel,
@@ -62,6 +63,7 @@ interface MobileSlackViewProps {
   onOpenGamesModal: () => void;
   onOpenPreferences: () => void;
   onOpenUserProfile: (member: WorkspaceMember) => void;
+  onOpenAuthModal?: () => void;
   onLogout: () => void;
   onRemoveMember?: (memberId: string) => void;
 }
@@ -87,6 +89,7 @@ export function MobileSlackView({
   onOpenGamesModal,
   onOpenPreferences,
   onOpenUserProfile,
+  onOpenAuthModal,
   onLogout,
   onRemoveMember,
 }: MobileSlackViewProps) {
@@ -815,6 +818,22 @@ export function MobileSlackView({
                   </p>
                 </div>
               </div>
+
+              {/* Switch Account */}
+              {onOpenAuthModal && (
+                <div
+                  onClick={onOpenAuthModal}
+                  className="flex items-start space-x-3 p-4 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition cursor-pointer text-sky-600 dark:text-sky-400 border-b border-neutral-200 dark:border-neutral-800"
+                >
+                  <UserCheck className="w-5 h-5 mt-0.5 flex-shrink-0" />
+                  <div className="flex-1">
+                    <h3 className="text-sm font-semibold">Switch Account / Change User</h3>
+                    <p className="text-xs text-sky-600/70 dark:text-sky-400/70 mt-0.5">
+                      Logged in as {currentUser.name} • Tap to switch
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {/* Sign Out */}
               <div

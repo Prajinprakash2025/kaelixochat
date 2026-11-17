@@ -234,6 +234,9 @@ export default function KaelixoApp() {
           } else if (normName === "anagha" && (!parsed.avatar || parsed.avatar.includes("seed="))) {
             parsed.avatar =
               "https://untypucxdpgxnfezzwuo.supabase.co/storage/v1/object/public/kaelixo-attachments/avatars/user-prajin_prakash/1794041835002-anagha_fish.png";
+          } else if (normName === "arjun dev") {
+            // Guarantee Arjun Dev does not leak Prajin Prakash's photo
+            parsed.avatar = "https://api.dicebear.com/7.x/bottts/svg?seed=Arjun";
           } else if (parsed.avatar?.includes("seed=")) {
             const match = TEAM_MEMBERS.find(
               (m) =>
@@ -486,6 +489,8 @@ export default function KaelixoApp() {
     } else if (cleanName === "anagha" && (!resolvedAvatar || resolvedAvatar.includes("seed="))) {
       resolvedAvatar =
         "https://untypucxdpgxnfezzwuo.supabase.co/storage/v1/object/public/kaelixo-attachments/avatars/user-prajin_prakash/1794041835002-anagha_fish.png";
+    } else if (cleanName === "arjun dev") {
+      resolvedAvatar = "https://api.dicebear.com/7.x/bottts/svg?seed=Arjun";
     } else if (!resolvedAvatar || resolvedAvatar.includes("seed=")) {
       const match = teamMembers.find(
         (m) =>
@@ -1214,6 +1219,16 @@ export default function KaelixoApp() {
         "https://untypucxdpgxnfezzwuo.supabase.co/storage/v1/object/public/kaelixo-attachments/avatars/user-prajin_prakash/1794041835002-anagha_fish.png";
       setCurrentUser((prev) => {
         const next = { ...prev, avatar: realAvatar };
+        try { localStorage.setItem("kaelixo_user", JSON.stringify(next)); } catch {}
+        return next;
+      });
+      return;
+    }
+
+    if (cleanName === "arjun dev" && currentUser.avatar?.includes("1794211392212")) {
+      const arjunAvatar = "https://api.dicebear.com/7.x/bottts/svg?seed=Arjun";
+      setCurrentUser((prev) => {
+        const next = { ...prev, avatar: arjunAvatar };
         try { localStorage.setItem("kaelixo_user", JSON.stringify(next)); } catch {}
         return next;
       });
@@ -3025,6 +3040,7 @@ export default function KaelixoApp() {
               setActiveProfileMember(member);
               setRightPanelMode("profile");
             }}
+            onOpenAuthModal={() => setIsAuthModalOpen(true)}
             onLogout={handleLogout}
             onRemoveMember={handleRemoveMember}
           />
@@ -3492,6 +3508,7 @@ export default function KaelixoApp() {
           onOpenGames={() => setIsGamesModalOpen(true)}
           onOpenInvite={() => setIsInviteModalOpen(true)}
           onSignOut={handleLogout}
+          onSwitchAccount={() => setIsAuthModalOpen(true)}
           onRemoveMember={handleRemoveMember}
         />
       )}

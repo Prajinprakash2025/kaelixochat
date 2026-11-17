@@ -444,6 +444,8 @@ export function SlackAuthModal({
       } else if (cleanLower === "anagha" && (!preservedAvatar || preservedAvatar.includes("seed="))) {
         preservedAvatar =
           "https://untypucxdpgxnfezzwuo.supabase.co/storage/v1/object/public/kaelixo-attachments/avatars/user-prajin_prakash/1794041835002-anagha_fish.png";
+      } else if (cleanLower === "arjun dev") {
+        preservedAvatar = "https://api.dicebear.com/7.x/bottts/svg?seed=Arjun";
       }
 
       const demoUser: WorkspaceMember = {
