@@ -22,13 +22,6 @@ import {
 import { MusicTrack, MusicSyncState, WorkspaceMember, MusicReaction } from "@/types";
 import { musicSync } from "@/utils/music-realtime";
 
-declare global {
-  interface Window {
-    YT: any;
-    onYouTubeIframeAPIReady: () => void;
-  }
-}
-
 interface SyncedMusicPlayerProps {
   currentUser: WorkspaceMember;
   onClose?: () => void;
@@ -50,7 +43,7 @@ export function SyncedMusicPlayer({
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [currentTime, setCurrentTime] = useState<number>(0);
   const [duration, setDuration] = useState<number>(0);
-  const [volume, setVolume] = useState<number>(80);
+  const [volume, setVolume] = useState<number>(85);
   const [isMuted, setIsMuted] = useState<boolean>(false);
   const [queue, setQueue] = useState<MusicTrack[]>([]);
   const [showQueue, setShowQueue] = useState<boolean>(false);
@@ -58,26 +51,60 @@ export function SyncedMusicPlayer({
   const [activeDj, setActiveDj] = useState<{ id: string; name: string; avatar: string } | null>(null);
   const [listeners, setListeners] = useState<WorkspaceMember[]>([currentUser]);
   const [reactions, setReactions] = useState<MusicReaction[]>([]);
-  const [isReady, setIsReady] = useState<boolean>(false);
+  const [origin, setOrigin] = useState<string>("");
 
-  const playerRef = useRef<any>(null);
-  const containerId = useRef(`yt-player-${Math.random().toString(36).substr(2, 6)}`);
+  const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const isInternalChangeRef = useRef<boolean>(false);
+
+  // Set origin on mount
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setOrigin(window.location.origin);
+    }
+  }, []);
+
+  const isInitialMount = useRef(true);
+
+  // Sync initialTrack prop when user selects a song
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      if (initialTrack) {
+        setCurrentTrack(initialTrack);
+      }
+      return;
+    }
+
+    if (initialTrack) {
+      setCurrentTrack(initialTrack);
+      setIsPlaying(true);
+      onTrackChange?.(initialTrack);
+      onPlayStateChange?.(true);
+      setTimeout(() => {
+        postYtCommand("playVideo");
+      }, 300);
+    }
+  }, [initialTrack]);
+
+  // Helper to send postMessage commands to the YouTube iframe
+  const postYtCommand = (func: string, args: any[] = []) => {
+    if (iframeRef.current?.contentWindow) {
+      try {
+        iframeRef.current.contentWindow.postMessage(
+          JSON.stringify({ event: "command", func, args }),
+          "*"
+        );
+      } catch (err) {
+        console.warn("postYtCommand error:", err);
+      }
+    }
+  };
 
   // 1. Initialize Realtime Sync
   useEffect(() => {
     musicSync.init(currentUser, "workspace-hq");
 
     const unsubAction = musicSync.subscribe((action) => {
-      // Ignore actions dispatched by ourselves to avoid echo loops
-      if (action.sender.id === currentUser.id) {
-        if (action.type === "REACTION") {
-          triggerReactionAnimation(action.payload.emoji, action.sender.name);
-        }
-        return;
-      }
-
       switch (action.type) {
         case "PLAY": {
           const track = action.payload.track as MusicTrack;
@@ -91,29 +118,19 @@ export function SyncedMusicPlayer({
           onPlayStateChange?.(true);
           onTrackChange?.(track);
 
-          if (playerRef.current) {
-            try {
-              playerRef.current.loadVideoById(track.id, targetPos);
-              playerRef.current.playVideo();
-            } catch (e) {
-              console.warn("Error playing video:", e);
-            }
-          }
+          setTimeout(() => {
+            postYtCommand("seekTo", [targetPos, true]);
+            postYtCommand("playVideo");
+          }, 300);
           break;
         }
 
         case "PAUSE": {
           setIsPlaying(false);
           onPlayStateChange?.(false);
-          if (playerRef.current) {
-            try {
-              playerRef.current.pauseVideo();
-              if (action.payload.position !== undefined) {
-                playerRef.current.seekTo(action.payload.position, true);
-              }
-            } catch (e) {
-              console.warn("Error pausing video:", e);
-            }
+          postYtCommand("pauseVideo");
+          if (action.payload.position !== undefined) {
+            postYtCommand("seekTo", [action.payload.position, true]);
           }
           break;
         }
@@ -123,13 +140,7 @@ export function SyncedMusicPlayer({
           const elapsed = (Date.now() - action.sentAt) / 1000;
           const targetPos = pos + elapsed;
           setCurrentTime(targetPos);
-          if (playerRef.current) {
-            try {
-              playerRef.current.seekTo(targetPos, true);
-            } catch (e) {
-              console.warn("Error seeking video:", e);
-            }
-          }
+          postYtCommand("seekTo", [targetPos, true]);
           break;
         }
 
@@ -140,14 +151,6 @@ export function SyncedMusicPlayer({
           setIsPlaying(true);
           onTrackChange?.(track);
           onPlayStateChange?.(true);
-          if (playerRef.current) {
-            try {
-              playerRef.current.loadVideoById(track.id, 0);
-              playerRef.current.playVideo();
-            } catch (e) {
-              console.warn("Error changing video:", e);
-            }
-          }
           break;
         }
 
@@ -164,14 +167,12 @@ export function SyncedMusicPlayer({
         }
 
         case "SYNC_REQUEST": {
-          // If we are currently playing, broadcast our current state to the newcomer
-          if (currentTrack && playerRef.current) {
-            const currentPos = playerRef.current.getCurrentTime?.() || currentTime;
+          if (currentTrack) {
             musicSync.respondState(
               {
                 currentTrack,
                 isPlaying,
-                position: currentPos,
+                position: currentTime,
                 sentAt: Date.now(),
                 dj: activeDj || { id: currentUser.id, name: currentUser.name, avatar: currentUser.avatar },
                 queue,
@@ -184,7 +185,7 @@ export function SyncedMusicPlayer({
 
         case "SYNC_RESPONSE": {
           const state = action.payload as MusicSyncState;
-          if (state && state.currentTrack && !currentTrack) {
+          if (state && state.currentTrack && (!currentTrack || currentTrack.id !== state.currentTrack.id)) {
             const elapsed = (Date.now() - state.sentAt) / 1000;
             const targetPos = (state.position || 0) + (state.isPlaying ? elapsed : 0);
 
@@ -195,18 +196,14 @@ export function SyncedMusicPlayer({
             onTrackChange?.(state.currentTrack);
             onPlayStateChange?.(state.isPlaying);
 
-            if (playerRef.current) {
-              try {
-                playerRef.current.loadVideoById(state.currentTrack.id, targetPos);
-                if (state.isPlaying) {
-                  playerRef.current.playVideo();
-                } else {
-                  playerRef.current.pauseVideo();
-                }
-              } catch (e) {
-                console.warn("Error applying synced state:", e);
+            setTimeout(() => {
+              postYtCommand("seekTo", [targetPos, true]);
+              if (state.isPlaying) {
+                postYtCommand("playVideo");
+              } else {
+                postYtCommand("pauseVideo");
               }
-            }
+            }, 400);
           }
           break;
         }
@@ -228,168 +225,109 @@ export function SyncedMusicPlayer({
     };
   }, [currentUser, currentTrack, isPlaying, currentTime, activeDj, queue]);
 
-  // 2. Load YouTube IFrame API
+  // 2. Listen to YouTube postMessage events for accurate time & state
   useEffect(() => {
-    let isMounted = true;
-
-    const setupPlayer = () => {
-      if (!window.YT || !window.YT.Player) return;
-      if (playerRef.current) return;
-
+    const handleWindowMessage = (e: MessageEvent) => {
       try {
-        playerRef.current = new window.YT.Player(containerId.current, {
-          height: "100%",
-          width: "100%",
-          videoId: currentTrack?.id || "tOM-nWPcR4U",
-          playerVars: {
-            autoplay: 0,
-            controls: 0,
-            modestbranding: 1,
-            rel: 0,
-            playsinline: 1,
-            disablekb: 1,
-            fs: 0,
-            origin: typeof window !== "undefined" ? window.location.origin : undefined,
-          },
-          events: {
-            onReady: (event: any) => {
-              if (!isMounted) return;
-              setIsReady(true);
-              event.target.setVolume(volume);
-              const dur = event.target.getDuration();
-              if (dur) setDuration(dur);
-
-              if (initialTrack && !currentTrack) {
-                setCurrentTrack(initialTrack);
-                event.target.loadVideoById(initialTrack.id, 0);
-              }
-            },
-            onStateChange: (event: any) => {
-              if (!isMounted) return;
-              // 1 = Playing, 2 = Paused, 0 = Ended
-              if (event.data === 1) {
-                setIsPlaying(true);
-                onPlayStateChange?.(true);
-                const dur = event.target.getDuration();
-                if (dur) setDuration(dur);
-              } else if (event.data === 2) {
-                setIsPlaying(false);
-                onPlayStateChange?.(false);
-              } else if (event.data === 0) {
-                // Track ended: play next in queue
-                handlePlayNext();
-              }
-            },
-            onError: (err: any) => {
-              console.warn("YouTube Player error:", err);
-            },
-          },
-        });
-      } catch (err) {
-        console.warn("YT.Player init failed:", err);
-      }
-    };
-
-    if (window.YT && window.YT.Player) {
-      setupPlayer();
-    } else {
-      const prevCallback = window.onYouTubeIframeAPIReady;
-      window.onYouTubeIframeAPIReady = () => {
-        if (prevCallback) prevCallback();
-        setupPlayer();
-      };
-
-      if (!document.getElementById("yt-iframe-api-script")) {
-        const tag = document.createElement("script");
-        tag.id = "yt-iframe-api-script";
-        tag.src = "https://www.youtube.com/iframe_api";
-        const firstScriptTag = document.getElementsByTagName("script")[0];
-        firstScriptTag?.parentNode?.insertBefore(tag, firstScriptTag);
-      }
-    }
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  // 3. Progress ticker
-  useEffect(() => {
-    if (isPlaying) {
-      progressIntervalRef.current = setInterval(() => {
-        if (playerRef.current && playerRef.current.getCurrentTime) {
-          try {
-            const time = playerRef.current.getCurrentTime();
-            setCurrentTime(time || 0);
-            const dur = playerRef.current.getDuration();
-            if (dur && dur !== duration) setDuration(dur);
-          } catch {
-            // Ignore cross-origin ticker errors
+        const data = typeof e.data === "string" ? JSON.parse(e.data) : e.data;
+        if (data?.event === "infoDelivery" && data.info) {
+          if (data.info.currentTime !== undefined) {
+            setCurrentTime(data.info.currentTime);
+          }
+          if (data.info.duration !== undefined && data.info.duration > 0) {
+            setDuration(data.info.duration);
+          }
+          if (data.info.playerState !== undefined) {
+            // 1: PLAYING, 2: PAUSED, 0: ENDED
+            if (data.info.playerState === 1) {
+              setIsPlaying(true);
+              onPlayStateChange?.(true);
+            } else if (data.info.playerState === 2) {
+              setIsPlaying(false);
+              onPlayStateChange?.(false);
+            } else if (data.info.playerState === 0) {
+              handlePlayNext();
+            }
           }
         }
-      }, 500);
-    } else {
-      if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
-    }
-
-    return () => {
-      if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
+      } catch {
+        // Safe to ignore non-JSON messages
+      }
     };
-  }, [isPlaying, duration]);
 
-  // Handle Play/Pause
-  const togglePlay = () => {
-    if (!playerRef.current) return;
-    const nextState = !isPlaying;
-    setIsPlaying(nextState);
-    onPlayStateChange?.(nextState);
+    window.addEventListener("message", handleWindowMessage);
+    return () => window.removeEventListener("message", handleWindowMessage);
+  }, [queue, currentTrack]);
 
-    const pos = playerRef.current.getCurrentTime?.() || currentTime;
-
-    if (nextState) {
-      playerRef.current.playVideo();
-      if (currentTrack) {
-        musicSync.play(currentTrack, pos, currentUser);
-        setActiveDj({ id: currentUser.id, name: currentUser.name, avatar: currentUser.avatar });
-      }
-    } else {
-      playerRef.current.pauseVideo();
-      musicSync.pause(pos, currentUser);
-    }
-  };
-
-  // Handle Seek
-  const handleSeek = (newTime: number) => {
-    setCurrentTime(newTime);
-    if (playerRef.current) {
+  // Tell iframe we are listening to events whenever iframe changes
+  const onIframeLoad = () => {
+    if (iframeRef.current?.contentWindow) {
       try {
-        playerRef.current.seekTo(newTime, true);
-        musicSync.seek(newTime, currentUser);
-      } catch (e) {
-        console.warn("Seek error:", e);
-      }
-    }
-  };
-
-  // Handle Volume
-  const handleVolumeChange = (newVol: number) => {
-    setVolume(newVol);
-    setIsMuted(newVol === 0);
-    if (playerRef.current) {
-      try {
-        playerRef.current.setVolume(newVol);
+        iframeRef.current.contentWindow.postMessage(
+          JSON.stringify({ event: "listening" }),
+          "*"
+        );
+        postYtCommand("setVolume", [volume]);
+        if (isPlaying) {
+          postYtCommand("playVideo");
+        }
       } catch {}
     }
   };
 
+  // Periodic ticker fallback
+  useEffect(() => {
+    if (isPlaying) {
+      progressIntervalRef.current = setInterval(() => {
+        postYtCommand("listening");
+      }, 1000);
+    } else {
+      if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
+    }
+    return () => {
+      if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
+    };
+  }, [isPlaying]);
+
+  // Toggle Play / Pause
+  const togglePlay = () => {
+    const next = !isPlaying;
+    setIsPlaying(next);
+    onPlayStateChange?.(next);
+
+    if (next) {
+      postYtCommand("playVideo");
+      if (currentTrack) {
+        musicSync.play(currentTrack, currentTime, currentUser);
+        setActiveDj({ id: currentUser.id, name: currentUser.name, avatar: currentUser.avatar });
+      }
+    } else {
+      postYtCommand("pauseVideo");
+      musicSync.pause(currentTime, currentUser);
+    }
+  };
+
+  // Seek
+  const handleSeek = (newTime: number) => {
+    setCurrentTime(newTime);
+    postYtCommand("seekTo", [newTime, true]);
+    musicSync.seek(newTime, currentUser);
+  };
+
+  // Volume
+  const handleVolumeChange = (newVol: number) => {
+    setVolume(newVol);
+    setIsMuted(newVol === 0);
+    postYtCommand("setVolume", [newVol]);
+  };
+
   const toggleMute = () => {
-    if (!playerRef.current) return;
     if (isMuted) {
-      playerRef.current.unMute?.();
-      playerRef.current.setVolume?.(volume || 50);
+      postYtCommand("unMute");
+      postYtCommand("setVolume", [volume || 70]);
       setIsMuted(false);
     } else {
-      playerRef.current.mute?.();
+      postYtCommand("mute");
       setIsMuted(true);
     }
   };
@@ -397,11 +335,10 @@ export function SyncedMusicPlayer({
   // Next Track
   const handlePlayNext = () => {
     if (queue.length > 0) {
-      const nextTrack = queue[0];
+      const next = queue[0];
       setQueue((prev) => prev.slice(1));
-      playSpecificTrack(nextTrack);
+      playSpecificTrack(next);
     } else if (currentTrack) {
-      // Loop or restart
       handleSeek(0);
     }
   };
@@ -415,19 +352,10 @@ export function SyncedMusicPlayer({
     onTrackChange?.(track);
     onPlayStateChange?.(true);
 
-    if (playerRef.current) {
-      try {
-        playerRef.current.loadVideoById(track.id, 0);
-        playerRef.current.playVideo();
-      } catch (e) {
-        console.warn("Load video failed:", e);
-      }
-    }
-
     musicSync.play(track, 0, currentUser);
   };
 
-  // Reaction Animation
+  // Reactions
   const triggerReactionAnimation = (emoji: string, userName: string) => {
     const reaction: MusicReaction = {
       id: `rx-${Date.now()}-${Math.random()}`,
@@ -455,7 +383,7 @@ export function SyncedMusicPlayer({
 
   return (
     <div className="relative flex flex-col w-full bg-neutral-900/95 text-white rounded-2xl border border-neutral-700/60 shadow-2xl backdrop-blur-xl overflow-hidden select-none">
-      {/* Realtime Floating Reaction Emojis */}
+      {/* Realtime Floating Reactions */}
       <div className="absolute inset-0 pointer-events-none z-50 overflow-hidden">
         {reactions.map((r, i) => (
           <div
@@ -472,17 +400,6 @@ export function SyncedMusicPlayer({
             </span>
           </div>
         ))}
-      </div>
-
-      {/* Hidden/Minimal IFrame container for YouTube Audio */}
-      <div
-        className={`transition-all duration-300 ${
-          showVideo
-            ? "relative w-full aspect-video bg-black rounded-t-xl overflow-hidden"
-            : "fixed -top-[9999px] -left-[9999px] w-1 h-1 opacity-0 pointer-events-none"
-        }`}
-      >
-        <div id={containerId.current} className="w-full h-full" />
       </div>
 
       {/* Header Bar */}
@@ -519,15 +436,15 @@ export function SyncedMusicPlayer({
           <button
             type="button"
             onClick={() => setShowVideo(!showVideo)}
-            className={`px-2 py-1 rounded-md text-[11px] font-medium transition cursor-pointer flex items-center space-x-1 ${
+            className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition cursor-pointer flex items-center space-x-1.5 ${
               showVideo
                 ? "bg-purple-600 text-white"
                 : "bg-neutral-800 text-neutral-300 hover:text-white hover:bg-neutral-700"
             }`}
-            title={showVideo ? "Hide Video (Audio Only)" : "Watch Video"}
+            title={showVideo ? "Switch to Audio Mode" : "Expand Video"}
           >
-            {showVideo ? <Minimize2 className="w-3 h-3" /> : <Maximize2 className="w-3 h-3" />}
-            <span>{showVideo ? "Audio-Only" : "Video"}</span>
+            {showVideo ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
+            <span>{showVideo ? "Audio View" : "Video"}</span>
           </button>
 
           {onClose && (
@@ -540,6 +457,34 @@ export function SyncedMusicPlayer({
             </button>
           )}
         </div>
+      </div>
+
+      {/* Embedded YouTube Media Engine (Always visible in DOM with valid dimensions so Chrome/Brave never blocks audio) */}
+      <div
+        className={`w-full transition-all duration-300 bg-black overflow-hidden ${
+          showVideo
+            ? "aspect-video border-b border-neutral-800"
+            : "h-20 opacity-90 border-b border-neutral-800/60"
+        }`}
+      >
+        {currentTrack ? (
+          <iframe
+            ref={iframeRef}
+            key={currentTrack.id}
+            src={`https://www.youtube-nocookie.com/embed/${currentTrack.id}?autoplay=1&enablejsapi=1&origin=${encodeURIComponent(
+              origin || ""
+            )}&rel=0&modestbranding=1&playsinline=1`}
+            title={currentTrack.title}
+            onLoad={onIframeLoad}
+            className="w-full h-full border-0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowFullScreen
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-xs text-neutral-500 bg-neutral-950">
+            Select a song below to start playing
+          </div>
+        )}
       </div>
 
       {/* Main Track Display Area */}
@@ -610,13 +555,13 @@ export function SyncedMusicPlayer({
 
           <h3
             className="text-base md:text-lg font-bold text-white truncate drop-shadow-sm"
-            title={currentTrack?.title || "No Track Selected"}
+            title={currentTrack?.title || "Choose a song to start jam"}
           >
             {currentTrack?.title || "Choose a song to start jam"}
           </h3>
           <p
             className="text-xs md:text-sm text-neutral-400 truncate mt-0.5"
-            title={currentTrack?.artist || "Search or select from below"}
+            title={currentTrack?.artist || "Search songs or select from below"}
           >
             {currentTrack?.artist || "Search songs or paste YouTube links"}
           </p>
