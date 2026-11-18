@@ -33,6 +33,7 @@ import {
   Search,
   ExternalLink,
   ChevronRight,
+  ChevronLeft,
   UserCheck,
 } from "lucide-react";
 import { MusicTrack, WorkspaceMember } from "@/types";
@@ -266,9 +267,16 @@ export function MusicReelsView({
   const [isFollowing, setIsFollowing] = useState<Record<string, boolean>>({});
 
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const carouselRef = useRef<HTMLDivElement | null>(null);
   const touchStartY = useRef<number>(0);
-  const wheelTimeout = useRef<NodeJS.Timeout | null>(null);
   const doubleClickTimeout = useRef<NodeJS.Timeout | null>(null);
+
+  const scrollCarousel = (direction: "left" | "right") => {
+    if (carouselRef.current) {
+      const amount = direction === "left" ? -350 : 350;
+      carouselRef.current.scrollBy({ left: amount, behavior: "smooth" });
+    }
+  };
 
   // Load liked reels and map from localStorage
   useEffect(() => {
@@ -436,23 +444,7 @@ export function MusicReelsView({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [activeIndex, reels.length, toggleMute, togglePlayPause]);
 
-  // Mouse wheel scroll handler (throttled)
-  const handleWheel = (e: React.WheelEvent) => {
-    if (wheelTimeout.current) return;
-    if (Math.abs(e.deltaY) > 40) {
-      wheelTimeout.current = setTimeout(() => {
-        wheelTimeout.current = null;
-      }, 400);
-
-      if (e.deltaY > 0) {
-        handleNextReel();
-      } else {
-        handlePrevReel();
-      }
-    }
-  };
-
-  // Touch Swipe on mobile
+  // Touch Swipe on mobile (specifically on the Reel Video Card)
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartY.current = e.touches[0].clientY;
   };
@@ -644,10 +636,7 @@ export function MusicReelsView({
   return (
     <div
       ref={containerRef}
-      onWheel={handleWheel}
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
-      className="flex-1 flex flex-col h-full bg-[#0d0d12] text-white select-none overflow-y-auto scrollbar-thin relative"
+      className="flex-1 flex flex-col h-full bg-[#0d0d12] text-white select-none overflow-y-auto scrollbar-thin relative scroll-smooth"
     >
       {/* Toast Notification */}
       {toastMessage && (
@@ -761,11 +750,13 @@ export function MusicReelsView({
       {/* 4. MAIN STUDIO 3-COLUMN LAYOUT (Exact Screenshot 2) */}
       <div className="px-4 sm:px-6 py-3 flex-1 flex flex-col lg:flex-row items-start justify-center gap-5 xl:gap-6">
         {/* ================= COLUMN 1: REEL VIDEO PLAYER & ACTION BAR ================= */}
-        <div className="flex items-start justify-center space-x-3 sm:space-x-3.5 mx-auto lg:mx-0 flex-shrink-0">
+        <div className="flex items-start justify-center space-x-3 sm:space-x-3.5 mx-auto lg:mx-0 flex-shrink-0 lg:sticky lg:top-3 self-start">
           {/* Vertical 9:16 Video Card */}
           <div
             key={currentTrack?.id || activeIndex}
             onClick={handleVideoClick}
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
             className={`relative w-[300px] xs:w-[330px] sm:w-[360px] aspect-[9/16] rounded-2xl overflow-hidden bg-black shadow-2xl border border-neutral-800 flex flex-col justify-between group select-none cursor-pointer ${
               scrollTransition === "up" ? "animate-reel-up" : "animate-reel-down"
             }`}
@@ -955,7 +946,22 @@ export function MusicReelsView({
           </div>
 
           {/* Vertical Floating Action Icons right beside the Video (Exact Screenshot 2) */}
-          <div className="flex flex-col items-center justify-end space-y-3.5 pt-12">
+          <div className="flex flex-col items-center justify-center space-y-2.5 sm:space-y-3 pt-2">
+            {/* 0. Prev Reel Button */}
+            <button
+              type="button"
+              onClick={handlePrevReel}
+              disabled={activeIndex === 0}
+              className={`w-10 h-10 rounded-full flex items-center justify-center transition shadow-xl cursor-pointer border ${
+                activeIndex === 0
+                  ? "opacity-30 cursor-not-allowed bg-neutral-900/50 text-neutral-600 border-neutral-800/40"
+                  : "bg-neutral-900/90 hover:bg-purple-600 text-white border-neutral-800 hover:border-purple-500 hover:scale-110 active:scale-95"
+              }`}
+              title="Previous Reel (↑ / K)"
+            >
+              <ChevronUp className="w-5 h-5" />
+            </button>
+
             {/* 1. Like Heart Button */}
             <div className="flex flex-col items-center space-y-1">
               <button
@@ -1191,6 +1197,16 @@ export function MusicReelsView({
                 </>
               )}
             </div>
+
+            {/* 6. Next Reel Button */}
+            <button
+              type="button"
+              onClick={handleNextReel}
+              className="w-10 h-10 rounded-full bg-neutral-900/90 hover:bg-purple-600 border border-neutral-800 hover:border-purple-500 flex items-center justify-center text-white transition shadow-xl cursor-pointer hover:scale-110 active:scale-95"
+              title="Next Reel (↓ / J)"
+            >
+              <ChevronDown className="w-5 h-5" />
+            </button>
           </div>
         </div>
 
@@ -1403,19 +1419,30 @@ export function MusicReelsView({
           <div className="flex items-center space-x-2">
             <Film className="w-4 h-4 text-purple-400" />
             <h3 className="text-xs font-bold text-white">More Reels for You</h3>
+            <span className="text-[10px] text-neutral-400">({moreReels.length} suggestions)</span>
           </div>
-          <button
-            type="button"
-            onClick={handleNextReel}
-            className="text-[11px] font-bold text-purple-400 hover:text-purple-300 flex items-center space-x-1 cursor-pointer"
-          >
-            <span>View All</span>
-            <span>→</span>
-          </button>
+          <div className="flex items-center space-x-2">
+            <button
+              type="button"
+              onClick={() => scrollCarousel("left")}
+              className="w-7 h-7 rounded-full bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-400 hover:text-white flex items-center justify-center cursor-pointer transition"
+              title="Scroll left"
+            >
+              <ChevronLeft className="w-3.5 h-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => scrollCarousel("right")}
+              className="w-7 h-7 rounded-full bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-400 hover:text-white flex items-center justify-center cursor-pointer transition"
+              title="Scroll right"
+            >
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
 
         {/* Horizontal Carousel */}
-        <div className="flex items-center space-x-3 overflow-x-auto scrollbar-none pb-2">
+        <div ref={carouselRef} className="flex items-center space-x-3 overflow-x-auto scrollbar-none pb-2 scroll-smooth">
           {moreReels.map((track) => (
             <div
               key={track.id}
