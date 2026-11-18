@@ -419,35 +419,134 @@ const CATEGORY_CATALOG: Record<string, { name: string; icon: string; tracks: Mus
 
 // Dynamic queries when searching by category or pagination
 const CATEGORY_SEARCH_QUERIES: Record<string, string[]> = {
-  trending: ["latest viral hit songs 2024", "billboard global trending music"],
+  trending: [
+    "latest viral hit songs 2024",
+    "billboard global trending music hits",
+    "top spotify viral hits today",
+    "worldwide trending songs official audio",
+    "trending music playlist hits",
+  ],
   malayalam: [
     "latest malayalam hit songs 2024",
     "malayalam viral movie songs",
+    "sushin shyam latest songs",
+    "dabzee new malayalam tracks",
     "malayalam evergreen melody hits",
-    "sushin shyam shaan rahman hits",
+    "kerala indie music trending",
+    "tovino thomas fahadh faasil hit songs",
   ],
   tamil: [
-    "tamil hit songs 2024",
+    "tamil viral hits 2024",
     "anirudh songs viral hits",
     "ar rahman tamil super hits",
-    "tamil melody hits",
-  ],
-  english: [
-    "top billboard hot 100 songs",
-    "viral pop songs 2024",
-    "top global hits english",
-  ],
-  lofi: [
-    "lofi hip hop radio beats to study",
-    "chillhop beats coding focus",
-    "ambient lofi chill songs",
+    "tamil melody songs hits",
+    "yuvan shankar raja super hits",
+    "sid sriram tamil love songs",
+    "kollywood latest trending songs",
   ],
   hindi: [
     "arijit singh best songs",
     "bollywood romantic hit songs",
     "hindi viral party hits",
+    "pritam arijit romantic hits",
+    "latest bollywood songs 2024",
+    "90s bollywood melodies evergreen",
+  ],
+  english: [
+    "top billboard hot 100 songs",
+    "viral pop songs 2024",
+    "the weeknd taylor swift hits",
+    "top global hits english pop",
+    "dua lipa imagine dragons hits",
+  ],
+  korean: [
+    "kpop viral hits 2024",
+    "bts official songs hits",
+    "blackpink top hit songs",
+    "korean drama best ost",
+    "newjeans aespa stray kids kpop",
+    "kpop top 50 songs",
+  ],
+  punjabi: [
+    "punjabi viral hits 2024",
+    "sidhu moose wala diljit dosanjh",
+    "karan aujla latest songs",
+    "ap dhillon punjabi hits",
+    "top punjabi songs playlist",
+  ],
+  telugu: [
+    "telugu super hits 2024",
+    "ss thaman telugu hits",
+    "devi sri prasad songs",
+    "telugu romantic melody songs",
+  ],
+  arabic: [
+    "arabic viral songs",
+    "middle east trending music",
+    "amr diab nancy ajram hits",
+    "arabic pop hits",
+  ],
+  lofi: [
+    "lofi hip hop radio beats to study",
+    "chillhop beats coding focus",
+    "ambient lofi chill songs",
+    "japanese lofi beats to sleep",
+  ],
+  romantic: [
+    "romantic love songs all time hits",
+    "all time favorite romantic melodies",
+    "heart touching love songs playlist",
+  ],
+  gym: [
+    "gym workout motivation music high bass",
+    "hard workout phonk songs",
+    "gym pump up bass boosted music",
+  ],
+  nostalgia: [
+    "90s evergreen melody hits all time",
+    "2000s nostalgic songs playlist",
+    "golden retro hits",
+  ],
+  "sushin shyam": [
+    "sushin shyam latest hit songs",
+    "sushin shyam bgm and movie hits",
+    "sushin shyam songs aavesham manjummel boys",
+  ],
+  anirudh: [
+    "anirudh ravichander latest hits",
+    "anirudh viral songs master leo jailer",
+    "anirudh party dance hits",
+  ],
+  "ar rahman": [
+    "ar rahman greatest hits all time",
+    "ar rahman 90s evergreen tamil hindi",
+    "ar rahman soul melodies",
+  ],
+  "arijit singh": [
+    "arijit singh all time best songs",
+    "arijit singh romantic hits",
+    "arijit singh soulful melodies",
+  ],
+  "sid sriram": [
+    "sid sriram best love songs",
+    "sid sriram tamil telugu hits",
+    "sid sriram live acoustic hits",
+  ],
+  bts: [
+    "bts top hit songs",
+    "bts best songs playlist",
+    "jungkook bts solo hits",
   ],
 };
+
+function shuffleArray<T>(array: T[]): T[] {
+  const copy = [...array];
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
 
 // Helper to extract YouTube video ID from URL or raw ID
 function extractVideoId(text: string): string | null {
@@ -469,7 +568,7 @@ async function searchYouTube(query: string, limit: number = 15): Promise<MusicTr
           "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         "Accept-Language": "en-US,en;q=0.9",
       },
-      next: { revalidate: 300 },
+      cache: "no-store",
     });
 
     if (!ytRes.ok) return [];
@@ -528,7 +627,8 @@ async function searchYouTube(query: string, limit: number = 15): Promise<MusicTr
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const q = searchParams.get("q")?.trim();
-  const category = (searchParams.get("category") || "trending").toLowerCase();
+  const rawCategory = (searchParams.get("category") || "trending").trim();
+  const category = rawCategory.toLowerCase();
   const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
   const trending = searchParams.get("trending") === "true";
 
@@ -576,45 +676,72 @@ export async function GET(request: Request) {
   }
 
   // 2. Category browsing with infinite/dynamic recommendations
-  const categoryInfo = CATEGORY_CATALOG[category] || CATEGORY_CATALOG["trending"];
-  const curated = categoryInfo.tracks;
+  // Support both pre-defined catalog categories AND any custom user category/singer/place!
+  const isKnownCatalog = category in CATEGORY_CATALOG;
+  const isKnownQuery = category in CATEGORY_SEARCH_QUERIES;
+
+  const queryList: string[] = isKnownQuery
+    ? CATEGORY_SEARCH_QUERIES[category]
+    : [
+        `${rawCategory} hit songs official audio`,
+        `${rawCategory} popular music songs`,
+        `${rawCategory} viral playlist 2024`,
+        `${rawCategory} songs best hits`,
+      ];
+
+  const categoryName = isKnownCatalog
+    ? CATEGORY_CATALOG[category].name
+    : rawCategory.charAt(0).toUpperCase() + rawCategory.slice(1);
+
+  const icon = isKnownCatalog ? CATEGORY_CATALOG[category].icon : "🎵";
 
   if (page === 1) {
-    // For page 1: Start with high quality curated tracks, and supplement with live YouTube hits
-    const queryList = CATEGORY_SEARCH_QUERIES[category] || CATEGORY_SEARCH_QUERIES["trending"];
-    const dynamicHits = await searchYouTube(queryList[0], 12);
+    // Pick a randomized query from queryList so EVERY reload brings fresh, varied songs like YouTube/Spotify!
+    const randomQueryIdx = Math.floor(Math.random() * queryList.length);
+    const chosenQuery = queryList[randomQueryIdx];
+    const dynamicHits = await searchYouTube(chosenQuery, 16);
 
-    // Merge without duplicates
-    const seen = new Set(curated.map((t) => t.id));
-    const merged = [...curated];
-    for (const t of dynamicHits) {
-      if (!seen.has(t.id)) {
-        seen.add(t.id);
-        merged.push(t);
+    let tracksToReturn: MusicTrack[] = [];
+
+    if (isKnownCatalog) {
+      // Pick a shuffled sample of 3 curated songs + merge with dynamic hits
+      const curatedShuffled = shuffleArray(CATEGORY_CATALOG[category].tracks).slice(0, 3);
+      const seen = new Set(curatedShuffled.map((t) => t.id));
+      tracksToReturn = [...curatedShuffled];
+
+      for (const t of dynamicHits) {
+        if (!seen.has(t.id)) {
+          seen.add(t.id);
+          tracksToReturn.push(t);
+        }
       }
+      // Shuffle combined batch so order is fresh on every reload
+      tracksToReturn = shuffleArray(tracksToReturn);
+    } else {
+      tracksToReturn = dynamicHits;
     }
 
     return NextResponse.json({
       success: true,
-      category,
-      categoryName: categoryInfo.name,
-      icon: categoryInfo.icon,
+      category: rawCategory,
+      categoryName,
+      icon,
       page: 1,
-      tracks: merged,
+      tracks: tracksToReturn,
       hasMore: true,
     });
   }
 
-  // Page 2+: Query deeper searches so it never ends
-  const queryList = CATEGORY_SEARCH_QUERIES[category] || CATEGORY_SEARCH_QUERIES["trending"];
+  // Page 2+: Query subsequent rotated queries so endless scroll never runs out
   const queryIndex = (page - 1) % queryList.length;
-  const deeperHits = await searchYouTube(`${queryList[queryIndex]} page ${page}`, 15);
+  const deeperQuery = `${queryList[queryIndex]} part ${page}`;
+  const deeperHits = await searchYouTube(deeperQuery, 15);
 
   return NextResponse.json({
     success: true,
-    category,
-    categoryName: categoryInfo.name,
-    icon: categoryInfo.icon,
+    category: rawCategory,
+    categoryName,
+    icon,
     page,
     tracks: deeperHits,
     hasMore: deeperHits.length >= 6,
