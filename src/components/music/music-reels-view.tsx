@@ -64,18 +64,18 @@ export function MusicReelsView({
   const [isLoading, setIsLoading] = useState(false);
   const [page, setPage] = useState(1);
 
-  // Playback & Custom Duration Timer (15s, 30s, 45s, 60s, 90s, 120s, or 0 for Full Song)
+  // Playback & Custom Duration Timer (Default: 2 minutes / 120s)
   const [isPlaying, setIsPlaying] = useState(true);
   const [isMuted, setIsMuted] = useState(false);
   const [currentSecond, setCurrentSecond] = useState(0);
-  const [durationLimit, setDurationLimit] = useState<number>(60);
+  const [durationLimit, setDurationLimit] = useState<number>(120);
   const [showDurationPicker, setShowDurationPicker] = useState<boolean>(false);
   const [customInputSeconds, setCustomInputSeconds] = useState<string>("");
   const [autoAdvance, setAutoAdvance] = useState(true);
   const [fitMode, setFitMode] = useState<"fill" | "fit">("fill");
   const [showPlayPauseIcon, setShowPlayPauseIcon] = useState<"play" | "pause" | null>(null);
 
-  // Load duration preference from localStorage
+  // Load duration preference from localStorage (defaults to 120s / 2 minutes)
   useEffect(() => {
     if (typeof window !== "undefined") {
       try {
@@ -85,6 +85,9 @@ export function MusicReelsView({
           if (!isNaN(parsed) && parsed >= 0) {
             setDurationLimit(parsed);
           }
+        } else {
+          setDurationLimit(120);
+          localStorage.setItem("kaelixo_reels_duration", "120");
         }
       } catch {}
     }
@@ -102,7 +105,7 @@ export function MusicReelsView({
     showToast(
       seconds === 0
         ? "Reel duration set to: Full Song"
-        : `Reel duration set to: ${seconds} seconds`
+        : `Reel duration set to: ${formatDurationLabel(seconds)}`
     );
   };
 
@@ -111,7 +114,7 @@ export function MusicReelsView({
     if (sec < 60) return `${sec}s`;
     const m = Math.floor(sec / 60);
     const s = sec % 60;
-    return s > 0 ? `${m}m ${s}s` : `${m}m`;
+    return s > 0 ? `${m}m ${s}s` : `${m} mins`;
   };
 
   const formatTime = (sec: number) => {
@@ -604,7 +607,7 @@ export function MusicReelsView({
                   title="Click to customize reel duration (15s, 30s, 60s, custom)"
                 >
                   <Clock className="w-3 h-3 text-rose-400" />
-                  <span>{durationLimit === 0 ? "Full" : `${durationLimit}s`}</span>
+                  <span>{formatDurationLabel(durationLimit)}</span>
                   <ChevronDown className="w-2.5 h-2.5 text-neutral-400" />
                 </button>
 
@@ -952,7 +955,7 @@ export function MusicReelsView({
                 <Clock className="w-4 h-4 text-rose-400" />
               </button>
               <span className="text-[10px] font-bold text-neutral-400">
-                {durationLimit === 0 ? "Full" : `${durationLimit}s`}
+                {formatDurationLabel(durationLimit)}
               </span>
             </div>
 
