@@ -50,6 +50,7 @@ export function SyncedMusicPlayer({
     setShowVideo,
     sendReaction,
     playTrack,
+    unlockMobileAudio,
   } = useMusic();
 
   const [showQueue, setShowQueue] = useState(false);
@@ -142,6 +143,21 @@ export function SyncedMusicPlayer({
           )}
         </div>
       </div>
+
+      {/* Mobile / Browser Mute Warning Banner */}
+      {isMuted && isPlaying && (
+        <button
+          type="button"
+          onClick={() => {
+            unlockMobileAudio();
+            toggleMute();
+          }}
+          className="w-full bg-amber-500/20 border-b border-amber-500/30 px-4 py-2 flex items-center justify-center space-x-2 text-amber-300 text-xs font-semibold animate-pulse cursor-pointer hover:bg-amber-500/30 transition"
+        >
+          <VolumeX className="w-4 h-4 text-amber-400" />
+          <span>Sound is muted on this phone. Tap here to unmute phone speakers!</span>
+        </button>
+      )}
 
       {/* Main Track Display Area */}
       <div className="p-5 flex flex-col md:flex-row items-center gap-5">
@@ -292,16 +308,22 @@ export function SyncedMusicPlayer({
         <div className="flex items-center space-x-3">
           <button
             type="button"
-            onClick={playPrevious}
+            onClick={() => {
+              unlockMobileAudio();
+              playPrevious();
+            }}
             className="p-2 text-neutral-400 hover:text-white hover:bg-neutral-800 rounded-lg transition cursor-pointer"
-            title="Restart Track"
+            title="Previous Track"
           >
             <SkipBack className="w-4 h-4" />
           </button>
 
           <button
             type="button"
-            onClick={togglePlay}
+            onClick={() => {
+              unlockMobileAudio();
+              togglePlay();
+            }}
             disabled={!currentTrack}
             className={`w-11 h-11 rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-95 cursor-pointer ${
               isPlaying
@@ -319,7 +341,10 @@ export function SyncedMusicPlayer({
 
           <button
             type="button"
-            onClick={playNext}
+            onClick={() => {
+              unlockMobileAudio();
+              playNext();
+            }}
             className="p-2 text-neutral-400 hover:text-white hover:bg-neutral-800 rounded-lg transition cursor-pointer"
             title="Next Track"
           >

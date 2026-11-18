@@ -19,13 +19,15 @@ interface MusicContextType {
   volume: number;
   isMuted: boolean;
   queue: MusicTrack[];
+  playlist: MusicTrack[];
   showVideo: boolean;
   activeDj: WorkspaceMember | null;
   listeners: WorkspaceMember[];
   reactions: MusicReaction[];
   isPlayerOpen: boolean;
   needsUserInteraction: boolean;
-  playTrack: (track: MusicTrack, position?: number) => void;
+  playTrack: (track: MusicTrack, position?: number, newPlaylist?: MusicTrack[]) => void;
+  setPlaylist: (tracks: MusicTrack[]) => void;
   togglePlay: () => void;
   pause: () => void;
   resume: () => void;
@@ -58,6 +60,9 @@ export function MusicProvider({ children, currentUser }: MusicProviderProps) {
   const [volume, setVolume] = useState<number>(85);
   const [isMuted, setIsMuted] = useState<boolean>(false);
   const [queue, setQueue] = useState<MusicTrack[]>([]);
+  const [playlist, setPlaylist] = useState<MusicTrack[]>([]);
+  const playlistRef = useRef<MusicTrack[]>([]);
+  playlistRef.current = playlist;
   const [showVideo, setShowVideo] = useState<boolean>(false);
   const [activeDj, setActiveDj] = useState<WorkspaceMember | null>(null);
   const [listeners, setListeners] = useState<WorkspaceMember[]>([currentUser]);
@@ -66,9 +71,33 @@ export function MusicProvider({ children, currentUser }: MusicProviderProps) {
   const [needsUserInteraction, setNeedsUserInteraction] = useState<boolean>(false);
   const [origin, setOrigin] = useState<string>("");
 
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setOrigin(window.location.origin);
+    }
+  }, []);
+
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const hasUserInteractedRef = useRef<boolean>(false);
+
+  // Unlock mobile hardware Web Audio context (resumes suspended mobile audio pipeline)
+  const unlockHardwareAudio = () => {
+    try {
+      if (typeof window !== "undefined") {
+        const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+        if (AudioCtx) {
+          if (!(window as any).__kaelixoAudioCtx) {
+            (window as any).__kaelixoAudioCtx = new AudioCtx();
+          }
+          const ctx = (window as any).__kaelixoAudioCtx;
+          if (ctx.state === "suspended") {
+            ctx.resume();
+          }
+        }
+      }
+    } catch {}
+  };
 
   // Listen to window-level custom event to toggle player from any component
   useEffect(() => {
@@ -115,6 +144,8 @@ export function MusicProvider({ children, currentUser }: MusicProviderProps) {
 
           setTimeout(() => {
             postYtCommand("seekTo", [targetPos, true]);
+            postYtCommand("unMute");
+            postYtCommand("setVolume", [volume > 0 ? volume : 100]);
             postYtCommand("playVideo");
           }, 350);
           break;
@@ -193,6 +224,8 @@ export function MusicProvider({ children, currentUser }: MusicProviderProps) {
 
             setTimeout(() => {
               postYtCommand("seekTo", [targetPos, true]);
+              postYtCommand("unMute");
+              postYtCommand("setVolume", [volume > 0 ? volume : 100]);
               if (state.isPlaying) {
                 postYtCommand("playVideo");
               } else {
@@ -232,6 +265,12 @@ export function MusicProvider({ children, currentUser }: MusicProviderProps) {
           if (data.info.duration !== undefined && data.info.duration > 0) {
             setDuration(data.info.duration);
           }
+          if (data.info.muted !== undefined) {
+            setIsMuted(Boolean(data.info.muted));
+          }
+          if (data.info.volume !== undefined && data.info.volume > 0) {
+            setVolume(data.info.volume);
+          }
           if (data.info.playerState !== undefined) {
             // 1: PLAYING, 2: PAUSED, 0: ENDED
             if (data.info.playerState === 1) {
@@ -252,6 +291,31 @@ export function MusicProvider({ children, currentUser }: MusicProviderProps) {
     return () => window.removeEventListener("message", handleWindowMessage);
   }, [queue, currentTrack]);
 
+  // Global Mobile Touch & Click Audio-Unlock Listener
+  // Mobile browsers require a user gesture to route audio through speakers.
+  // When user taps/scrolls anywhere on their phone screen, we unlock the Web Audio pipeline
+  // and unmute YouTube so the phone speakers immediately play the music!
+  useEffect(() => {
+    const handleUserGesture = () => {
+      unlockHardwareAudio();
+      postYtCommand("unMute");
+      postYtCommand("setVolume", [volume > 0 ? volume : 100]);
+      if (isPlaying) {
+        postYtCommand("playVideo");
+      }
+    };
+
+    window.addEventListener("touchstart", handleUserGesture, { passive: true });
+    window.addEventListener("pointerdown", handleUserGesture, { passive: true });
+    window.addEventListener("click", handleUserGesture, { passive: true });
+
+    return () => {
+      window.removeEventListener("touchstart", handleUserGesture);
+      window.removeEventListener("pointerdown", handleUserGesture);
+      window.removeEventListener("click", handleUserGesture);
+    };
+  }, [isPlaying, volume]);
+
   // Tell iframe we are listening to events whenever iframe loads
   const onIframeLoad = () => {
     if (iframeRef.current?.contentWindow) {
@@ -260,7 +324,8 @@ export function MusicProvider({ children, currentUser }: MusicProviderProps) {
           JSON.stringify({ event: "listening" }),
           "*"
         );
-        postYtCommand("setVolume", [volume]);
+        postYtCommand("unMute");
+        postYtCommand("setVolume", [volume > 0 ? volume : 100]);
         if (isPlaying) {
           postYtCommand("playVideo");
         }
@@ -283,18 +348,27 @@ export function MusicProvider({ children, currentUser }: MusicProviderProps) {
   }, [isPlaying]);
 
   // Play Specific Track
-  const playTrack = (track: MusicTrack, position: number = 0) => {
+  const playTrack = (track: MusicTrack, position: number = 0, newPlaylist?: MusicTrack[]) => {
     hasUserInteractedRef.current = true;
+    unlockHardwareAudio();
     setCurrentTrack(track);
     setCurrentTime(position);
     setIsPlaying(true);
+    setIsMuted(false);
     setActiveDj(currentUser);
+
+    if (newPlaylist && newPlaylist.length > 0) {
+      setPlaylist(newPlaylist);
+      playlistRef.current = newPlaylist;
+    }
 
     // Broadcast PLAY to all devices
     musicSync.play(track, position, currentUser);
 
     setTimeout(() => {
       postYtCommand("seekTo", [position, true]);
+      postYtCommand("unMute");
+      postYtCommand("setVolume", [volume > 0 ? volume : 100]);
       postYtCommand("playVideo");
     }, 300);
   };
@@ -302,10 +376,13 @@ export function MusicProvider({ children, currentUser }: MusicProviderProps) {
   // Toggle Play / Pause
   const togglePlay = () => {
     hasUserInteractedRef.current = true;
+    unlockHardwareAudio();
     const nextState = !isPlaying;
     setIsPlaying(nextState);
 
     if (nextState) {
+      postYtCommand("unMute");
+      postYtCommand("setVolume", [volume > 0 ? volume : 100]);
       postYtCommand("playVideo");
       if (currentTrack) {
         musicSync.play(currentTrack, currentTime, currentUser);
@@ -325,7 +402,10 @@ export function MusicProvider({ children, currentUser }: MusicProviderProps) {
 
   const resume = () => {
     hasUserInteractedRef.current = true;
+    unlockHardwareAudio();
     setIsPlaying(true);
+    postYtCommand("unMute");
+    postYtCommand("setVolume", [volume > 0 ? volume : 100]);
     postYtCommand("playVideo");
     if (currentTrack) {
       musicSync.play(currentTrack, currentTime, currentUser);
@@ -348,9 +428,10 @@ export function MusicProvider({ children, currentUser }: MusicProviderProps) {
   };
 
   const toggleMute = () => {
+    unlockHardwareAudio();
     if (isMuted) {
       postYtCommand("unMute");
-      postYtCommand("setVolume", [volume || 75]);
+      postYtCommand("setVolume", [volume > 0 ? volume : 100]);
       setIsMuted(false);
     } else {
       postYtCommand("mute");
@@ -381,16 +462,57 @@ export function MusicProvider({ children, currentUser }: MusicProviderProps) {
 
   // Next / Previous
   const handlePlayNext = () => {
+    // 1. If user has items in custom queue, prioritize queue
     if (queue.length > 0) {
       const next = queue[0];
       setQueue((prev) => prev.slice(1));
       playTrack(next, 0);
-    } else if (currentTrack) {
+      return;
+    }
+
+    // 2. Otherwise play next song in the active category / playlist
+    const activeList = playlistRef.current;
+    if (activeList.length > 0 && currentTrack) {
+      const currentIndex = activeList.findIndex((t) => t.id === currentTrack.id);
+      if (currentIndex !== -1 && currentIndex < activeList.length - 1) {
+        playTrack(activeList[currentIndex + 1], 0);
+        return;
+      } else if (currentIndex === activeList.length - 1) {
+        // Loop back to first song in category
+        playTrack(activeList[0], 0);
+        return;
+      } else if (currentIndex === -1) {
+        playTrack(activeList[0], 0);
+        return;
+      }
+    }
+
+    if (currentTrack) {
       seekTo(0);
     }
   };
 
   const playPrevious = () => {
+    // If current song has played for more than 3 seconds, restart it first
+    if (currentTime > 3) {
+      seekTo(0);
+      return;
+    }
+
+    // Otherwise play previous song in active category / playlist
+    const activeList = playlistRef.current;
+    if (activeList.length > 0 && currentTrack) {
+      const currentIndex = activeList.findIndex((t) => t.id === currentTrack.id);
+      if (currentIndex > 0) {
+        playTrack(activeList[currentIndex - 1], 0);
+        return;
+      } else if (currentIndex === 0) {
+        // Loop to last song in category
+        playTrack(activeList[activeList.length - 1], 0);
+        return;
+      }
+    }
+
     seekTo(0);
   };
 
@@ -416,8 +538,16 @@ export function MusicProvider({ children, currentUser }: MusicProviderProps) {
   const unlockMobileAudio = () => {
     hasUserInteractedRef.current = true;
     setNeedsUserInteraction(false);
-    postYtCommand("playVideo");
+    setIsMuted(false);
+    unlockHardwareAudio();
+    postYtCommand("unMute");
+    postYtCommand("setVolume", [volume > 0 ? volume : 100]);
+    if (isPlaying) {
+      postYtCommand("playVideo");
+    }
   };
+
+  const hostOrigin = origin || (typeof window !== "undefined" ? window.location.origin : "");
 
   return (
     <MusicContext.Provider
@@ -429,6 +559,8 @@ export function MusicProvider({ children, currentUser }: MusicProviderProps) {
         volume,
         isMuted,
         queue,
+        playlist,
+        setPlaylist,
         showVideo,
         activeDj,
         listeners,
@@ -455,26 +587,26 @@ export function MusicProvider({ children, currentUser }: MusicProviderProps) {
     >
       {/* 
         =======================================================================
-        GLOBAL AUDIO ENGINE (Hidden / Offscreen Singleton IFrame)
+        GLOBAL AUDIO ENGINE (Singleton IFrame)
         Mounted ONCE at the root of the app. Never unmounts when changing chats!
-        Uses an on-screen minimum dimension (w-12 h-12 opacity-5) so Chrome and 
-        Brave never block audio playback or consider it an invisible frame!
+        Uses an offscreen opacity-100 footprint so Chrome / Android / iOS
+        never throttle or silence the audio hardware stream.
         =======================================================================
       */}
       <div
         className={`fixed z-0 pointer-events-none transition-all duration-300 ${
           showVideo
             ? "bottom-20 right-4 w-72 sm:w-96 aspect-video bg-black rounded-xl shadow-2xl border border-neutral-700 pointer-events-auto overflow-hidden z-50"
-            : "bottom-0 right-0 w-12 h-12 opacity-[0.02] overflow-hidden"
+            : "fixed -bottom-10 -right-10 w-2 h-2 opacity-100 overflow-hidden pointer-events-none z-[-1]"
         }`}
       >
         {currentTrack && (
           <iframe
             ref={iframeRef}
             key={currentTrack.id}
-            src={`https://www.youtube-nocookie.com/embed/${currentTrack.id}?autoplay=1&enablejsapi=1&origin=${encodeURIComponent(
-              origin || ""
-            )}&rel=0&modestbranding=1&playsinline=1`}
+            src={`https://www.youtube.com/embed/${currentTrack.id}?autoplay=1&enablejsapi=1&origin=${encodeURIComponent(
+              hostOrigin
+            )}&widget_referrer=${encodeURIComponent(hostOrigin)}&rel=0&modestbranding=1&playsinline=1`}
             title={currentTrack.title}
             onLoad={onIframeLoad}
             className="w-full h-full border-0"

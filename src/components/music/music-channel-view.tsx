@@ -38,7 +38,7 @@ export function MusicChannelView({
   messages,
   onSendMessage,
 }: MusicChannelViewProps) {
-  const { playTrack, togglePlay, addToQueue, currentTrack, isPlaying } = useMusic();
+  const { playTrack, togglePlay, addToQueue, currentTrack, isPlaying, setPlaylist } = useMusic();
 
   const [activeCategory, setActiveCategory] = useState("trending");
   const [tracks, setTracks] = useState<MusicTrack[]>([]);
@@ -125,6 +125,13 @@ export function MusicChannelView({
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
+  // Sync active category tracks to global playlist so Next/Prev navigates seamlessly
+  useEffect(() => {
+    if (tracks.length > 0) {
+      setPlaylist(tracks);
+    }
+  }, [tracks, setPlaylist]);
+
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 2500);
@@ -134,7 +141,7 @@ export function MusicChannelView({
     if (currentTrack?.id === track.id) {
       togglePlay();
     } else {
-      playTrack(track, 0);
+      playTrack(track, 0, tracks);
       showToast(`Playing "${track.title}" on all devices!`);
     }
   };
