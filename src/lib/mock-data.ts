@@ -143,6 +143,13 @@ export const INITIAL_CHANNELS: Channel[] = [
     departmentCode: "management",
     isPrivate: true,
   },
+  {
+    id: "33333333-3333-3333-3333-333333333337",
+    name: "music",
+    topic: "🎧 Ad-Free Clean Audio Jam & Team Synchronized Jukebox",
+    departmentCode: "all",
+    isPrivate: false,
+  },
 ];
 
 export const INITIAL_MESSAGES: Record<string, Message[]> = {

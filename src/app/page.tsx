@@ -33,7 +33,11 @@ import {
   Notification,
   reactionsMapToArray,
   createReactionsArray,
+  MusicTrack,
 } from "@/types";
+import { SyncedMusicPlayer } from "@/components/music/synced-music-player";
+import { FloatingMusicBar } from "@/components/music/floating-music-bar";
+import { MusicChannelView } from "@/components/music/music-channel-view";
 import { formatFileSize } from "@/utils/storage";
 import { getOrCreateDmChannel } from "@/utils/channels";
 import { initPresenceTracker, PresenceMap } from "@/utils/realtime";
@@ -363,6 +367,9 @@ export default function KaelixoApp() {
   const [isEditProfileModalOpen, setIsEditProfileModalOpen] = useState(false);
   const [isGamesModalOpen, setIsGamesModalOpen] = useState(false);
   const [isFilesDrawerOpen, setIsFilesDrawerOpen] = useState(false);
+  const [isMusicModalOpen, setIsMusicModalOpen] = useState(false);
+  const [activeMusicTrack, setActiveMusicTrack] = useState<MusicTrack | null>(null);
+  const [isMusicPlaying, setIsMusicPlaying] = useState(false);
   const [channelViewTab, setChannelViewTab] = useState<"messages" | "canvas" | "files">("messages");
   const [channelCanvasNotes, setChannelCanvasNotes] = useState<Record<string, string>>({
     "33333333-3333-3333-3333-333333333331": "### Dev Sprint Board & Architecture\n- Slack 1:1 Theme Engine (aubergine, clementine, banana, mood-indigo)\n- Workspace files & attachments browser\n- Single unified top bar search",
@@ -470,6 +477,10 @@ export default function KaelixoApp() {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
         e.preventDefault();
         setIsSearchModalOpen((prev) => !prev);
+      }
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && (e.key === "h" || e.key === "H")) {
+        e.preventDefault();
+        setIsMusicModalOpen((prev) => !prev);
       }
     };
     window.addEventListener("keydown", handleKeyDown);
@@ -3036,6 +3047,7 @@ export default function KaelixoApp() {
             onOpenMemberDirectory={() => setIsMemberDirectoryOpen(true)}
             onOpenGamesModal={() => setIsGamesModalOpen(true)}
             onOpenPreferences={() => openPreferences("appearance")}
+            onOpenMusic={() => setIsMusicModalOpen(true)}
             onOpenUserProfile={(member) => {
               setActiveProfileMember(member);
               setRightPanelMode("profile");
@@ -3185,23 +3197,21 @@ export default function KaelixoApp() {
                 <Search className="w-4 h-4" />
               </button>
 
-              {/* Huddle / Call */}
+              {/* Huddle / Listen Together Music Jam */}
               <button
                 type="button"
-                onClick={() => {
-                  setActiveToast({
-                    id: `huddle-${Date.now()}`,
-                    senderName: "Huddle Audio",
-                    content: `Connected to live audio huddle in ${activeDmRecipient ? activeDmRecipient.name : `#${activeChannel.name}`}`,
-                    channelName: activeChannel.name,
-                    channelId: activeChannelId,
-                    messageId: "",
-                  });
-                }}
-                className="p-1.5 sm:p-2 rounded-lg text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition cursor-pointer"
-                title="Start Huddle [Ctrl+Shift+H]"
+                onClick={() => setIsMusicModalOpen((prev) => !prev)}
+                className={`p-1.5 sm:p-2 rounded-lg transition cursor-pointer relative ${
+                  isMusicPlaying
+                    ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
+                    : "text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                }`}
+                title="Listen Together / Ad-Free Music Jam [Ctrl+Shift+H]"
               >
                 <Headphones className="w-4 h-4" />
+                {isMusicPlaying && (
+                  <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                )}
               </button>
 
               {/* Member Directory */}
@@ -3419,6 +3429,12 @@ export default function KaelixoApp() {
               )}
             </div>
           </div>
+        ) : activeChannel.name === "music" ? (
+          <MusicChannelView
+            currentUser={currentUser}
+            messages={mainFeedMessages}
+            onSendMessage={handleSendMessage}
+          />
         ) : (
           <>
             {/* Specialized Department Toolbar (only for channels, not in DMs) */}
@@ -3804,6 +3820,35 @@ export default function KaelixoApp() {
         messagesByChannel={messagesByChannel}
         channelName={activeDmRecipient ? activeDmRecipient.name : activeChannel.name}
       />
+
+      {/* Ad-Free Synced Music Player Modal */}
+      {isMusicModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="w-full max-w-2xl">
+            <SyncedMusicPlayer
+              currentUser={currentUser}
+              onClose={() => setIsMusicModalOpen(false)}
+              initialTrack={activeMusicTrack}
+              onTrackChange={(t) => setActiveMusicTrack(t)}
+              onPlayStateChange={(playing) => setIsMusicPlaying(playing)}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Floating Persistent Mini-Player (persist across all channels) */}
+      {!isMusicModalOpen && activeChannel.name !== "music" && activeMusicTrack && (
+        <FloatingMusicBar
+          currentTrack={activeMusicTrack}
+          isPlaying={isMusicPlaying}
+          currentUser={currentUser}
+          onExpand={() => setIsMusicModalOpen(true)}
+          onClose={() => {
+            setActiveMusicTrack(null);
+            setIsMusicPlaying(false);
+          }}
+        />
+      )}
     </div>
   );
 }

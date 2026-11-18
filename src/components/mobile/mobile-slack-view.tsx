@@ -29,6 +29,7 @@ import {
   Filter,
   Trash2,
   UserCheck,
+  Headphones,
 } from "lucide-react";
 import {
   Channel,
@@ -62,6 +63,7 @@ interface MobileSlackViewProps {
   onOpenMemberDirectory: () => void;
   onOpenGamesModal: () => void;
   onOpenPreferences: () => void;
+  onOpenMusic?: () => void;
   onOpenUserProfile: (member: WorkspaceMember) => void;
   onOpenAuthModal?: () => void;
   onLogout: () => void;
@@ -88,6 +90,7 @@ export function MobileSlackView({
   onOpenMemberDirectory,
   onOpenGamesModal,
   onOpenPreferences,
+  onOpenMusic,
   onOpenUserProfile,
   onOpenAuthModal,
   onLogout,
@@ -189,14 +192,26 @@ export function MobileSlackView({
         {/* Right side header actions */}
         <div className="flex items-center space-x-3">
           {activeTab === "home" && (
-            <button
-              type="button"
-              onClick={() => onChangeTab("search")}
-              className="p-1.5 rounded-full hover:bg-white/10 text-neutral-200 transition cursor-pointer"
-              title="Recent history & search"
-            >
-              <Clock className="w-5 h-5" />
-            </button>
+            <>
+              {onOpenMusic && (
+                <button
+                  type="button"
+                  onClick={onOpenMusic}
+                  className="p-1.5 rounded-full hover:bg-white/10 text-neutral-200 transition cursor-pointer"
+                  title="Ad-Free Music Jam"
+                >
+                  <Headphones className="w-5 h-5" />
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => onChangeTab("search")}
+                className="p-1.5 rounded-full hover:bg-white/10 text-neutral-200 transition cursor-pointer"
+                title="Recent history & search"
+              >
+                <Clock className="w-5 h-5" />
+              </button>
+            </>
           )}
 
           {/* Current User Avatar with Online Indicator */}
@@ -818,6 +833,22 @@ export function MobileSlackView({
                   </p>
                 </div>
               </div>
+
+              {/* Ad-Free Music Jam */}
+              {onOpenMusic && (
+                <div
+                  onClick={onOpenMusic}
+                  className="flex items-start space-x-3 p-4 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition cursor-pointer text-emerald-600 dark:text-emerald-400 border-b border-neutral-200 dark:border-neutral-800"
+                >
+                  <Headphones className="w-5 h-5 mt-0.5 flex-shrink-0" />
+                  <div className="flex-1">
+                    <h3 className="text-sm font-semibold">Ad-Free Music Jam</h3>
+                    <p className="text-xs text-emerald-600/70 dark:text-emerald-400/70 mt-0.5">
+                      Listen together in real-time with team • Zero ads
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {/* Switch Account */}
               {onOpenAuthModal && (

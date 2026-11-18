@@ -275,3 +275,56 @@ export function createReactionsArray(
   }
   return arr;
 }
+
+// ------------------------------------------------------------------------------
+// Synchronized Music & Clean Audio Jam Contracts
+// ------------------------------------------------------------------------------
+
+export interface MusicTrack {
+  id: string; // YouTube videoId or radio stream ID
+  title: string;
+  artist: string;
+  thumbnail: string;
+  duration: number; // in seconds
+  durationFormatted: string; // e.g. "03:45"
+  url: string;
+  addedBy?: {
+    id: string;
+    name: string;
+    avatar: string;
+  };
+  source: "youtube" | "radio" | "stream";
+}
+
+export interface MusicSyncState {
+  currentTrack: MusicTrack | null;
+  isPlaying: boolean;
+  position: number; // in seconds
+  sentAt: number; // timestamp in epoch ms
+  dj: {
+    id: string;
+    name: string;
+    avatar: string;
+  } | null;
+  queue: MusicTrack[];
+  roomName?: string;
+}
+
+export interface MusicSyncAction {
+  type: "PLAY" | "PAUSE" | "SEEK" | "TRACK_CHANGE" | "QUEUE_ADD" | "QUEUE_REMOVE" | "QUEUE_CLEAR" | "SYNC_REQUEST" | "SYNC_RESPONSE" | "REACTION";
+  payload: any;
+  sentAt: number;
+  sender: {
+    id: string;
+    name: string;
+    avatar: string;
+  };
+}
+
+export interface MusicReaction {
+  id: string;
+  emoji: string;
+  userName: string;
+  sentAt: number;
+}
+
