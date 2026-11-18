@@ -49,6 +49,10 @@ export function FloatingMusicBar() {
         <img
           src={currentTrack.thumbnail}
           alt={currentTrack.title}
+          onError={(e) => {
+            (e.target as HTMLImageElement).src =
+              "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=400&q=80";
+          }}
           className={`w-full h-full object-cover transition-transform duration-700 ${
             isPlaying ? "scale-110" : ""
           }`}

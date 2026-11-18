@@ -26,6 +26,8 @@ interface MusicContextType {
   reactions: MusicReaction[];
   isPlayerOpen: boolean;
   needsUserInteraction: boolean;
+  hiddenTrackIds: string[];
+  hideTrack: (trackId: string) => void;
   playTrack: (track: MusicTrack, position?: number, newPlaylist?: MusicTrack[]) => void;
   setPlaylist: (tracks: MusicTrack[]) => void;
   togglePlay: () => void;
@@ -69,13 +71,36 @@ export function MusicProvider({ children, currentUser }: MusicProviderProps) {
   const [reactions, setReactions] = useState<MusicReaction[]>([]);
   const [isPlayerOpen, setIsPlayerOpen] = useState<boolean>(false);
   const [needsUserInteraction, setNeedsUserInteraction] = useState<boolean>(false);
+  const [hiddenTrackIds, setHiddenTrackIds] = useState<string[]>([]);
   const [origin, setOrigin] = useState<string>("");
 
   useEffect(() => {
     if (typeof window !== "undefined") {
       setOrigin(window.location.origin);
+      try {
+        const saved = localStorage.getItem("kaelixo_hidden_tracks");
+        if (saved) {
+          setHiddenTrackIds(JSON.parse(saved));
+        }
+      } catch {}
     }
   }, []);
+
+  const hideTrack = (trackId: string) => {
+    setHiddenTrackIds((prev) => {
+      if (prev.includes(trackId)) return prev;
+      const next = [...prev, trackId];
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem("kaelixo_hidden_tracks", JSON.stringify(next));
+        } catch {}
+      }
+      return next;
+    });
+    if (currentTrack?.id === trackId) {
+      handlePlayNext();
+    }
+  };
 
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -139,6 +164,8 @@ export function MusicProvider({ children, currentUser }: MusicProviderProps) {
 
           setActiveDj(action.sender as any);
           setCurrentTrack(track);
+          setCurrentTime(pos);
+          setDuration(track.duration || 180);
           setIsPlaying(true);
           setNeedsUserInteraction(false);
 
@@ -218,6 +245,8 @@ export function MusicProvider({ children, currentUser }: MusicProviderProps) {
             const targetPos = (state.position || 0) + (state.isPlaying ? elapsed : 0);
 
             setCurrentTrack(state.currentTrack);
+            setCurrentTime(targetPos);
+            setDuration(state.currentTrack.duration || 180);
             setIsPlaying(state.isPlaying);
             setActiveDj(state.dj as any);
             setQueue(state.queue || []);
@@ -258,12 +287,26 @@ export function MusicProvider({ children, currentUser }: MusicProviderProps) {
     const handleWindowMessage = (e: MessageEvent) => {
       try {
         const data = typeof e.data === "string" ? JSON.parse(e.data) : e.data;
+
+        // Catch YouTube errors (150/101: embedding disabled, 100: not found/deleted)
+        if (data?.event === "onError" || (data?.info && data.info.errorCode !== undefined)) {
+          const errCode = data?.data || data?.info?.errorCode;
+          console.warn("YouTube player error:", errCode, "Auto-skipping broken track:", currentTrack?.title);
+          if (currentTrack) {
+            hideTrack(currentTrack.id);
+          }
+          setTimeout(() => {
+            handlePlayNext();
+          }, 400);
+          return;
+        }
+
         if (data?.event === "infoDelivery" && data.info) {
           if (data.info.currentTime !== undefined) {
-            setCurrentTime(data.info.currentTime);
+            setCurrentTime(Math.floor(data.info.currentTime));
           }
           if (data.info.duration !== undefined && data.info.duration > 0) {
-            setDuration(data.info.duration);
+            setDuration(Math.floor(data.info.duration));
           }
           if (data.info.muted !== undefined) {
             setIsMuted(Boolean(data.info.muted));
@@ -333,19 +376,26 @@ export function MusicProvider({ children, currentUser }: MusicProviderProps) {
     }
   };
 
-  // Periodic heartbeat to pull current time from iframe
+  // Active playback second-by-second ticker
+  // Ensures scrubber slider and time counters (0:01, 0:02...) advance smoothly in real time!
   useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
     if (isPlaying) {
-      progressIntervalRef.current = setInterval(() => {
-        postYtCommand("listening");
+      interval = setInterval(() => {
+        setCurrentTime((prev) => {
+          const next = prev + 1;
+          if (duration > 0 && next >= duration) {
+            handlePlayNext();
+            return 0;
+          }
+          return next;
+        });
       }, 1000);
-    } else {
-      if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
     }
     return () => {
-      if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
+      if (interval) clearInterval(interval);
     };
-  }, [isPlaying]);
+  }, [isPlaying, duration]);
 
   // Play Specific Track
   const playTrack = (track: MusicTrack, position: number = 0, newPlaylist?: MusicTrack[]) => {
@@ -353,6 +403,7 @@ export function MusicProvider({ children, currentUser }: MusicProviderProps) {
     unlockHardwareAudio();
     setCurrentTrack(track);
     setCurrentTime(position);
+    setDuration(track.duration || 180);
     setIsPlaying(true);
     setIsMuted(false);
     setActiveDj(currentUser);
@@ -583,6 +634,8 @@ export function MusicProvider({ children, currentUser }: MusicProviderProps) {
         setIsPlayerOpen,
         sendReaction,
         unlockMobileAudio,
+        hiddenTrackIds,
+        hideTrack,
       }}
     >
       {/* 

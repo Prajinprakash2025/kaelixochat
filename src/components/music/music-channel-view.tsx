@@ -13,6 +13,8 @@ import {
   Sparkles,
   Volume2,
   ChevronDown,
+  X,
+  EyeOff,
 } from "lucide-react";
 import { MusicTrack, WorkspaceMember, Message } from "@/types";
 import { SyncedMusicPlayer } from "./synced-music-player";
@@ -38,7 +40,16 @@ export function MusicChannelView({
   messages,
   onSendMessage,
 }: MusicChannelViewProps) {
-  const { playTrack, togglePlay, addToQueue, currentTrack, isPlaying, setPlaylist } = useMusic();
+  const {
+    playTrack,
+    togglePlay,
+    addToQueue,
+    currentTrack,
+    isPlaying,
+    setPlaylist,
+    hiddenTrackIds,
+    hideTrack,
+  } = useMusic();
 
   const [activeCategory, setActiveCategory] = useState("trending");
   const [tracks, setTracks] = useState<MusicTrack[]>([]);
@@ -52,6 +63,7 @@ export function MusicChannelView({
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const observerTargetRef = useRef<HTMLDivElement | null>(null);
   const loadingMoreRef = useRef(false);
 
   // Fetch Category Songs
@@ -100,6 +112,28 @@ export function MusicChannelView({
     setPage(nextPage);
     fetchCategoryTracks(activeCategory, nextPage, true);
   };
+
+  // Automatic Infinite Scroll on Sentinel Intersection (No button click needed!)
+  useEffect(() => {
+    const target = observerTargetRef.current;
+    if (!target) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting && !isLoading && hasMore) {
+          setPage((prevPage) => {
+            const nextPage = prevPage + 1;
+            fetchCategoryTracks(activeCategory, nextPage, true);
+            return nextPage;
+          });
+        }
+      },
+      { threshold: 0.1, rootMargin: "350px" }
+    );
+
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [activeCategory, isLoading, hasMore, fetchCategoryTracks]);
 
   // Search handler with debounce
   useEffect(() => {
@@ -190,12 +224,14 @@ export function MusicChannelView({
         {/* Live Search Results Dropdown */}
         {searchResults.length > 0 && (
           <div className="mt-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl shadow-xl overflow-hidden divide-y divide-neutral-100 dark:divide-neutral-800/60 max-h-80 overflow-y-auto">
-            {searchResults.map((track) => {
+            {searchResults
+              .filter((track) => !hiddenTrackIds.includes(track.id))
+              .map((track) => {
               const isThisPlaying = currentTrack?.id === track.id && isPlaying;
               return (
                 <div
                   key={track.id}
-                  className="p-3 flex items-center justify-between hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition"
+                  className="p-3 flex items-center justify-between hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition group"
                 >
                   <div
                     onClick={() => handlePlaySong(track)}
@@ -205,6 +241,10 @@ export function MusicChannelView({
                       <img
                         src={track.thumbnail}
                         alt={track.title}
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src =
+                            "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=400&q=80";
+                        }}
                         className="w-full h-full object-cover"
                       />
                       {isThisPlaying && (
@@ -224,6 +264,18 @@ export function MusicChannelView({
                   </div>
 
                   <div className="flex items-center space-x-2 flex-shrink-0 ml-3">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        hideTrack(track.id);
+                        showToast(`Hidden "${track.title.slice(0, 18)}..."`);
+                      }}
+                      className="p-1.5 text-neutral-400 hover:text-red-400 opacity-0 group-hover:opacity-100 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition cursor-pointer"
+                      title="Hide from suggestions"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
                     <button
                       type="button"
                       onClick={() => handlePlaySong(track)}
@@ -293,13 +345,15 @@ export function MusicChannelView({
       {/* TRACKS GRID (Endless recommendations) */}
       <div className="w-full max-w-4xl mx-auto space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-          {tracks.map((t, idx) => {
+          {tracks
+            .filter((t) => !hiddenTrackIds.includes(t.id))
+            .map((t, idx) => {
             const isThisPlaying = currentTrack?.id === t.id && isPlaying;
             return (
               <div
                 key={`${t.id}-${idx}`}
                 onClick={() => handlePlaySong(t)}
-                className={`group p-3 rounded-xl bg-white dark:bg-neutral-900/90 border transition-all duration-200 flex items-center space-x-3 cursor-pointer select-none ${
+                className={`group p-3 rounded-xl bg-white dark:bg-neutral-900/90 border transition-all duration-200 flex items-center space-x-3 cursor-pointer select-none relative ${
                   isThisPlaying
                     ? "border-emerald-500 ring-2 ring-emerald-500/30 shadow-lg bg-emerald-500/5 dark:bg-emerald-950/20"
                     : "border-neutral-200 dark:border-neutral-800/80 hover:border-emerald-500/60 hover:shadow-md hover:-translate-y-0.5"
@@ -311,6 +365,10 @@ export function MusicChannelView({
                     src={t.thumbnail}
                     alt={t.title}
                     loading="lazy"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src =
+                        "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=400&q=80";
+                    }}
                     className="w-full h-full object-cover group-hover:scale-110 transition duration-300"
                   />
 
@@ -338,16 +396,30 @@ export function MusicChannelView({
 
                 {/* Track Information */}
                 <div className="min-w-0 flex-1">
-                  <p
-                    className={`text-xs font-bold truncate ${
-                      isThisPlaying
-                        ? "text-emerald-600 dark:text-emerald-400"
-                        : "text-neutral-900 dark:text-white"
-                    }`}
-                    title={t.title}
-                  >
-                    {t.title}
-                  </p>
+                  <div className="flex items-start justify-between">
+                    <p
+                      className={`text-xs font-bold truncate pr-1 ${
+                        isThisPlaying
+                          ? "text-emerald-600 dark:text-emerald-400"
+                          : "text-neutral-900 dark:text-white"
+                      }`}
+                      title={t.title}
+                    >
+                      {t.title}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        hideTrack(t.id);
+                        showToast(`Removed "${t.title.slice(0, 20)}..." from recommendations`);
+                      }}
+                      className="p-1 -mr-1 -mt-1 text-neutral-400 hover:text-red-400 opacity-0 group-hover:opacity-100 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-800 transition cursor-pointer"
+                      title="Hide this song from recommendations"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                   <p className="text-[11px] text-neutral-500 truncate mt-0.5" title={t.artist}>
                     {t.artist}
                   </p>
@@ -372,26 +444,13 @@ export function MusicChannelView({
           })}
         </div>
 
-        {/* LOAD MORE / ENDLESS BUTTON */}
-        <div className="pt-4 pb-8 flex flex-col items-center justify-center">
-          {isLoading ? (
-            <div className="flex items-center space-x-2 text-xs font-semibold text-emerald-500 py-3">
+        {/* Infinite Scroll Auto-Load Sentinel (Auto-loads smoothly on scroll without button click) */}
+        <div ref={observerTargetRef} className="pt-6 pb-16 flex items-center justify-center">
+          {isLoading && (
+            <div className="flex items-center space-x-2 text-xs font-semibold text-emerald-500 py-4 animate-pulse">
               <Loader2 className="w-4 h-4 animate-spin" />
-              <span>Fetching more songs...</span>
+              <span>Loading more songs...</span>
             </div>
-          ) : hasMore ? (
-            <button
-              type="button"
-              onClick={handleLoadMore}
-              className="px-6 py-2.5 rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 hover:border-emerald-500 text-xs font-bold text-neutral-700 dark:text-neutral-200 hover:text-emerald-600 dark:hover:text-emerald-400 shadow-sm transition flex items-center space-x-2 cursor-pointer active:scale-95"
-            >
-              <span>Explore More {CATEGORIES.find((c) => c.id === activeCategory)?.name}</span>
-              <ChevronDown className="w-3.5 h-3.5" />
-            </button>
-          ) : (
-            <p className="text-xs text-neutral-400 py-2">
-              You’ve reached the top of this category! Try searching or another category.
-            </p>
           )}
         </div>
       </div>
