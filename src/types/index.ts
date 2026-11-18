@@ -311,7 +311,7 @@ export interface MusicSyncState {
 }
 
 export interface MusicSyncAction {
-  type: "PLAY" | "PAUSE" | "SEEK" | "TRACK_CHANGE" | "QUEUE_ADD" | "QUEUE_REMOVE" | "QUEUE_CLEAR" | "SYNC_REQUEST" | "SYNC_RESPONSE" | "REACTION";
+  type: "PLAY" | "PAUSE" | "SEEK" | "TRACK_CHANGE" | "QUEUE_ADD" | "QUEUE_REMOVE" | "QUEUE_CLEAR" | "SYNC_REQUEST" | "SYNC_RESPONSE" | "REACTION" | "HEARTBEAT";
   payload: any;
   sentAt: number;
   sender: {

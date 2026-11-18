@@ -27,6 +27,8 @@ export function FloatingMusicBar() {
     toggleMute,
     unlockMobileAudio,
     setIsPlayerOpen,
+    resync,
+    syncDriftSeconds,
   } = useMusic();
 
   if (!currentTrack) return null;
@@ -89,9 +91,23 @@ export function FloatingMusicBar() {
               🔊 Tap to Unmute Phone
             </span>
           ) : (
-            <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">
-              {listeners.length > 1 ? `Synced (${listeners.length} devices)` : "Ad-Free Jam"}
-            </span>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                resync();
+              }}
+              className="text-[10px] font-bold text-emerald-400 hover:text-emerald-300 uppercase tracking-wider cursor-pointer flex items-center space-x-1"
+              title="Click to re-align playback with DJ"
+            >
+              <span>
+                {syncDriftSeconds > 1.2
+                  ? `⚡ Tap to Sync (${syncDriftSeconds.toFixed(1)}s)`
+                  : listeners.length > 1
+                  ? `⚡ Synced (${listeners.length} devices)`
+                  : "⚡ Live Synced"}
+              </span>
+            </button>
           )}
         </div>
         <p className="text-xs font-bold text-white truncate drop-shadow-sm">

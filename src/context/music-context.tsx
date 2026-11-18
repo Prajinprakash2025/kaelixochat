@@ -45,6 +45,8 @@ interface MusicContextType {
   setIsPlayerOpen: (open: boolean) => void;
   sendReaction: (emoji: string) => void;
   unlockMobileAudio: () => void;
+  resync: () => void;
+  syncDriftSeconds: number;
 }
 
 const MusicContext = createContext<MusicContextType | null>(null);
@@ -72,7 +74,19 @@ export function MusicProvider({ children, currentUser }: MusicProviderProps) {
   const [isPlayerOpen, setIsPlayerOpen] = useState<boolean>(false);
   const [needsUserInteraction, setNeedsUserInteraction] = useState<boolean>(false);
   const [hiddenTrackIds, setHiddenTrackIds] = useState<string[]>([]);
+  const [syncDriftSeconds, setSyncDriftSeconds] = useState<number>(0);
   const [origin, setOrigin] = useState<string>("");
+
+  const currentTrackRef = useRef<MusicTrack | null>(null);
+  currentTrackRef.current = currentTrack;
+  const isPlayingRef = useRef<boolean>(false);
+  isPlayingRef.current = isPlaying;
+  const currentTimeRef = useRef<number>(0);
+  currentTimeRef.current = currentTime;
+  const activeDjRef = useRef<WorkspaceMember | null>(null);
+  activeDjRef.current = activeDj;
+  const queueRef = useRef<MusicTrack[]>([]);
+  queueRef.current = queue;
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -150,7 +164,27 @@ export function MusicProvider({ children, currentUser }: MusicProviderProps) {
     }
   };
 
-  // 1. Initialize Supabase Realtime channel once globally
+  // 1. DJ Heartbeat Emitter: Every 3 seconds, active DJ emits exact position to keep all devices in sync
+  useEffect(() => {
+    if (!isPlaying || !currentTrack) return;
+    const isDj = !activeDj || activeDj.id === currentUser.id;
+    if (!isDj) return;
+
+    const interval = setInterval(() => {
+      if (currentTrackRef.current && isPlayingRef.current) {
+        musicSync.heartbeat(
+          currentTimeRef.current,
+          isPlayingRef.current,
+          currentTrackRef.current.id,
+          currentUser
+        );
+      }
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [isPlaying, currentTrack?.id, activeDj?.id, currentUser]);
+
+  // 2. Stable Supabase Realtime channel subscription (Initialized ONCE, avoids dropped packets)
   useEffect(() => {
     musicSync.init(currentUser, "workspace-hq");
 
@@ -158,21 +192,26 @@ export function MusicProvider({ children, currentUser }: MusicProviderProps) {
       switch (action.type) {
         case "PLAY": {
           const track = action.payload.track as MusicTrack;
-          const pos = action.payload.position || 0;
-          const elapsed = (Date.now() - action.sentAt) / 1000;
+          const pos = Number(action.payload.position) || 0;
+          let elapsed = (Date.now() - action.sentAt) / 1000;
+          if (elapsed < 0 || elapsed > 5) elapsed = 0.15; // Clock skew protection
           const targetPos = Math.max(0, pos + elapsed);
 
           setActiveDj(action.sender as any);
           setCurrentTrack(track);
-          setCurrentTime(pos);
+          setCurrentTime(Math.floor(targetPos));
           setDuration(track.duration || 180);
           setIsPlaying(true);
           setNeedsUserInteraction(false);
 
+          // Execute immediate seek and play
+          postYtCommand("seekTo", [targetPos, true]);
+          postYtCommand("unMute");
+          postYtCommand("setVolume", [volume > 0 ? volume : 100]);
+          postYtCommand("playVideo");
+
           setTimeout(() => {
             postYtCommand("seekTo", [targetPos, true]);
-            postYtCommand("unMute");
-            postYtCommand("setVolume", [volume > 0 ? volume : 100]);
             postYtCommand("playVideo");
           }, 350);
           break;
@@ -180,18 +219,22 @@ export function MusicProvider({ children, currentUser }: MusicProviderProps) {
 
         case "PAUSE": {
           setIsPlaying(false);
+          const pos = action.payload.position;
           postYtCommand("pauseVideo");
-          if (action.payload.position !== undefined) {
-            postYtCommand("seekTo", [action.payload.position, true]);
+          if (pos !== undefined && !isNaN(pos)) {
+            const pausePos = Math.floor(pos);
+            setCurrentTime(pausePos);
+            postYtCommand("seekTo", [pausePos, true]);
           }
           break;
         }
 
         case "SEEK": {
-          const pos = action.payload.position || 0;
-          const elapsed = (Date.now() - action.sentAt) / 1000;
+          const pos = Number(action.payload.position) || 0;
+          let elapsed = (Date.now() - action.sentAt) / 1000;
+          if (elapsed < 0 || elapsed > 5) elapsed = 0.15;
           const targetPos = pos + elapsed;
-          setCurrentTime(targetPos);
+          setCurrentTime(Math.floor(targetPos));
           postYtCommand("seekTo", [targetPos, true]);
           break;
         }
@@ -200,7 +243,55 @@ export function MusicProvider({ children, currentUser }: MusicProviderProps) {
           const track = action.payload.track as MusicTrack;
           setActiveDj(action.sender as any);
           setCurrentTrack(track);
+          setCurrentTime(0);
           setIsPlaying(true);
+          break;
+        }
+
+        case "HEARTBEAT": {
+          // Ignore own heartbeats
+          if (action.sender.id === currentUser.id) break;
+
+          // Ensure it's for current track
+          if (
+            action.payload.trackId &&
+            currentTrackRef.current &&
+            currentTrackRef.current.id !== action.payload.trackId
+          ) {
+            break;
+          }
+
+          const djPlaying = Boolean(action.payload.isPlaying);
+          const djPos = Number(action.payload.position) || 0;
+
+          // Latency & clock-skew compensation
+          let latency = (Date.now() - action.sentAt) / 1000;
+          if (latency < 0 || latency > 4) latency = 0.15;
+          const expectedPos = djPos + (djPlaying ? latency : 0);
+
+          const localPos = currentTimeRef.current;
+          const drift = Math.abs(localPos - expectedPos);
+          setSyncDriftSeconds(drift);
+
+          // Align playing state if DJ paused/resumed
+          if (djPlaying !== isPlayingRef.current) {
+            setIsPlaying(djPlaying);
+            if (djPlaying) {
+              postYtCommand("playVideo");
+            } else {
+              postYtCommand("pauseVideo");
+              postYtCommand("seekTo", [djPos, true]);
+              setCurrentTime(Math.floor(djPos));
+            }
+          }
+
+          // If audio drifted by more than 1.2s, automatically pull it back into lockstep!
+          if (djPlaying && drift > 1.2) {
+            console.log(`[MusicSync] Drift of ${drift.toFixed(2)}s detected -> Snapping to ${expectedPos.toFixed(2)}s`);
+            setCurrentTime(Math.floor(expectedPos));
+            postYtCommand("seekTo", [expectedPos, true]);
+            postYtCommand("playVideo");
+          }
           break;
         }
 
@@ -222,15 +313,19 @@ export function MusicProvider({ children, currentUser }: MusicProviderProps) {
         }
 
         case "SYNC_REQUEST": {
-          if (currentTrack) {
+          if (currentTrackRef.current) {
             musicSync.respondState(
               {
-                currentTrack,
-                isPlaying,
-                position: currentTime,
+                currentTrack: currentTrackRef.current,
+                isPlaying: isPlayingRef.current,
+                position: currentTimeRef.current,
                 sentAt: Date.now(),
-                dj: activeDj || { id: currentUser.id, name: currentUser.name, avatar: currentUser.avatar },
-                queue,
+                dj: activeDjRef.current || {
+                  id: currentUser.id,
+                  name: currentUser.name,
+                  avatar: currentUser.avatar,
+                },
+                queue: queueRef.current,
               },
               currentUser
             );
@@ -240,27 +335,44 @@ export function MusicProvider({ children, currentUser }: MusicProviderProps) {
 
         case "SYNC_RESPONSE": {
           const state = action.payload as MusicSyncState;
-          if (state && state.currentTrack && (!currentTrack || currentTrack.id !== state.currentTrack.id)) {
-            const elapsed = (Date.now() - state.sentAt) / 1000;
+          if (state && state.currentTrack) {
+            let elapsed = (Date.now() - state.sentAt) / 1000;
+            if (elapsed < 0 || elapsed > 5) elapsed = 0.15;
             const targetPos = (state.position || 0) + (state.isPlaying ? elapsed : 0);
 
-            setCurrentTrack(state.currentTrack);
-            setCurrentTime(targetPos);
-            setDuration(state.currentTrack.duration || 180);
-            setIsPlaying(state.isPlaying);
             setActiveDj(state.dj as any);
             setQueue(state.queue || []);
+            setDuration(state.currentTrack.duration || 180);
 
-            setTimeout(() => {
-              postYtCommand("seekTo", [targetPos, true]);
-              postYtCommand("unMute");
-              postYtCommand("setVolume", [volume > 0 ? volume : 100]);
+            if (!currentTrackRef.current || currentTrackRef.current.id !== state.currentTrack.id) {
+              setCurrentTrack(state.currentTrack);
+              setCurrentTime(Math.floor(targetPos));
+              setIsPlaying(state.isPlaying);
+
+              setTimeout(() => {
+                postYtCommand("seekTo", [targetPos, true]);
+                postYtCommand("unMute");
+                postYtCommand("setVolume", [volume > 0 ? volume : 100]);
+                if (state.isPlaying) {
+                  postYtCommand("playVideo");
+                } else {
+                  postYtCommand("pauseVideo");
+                }
+              }, 350);
+            } else {
+              // Same track: align playing state and position immediately!
+              setIsPlaying(state.isPlaying);
+              const drift = Math.abs(currentTimeRef.current - targetPos);
+              if (drift > 1.0) {
+                setCurrentTime(Math.floor(targetPos));
+                postYtCommand("seekTo", [targetPos, true]);
+              }
               if (state.isPlaying) {
                 postYtCommand("playVideo");
               } else {
                 postYtCommand("pauseVideo");
               }
-            }, 400);
+            }
           }
           break;
         }
@@ -280,7 +392,7 @@ export function MusicProvider({ children, currentUser }: MusicProviderProps) {
       unsubAction();
       unsubPresence();
     };
-  }, [currentUser, currentTrack, isPlaying, currentTime, activeDj, queue]);
+  }, [currentUser.id]);
 
   // 2. Window postMessage listener from YouTube iframe
   useEffect(() => {
@@ -598,6 +710,12 @@ export function MusicProvider({ children, currentUser }: MusicProviderProps) {
     }
   };
 
+  const resync = () => {
+    unlockMobileAudio();
+    musicSync.requestSync(currentUser);
+    console.log("[MusicSync] Sent manual resync request to DJ");
+  };
+
   const hostOrigin = origin || (typeof window !== "undefined" ? window.location.origin : "");
 
   return (
@@ -634,6 +752,8 @@ export function MusicProvider({ children, currentUser }: MusicProviderProps) {
         setIsPlayerOpen,
         sendReaction,
         unlockMobileAudio,
+        resync,
+        syncDriftSeconds,
         hiddenTrackIds,
         hideTrack,
       }}

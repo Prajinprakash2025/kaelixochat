@@ -194,6 +194,24 @@ class MusicSyncManager {
     });
   }
 
+  public heartbeat(position: number, isPlaying: boolean, trackId: string, dj: WorkspaceMember) {
+    this.broadcastAction({
+      type: "HEARTBEAT",
+      payload: { position, isPlaying, trackId },
+      sentAt: Date.now(),
+      sender: { id: dj.id, name: dj.name, avatar: dj.avatar },
+    });
+  }
+
+  public requestSync(requester: WorkspaceMember) {
+    this.broadcastAction({
+      type: "SYNC_REQUEST",
+      payload: {},
+      sentAt: Date.now(),
+      sender: { id: requester.id, name: requester.name, avatar: requester.avatar },
+    });
+  }
+
   public sendReaction(emoji: string, sender: WorkspaceMember) {
     this.broadcastAction({
       type: "REACTION",

@@ -51,6 +51,8 @@ export function SyncedMusicPlayer({
     sendReaction,
     playTrack,
     unlockMobileAudio,
+    resync,
+    syncDriftSeconds,
   } = useMusic();
 
   const [showQueue, setShowQueue] = useState(false);
@@ -100,6 +102,25 @@ export function SyncedMusicPlayer({
         </div>
 
         <div className="flex items-center space-x-2">
+          {/* Live Sync Status & Tap to Resync Button */}
+          <button
+            type="button"
+            onClick={resync}
+            className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition flex items-center space-x-1 cursor-pointer border ${
+              syncDriftSeconds > 1.2
+                ? "bg-amber-500/20 text-amber-300 border-amber-500/50 hover:bg-amber-500/30 animate-pulse"
+                : "bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20"
+            }`}
+            title="Click to instantly re-align audio lockstep with DJ"
+          >
+            <Sparkles className="w-3 h-3 text-emerald-400" />
+            <span>
+              {syncDriftSeconds > 1.2
+                ? `⚠️ Drift: ${syncDriftSeconds.toFixed(1)}s (Tap to Sync)`
+                : "⚡ Live Synced"}
+            </span>
+          </button>
+
           {/* Active Listeners Badges */}
           <div className="flex items-center -space-x-1.5 bg-neutral-800/80 px-2 py-1 rounded-full text-xs text-neutral-300">
             <Users className="w-3.5 h-3.5 mr-1.5 text-neutral-400" />
