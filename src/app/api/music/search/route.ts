@@ -492,6 +492,24 @@ const CATEGORY_SEARCH_QUERIES: Record<string, string[]> = {
     "ambient lofi chill songs",
     "japanese lofi beats to sleep",
   ],
+  reels: [
+    "instagram trending reels songs 2024",
+    "viral reels audio songs shorts",
+    "trending reels background music",
+    "popular reels songs playlist",
+    "tiktok viral music hits shorts",
+  ],
+  "malayalam reels": [
+    "malayalam trending reels songs",
+    "malayalam viral reel audio",
+    "malayalam reels bgm songs",
+    "sushin shyam viral reels audio",
+  ],
+  "tamil reels": [
+    "tamil trending reels songs",
+    "tamil viral reel audio hits",
+    "anirudh viral reels songs",
+  ],
   romantic: [
     "romantic love songs all time hits",
     "all time favorite romantic melodies",
@@ -628,7 +646,10 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const q = searchParams.get("q")?.trim();
   const rawCategory = (searchParams.get("category") || "trending").trim();
-  const category = rawCategory.toLowerCase();
+  const isReels = searchParams.get("reels") === "true";
+  const category = (isReels && (rawCategory.toLowerCase() === "trending" || rawCategory.toLowerCase() === "all"))
+    ? "reels"
+    : rawCategory.toLowerCase();
   const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
   const trending = searchParams.get("trending") === "true";
 
@@ -682,6 +703,13 @@ export async function GET(request: Request) {
 
   const queryList: string[] = isKnownQuery
     ? CATEGORY_SEARCH_QUERIES[category]
+    : isReels
+    ? [
+        `${rawCategory} trending reels songs shorts`,
+        `${rawCategory} viral reel audio hits`,
+        `${rawCategory} instagram music shorts`,
+        `${rawCategory} hit songs official audio`,
+      ]
     : [
         `${rawCategory} hit songs official audio`,
         `${rawCategory} popular music songs`,

@@ -19,9 +19,12 @@ import {
   Shuffle,
   RotateCcw,
   Tag,
+  Film,
+  Radio,
 } from "lucide-react";
 import { MusicTrack, WorkspaceMember, Message } from "@/types";
 import { SyncedMusicPlayer } from "./synced-music-player";
+import { MusicReelsView } from "./music-reels-view";
 import { useMusic } from "@/context/music-context";
 
 interface MusicChannelViewProps {
@@ -80,6 +83,8 @@ export function MusicChannelView({
   } = useMusic();
 
   const [activeCategory, setActiveCategory] = useState("trending");
+  const [viewMode, setViewMode] = useState<"jam" | "reels">("jam");
+  const [reelsInitialIndex, setReelsInitialIndex] = useState(0);
   const [tracks, setTracks] = useState<MusicTrack[]>([]);
   const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
@@ -291,6 +296,27 @@ export function MusicChannelView({
     showToast(`Added "${track.title}" to shared queue`);
   };
 
+  // If user selected 60s Music Reels (Instagram Feed) Mode
+  if (viewMode === "reels") {
+    return (
+      <MusicReelsView
+        initialTracks={tracks}
+        initialIndex={reelsInitialIndex}
+        onPlayFullTrack={(track) => {
+          playTrack(track, 0, tracks);
+          setViewMode("jam");
+          showToast(`Playing "${track.title}" in Jam!`);
+        }}
+        onAddToQueue={(track) => {
+          addToQueue(track);
+          showToast(`Added "${track.title}" to shared queue`);
+        }}
+        onBackToJam={() => setViewMode("jam")}
+        currentUser={currentUser}
+      />
+    );
+  }
+
   return (
     <div
       ref={scrollContainerRef}
@@ -303,6 +329,45 @@ export function MusicChannelView({
           <span>{toastMessage}</span>
         </div>
       )}
+
+      {/* View Switcher: Audio Jam vs 60s Music Reels (Insta Feed) */}
+      <div className="w-full max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 bg-white dark:bg-neutral-900/80 p-2 rounded-2xl border border-neutral-200 dark:border-neutral-800 shadow-sm">
+        <div className="flex items-center space-x-1.5 w-full sm:w-auto">
+          <button
+            type="button"
+            onClick={() => setViewMode("jam")}
+            className="flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-bold bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 shadow-sm flex items-center justify-center space-x-2 transition cursor-pointer"
+          >
+            <Radio className="w-4 h-4 text-emerald-400 dark:text-emerald-600" />
+            <span>📻 Ad-Free Audio Jam</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setReelsInitialIndex(0);
+              setViewMode("reels");
+            }}
+            className="flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-bold text-neutral-600 dark:text-neutral-300 hover:text-white hover:bg-gradient-to-r hover:from-purple-600 hover:via-pink-600 hover:to-rose-600 border border-neutral-200 dark:border-neutral-700/80 hover:border-transparent flex items-center justify-center space-x-2 transition cursor-pointer group shadow-xs"
+          >
+            <Film className="w-4 h-4 text-pink-500 group-hover:text-white" />
+            <span>📱 60s Music Reels</span>
+            <span className="text-[9px] bg-rose-500 text-white px-1.5 py-0.5 rounded-full uppercase font-black animate-pulse">
+              Insta Feed
+            </span>
+          </button>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => {
+            setReelsInitialIndex(0);
+            setViewMode("reels");
+          }}
+          className="text-xs font-bold text-rose-500 hover:text-rose-400 flex items-center space-x-1.5 transition cursor-pointer py-1 px-2.5 rounded-lg hover:bg-rose-500/10"
+        >
+          <span>✨ Scroll 60s Video Clips like Reels →</span>
+        </button>
+      </div>
 
       {/* Hero Synced Player */}
       <div className="w-full max-w-4xl mx-auto">
@@ -426,6 +491,19 @@ export function MusicChannelView({
                         <Play className="w-3.5 h-3.5 fill-current" />
                       )}
                       <span>{isThisPlaying ? "Pause" : "Play"}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTracks((prev) => [track, ...prev.filter((p) => p.id !== track.id)]);
+                        setReelsInitialIndex(0);
+                        setViewMode("reels");
+                      }}
+                      className="px-2.5 py-1.5 rounded-lg border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 text-xs font-semibold transition cursor-pointer flex items-center space-x-1"
+                      title="Watch as 60s Reel"
+                    >
+                      <Film className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline">60s Reel</span>
                     </button>
                     <button
                       type="button"
@@ -704,16 +782,31 @@ export function MusicChannelView({
                     <span className="text-[10px] text-neutral-400 font-mono">
                       {t.durationFormatted}
                     </span>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleAddToQueue(t);
-                      }}
-                      className="text-[10px] text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 font-bold px-1.5 py-0.5 rounded hover:bg-emerald-50 dark:hover:bg-emerald-950/60 transition cursor-pointer"
-                    >
-                      + Queue
-                    </button>
+                    <div className="flex items-center space-x-1.5">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setReelsInitialIndex(idx);
+                          setViewMode("reels");
+                        }}
+                        className="text-[10px] text-rose-500 hover:text-rose-400 font-bold px-1.5 py-0.5 rounded hover:bg-rose-50 dark:hover:bg-rose-950/60 transition cursor-pointer flex items-center space-x-0.5"
+                        title="Watch 60s Reel"
+                      >
+                        <Film className="w-2.5 h-2.5" />
+                        <span>60s Reel</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleAddToQueue(t);
+                        }}
+                        className="text-[10px] text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 font-bold px-1.5 py-0.5 rounded hover:bg-emerald-50 dark:hover:bg-emerald-950/60 transition cursor-pointer"
+                      >
+                        + Queue
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
