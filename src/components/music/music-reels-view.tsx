@@ -25,6 +25,8 @@ import {
   Clock,
   Eye,
   EyeOff,
+  MoreVertical,
+  MoreHorizontal,
 } from "lucide-react";
 import { MusicTrack, WorkspaceMember } from "@/types";
 import { useMusic } from "@/context/music-context";
@@ -102,6 +104,8 @@ export function MusicReelsView({
 
   // Clean View Mode (hides all text clutter over video)
   const [cleanView, setCleanView] = useState(false);
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [scrollTransition, setScrollTransition] = useState<"up" | "down">("up");
 
   // Playback & Custom Duration Timer (Default: 2 minutes / 120s)
   const [isPlaying, setIsPlaying] = useState(true);
@@ -345,20 +349,22 @@ export function MusicReelsView({
     }
   }, [activeIndex, reels.length, isLoading, page, activeCategory, fetchReels]);
 
-  // Navigation handlers
-  const handleNextReel = () => {
+  // Navigation handlers with smooth scrolling animation transition
+  const handleNextReel = useCallback(() => {
+    setScrollTransition("up");
     if (activeIndex < reels.length - 1) {
       setActiveIndex((prev) => prev + 1);
     } else {
       setActiveIndex(0); // loop around
     }
-  };
+  }, [activeIndex, reels.length]);
 
-  const handlePrevReel = () => {
+  const handlePrevReel = useCallback(() => {
     if (activeIndex > 0) {
+      setScrollTransition("down");
       setActiveIndex((prev) => prev - 1);
     }
-  };
+  }, [activeIndex]);
 
   // Keyboard navigation (Arrow Up / Down, Space, M, L)
   useEffect(() => {
@@ -549,13 +555,13 @@ export function MusicReelsView({
       )}
 
       {/* TOP NAVIGATION & CATEGORY BAR */}
-      <div className="w-full max-w-5xl mx-auto px-4 pt-3 pb-2 z-20 flex flex-col sm:flex-row items-center justify-between gap-2.5 border-b border-neutral-900/80 bg-neutral-950/80 backdrop-blur-md">
+      <div className="w-full max-w-5xl mx-auto px-4 pt-2.5 pb-2 z-20 flex flex-col sm:flex-row items-center justify-between gap-2.5 border-b border-neutral-900/80 bg-neutral-950/80 backdrop-blur-md">
         <div className="flex items-center space-x-2.5 w-full sm:w-auto justify-between sm:justify-start">
           {onBackToJam && (
             <button
               type="button"
               onClick={onBackToJam}
-              className="px-3 py-1.5 rounded-xl bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-xs font-bold text-neutral-300 hover:text-white transition flex items-center space-x-1.5 cursor-pointer"
+              className="px-3 py-1.5 rounded-xl bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-xs font-bold text-neutral-300 hover:text-white transition flex items-center space-x-1.5 cursor-pointer shadow-xs"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
               <span>Back to Jam</span>
@@ -570,37 +576,6 @@ export function MusicReelsView({
             <span className="text-[10px] bg-rose-500/20 text-rose-400 border border-rose-500/30 px-2 py-0.5 rounded-full font-bold">
               Insta Feed
             </span>
-
-            {/* Direct Liked Reels Shelf Button */}
-            <button
-              type="button"
-              onClick={() => handleCategorySelect("liked")}
-              className={`px-2.5 py-1 rounded-full text-[10px] font-bold transition flex items-center space-x-1 cursor-pointer border ${
-                activeCategory === "liked"
-                  ? "bg-rose-600 text-white border-rose-400 shadow-sm"
-                  : "bg-neutral-900 hover:bg-neutral-800 text-rose-300 border-rose-500/30"
-              }`}
-              title="View all your saved liked reels"
-            >
-              <Heart
-                className={`w-3 h-3 ${
-                  activeCategory === "liked" ? "fill-white text-white" : "fill-rose-400 text-rose-400"
-                }`}
-              />
-              <span>Liked ({likedTracks.length})</span>
-            </button>
-
-            {/* Quick Duration Limit Pill */}
-            <button
-              type="button"
-              onClick={() => setShowDurationPicker((v) => !v)}
-              className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-neutral-900 hover:bg-neutral-800 text-rose-300 border border-neutral-700/80 hover:border-rose-500/60 transition flex items-center space-x-1 cursor-pointer"
-              title="Click to customize reel duration"
-            >
-              <Clock className="w-3 h-3 text-rose-400" />
-              <span>⏱️ {formatDurationLabel(durationLimit)}</span>
-              <ChevronDown className="w-2.5 h-2.5 text-neutral-400" />
-            </button>
           </div>
         </div>
 
@@ -625,7 +600,7 @@ export function MusicReelsView({
       </div>
 
       {/* CENTER REEL STAGE */}
-      <div className="flex-1 flex items-center justify-center relative p-2 sm:p-4 overflow-hidden">
+      <div className="flex-1 flex items-center justify-center relative p-1 sm:p-3 overflow-hidden">
         {activeCategory === "liked" && reels.length === 0 ? (
           <div className="flex flex-col items-center justify-center p-8 text-neutral-400 space-y-4 text-center max-w-sm bg-neutral-900/80 backdrop-blur-md rounded-3xl border border-neutral-800 shadow-2xl animate-in zoom-in-95 duration-200">
             <div className="w-16 h-16 rounded-full bg-rose-500/20 border border-rose-500/30 flex items-center justify-center text-rose-500 animate-pulse">
@@ -646,12 +621,15 @@ export function MusicReelsView({
             </button>
           </div>
         ) : (
-          /* Instagram Reel Container (Vertical 9:16 Aspect Ratio) */
-          <div className="flex items-center space-x-3 sm:space-x-5 h-full max-h-[780px]">
-            {/* Vertical 9:16 Video Card */}
+          /* Instagram Reel Container (Vertical 9:16 Aspect Ratio with Increased Height) */
+          <div className="flex items-center space-x-3 sm:space-x-5 h-full max-h-[880px]">
+            {/* Vertical 9:16 Video Card with Smooth Scrolling Transition */}
             <div
+              key={currentTrack?.id || activeIndex}
               onClick={handleVideoClick}
-              className="relative w-[340px] xs:w-[380px] sm:w-[410px] aspect-[9/16] h-full max-h-[760px] rounded-3xl overflow-hidden bg-black shadow-2xl border border-neutral-800/80 flex flex-col justify-between group select-none cursor-pointer"
+              className={`relative h-full max-h-[850px] aspect-[9/16] w-auto max-w-[92vw] rounded-3xl overflow-hidden bg-black shadow-2xl border border-neutral-800/80 flex flex-col justify-between group select-none cursor-pointer transition-shadow duration-300 hover:shadow-rose-950/20 ${
+                scrollTransition === "up" ? "animate-reel-up" : "animate-reel-down"
+              }`}
             >
               {/* Background Video Player (YouTube embedded with vertical crop/fit) */}
               <div className="absolute inset-0 overflow-hidden bg-neutral-950 flex items-center justify-center">
@@ -744,7 +722,7 @@ export function MusicReelsView({
               )}
 
               {/* TOP BAR INSIDE REEL */}
-              <div className="relative z-20 p-3.5 flex items-center justify-between text-xs font-semibold">
+              <div className="relative z-20 p-3 flex items-center justify-between text-xs font-semibold">
                 <div className="flex items-center space-x-2 bg-black/40 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/10">
                   <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                   <span className="text-[11px] text-white/90">
@@ -776,146 +754,25 @@ export function MusicReelsView({
                     <span>{cleanView ? "Info" : "Clean"}</span>
                   </button>
 
-                  {/* Custom Duration Limit Selector Button */}
+                  {/* Duration Limit Shortcut */}
                   <button
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
-                      setShowDurationPicker((v) => !v);
+                      setShowMoreMenu((v) => !v);
                     }}
-                    className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-black/50 hover:bg-neutral-800 text-rose-300 border border-rose-500/40 backdrop-blur-md transition flex items-center space-x-1 cursor-pointer shadow-xs hover:scale-102"
-                    title="Click to customize reel duration (15s, 30s, 60s, custom)"
+                    className="px-2 py-1 rounded-full text-[10px] font-bold bg-black/50 hover:bg-neutral-800 text-rose-300 border border-rose-500/30 backdrop-blur-md transition flex items-center space-x-1 cursor-pointer shadow-xs hover:scale-102"
+                    title="Click to change duration in menu"
                   >
                     <Clock className="w-3 h-3 text-rose-400" />
                     <span>{formatDurationLabel(durationLimit)}</span>
-                    <ChevronDown className="w-2.5 h-2.5 text-neutral-400" />
-                  </button>
-
-                  {/* Auto Next Toggle */}
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setAutoAdvance((v) => !v);
-                      showToast(autoAdvance ? "Auto-Next disabled" : `Auto-Next enabled (${formatDurationLabel(durationLimit)})`);
-                    }}
-                    className={`px-2.5 py-1 rounded-full text-[10px] font-bold border transition flex items-center space-x-1 cursor-pointer ${
-                      autoAdvance
-                        ? "bg-rose-500/30 text-rose-300 border-rose-500/40"
-                        : "bg-black/40 text-neutral-400 border-white/10"
-                    }`}
-                    title="Auto-scroll to next reel when duration limit completes"
-                  >
-                    <span>⚡ Auto: {autoAdvance ? "ON" : "OFF"}</span>
-                  </button>
-
-                  {/* Fit / Fill Aspect Toggle */}
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setFitMode((m) => (m === "fill" ? "fit" : "fill"));
-                    }}
-                    className="p-1.5 rounded-full bg-black/40 backdrop-blur-md border border-white/10 text-white/80 hover:text-white transition cursor-pointer"
-                    title="Toggle Video Zoom Fit / Fill"
-                  >
-                    <Maximize2 className="w-3.5 h-3.5" />
                   </button>
                 </div>
               </div>
 
-              {/* DURATION SELECTOR POPUP MODAL */}
-              {showDurationPicker && (
-                <div
-                  onClick={(e) => e.stopPropagation()}
-                  className="absolute top-14 left-3 right-3 z-50 bg-neutral-900/95 backdrop-blur-xl border border-rose-500/40 rounded-2xl p-3.5 shadow-2xl animate-in zoom-in-95 duration-150 space-y-2.5"
-                >
-                  <div className="flex items-center justify-between border-b border-neutral-800 pb-1.5">
-                    <div className="flex items-center space-x-1.5 text-xs font-bold text-white">
-                      <Clock className="w-3.5 h-3.5 text-rose-400" />
-                      <span>Custom Reel Duration</span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setShowDurationPicker(false)}
-                      className="text-neutral-400 hover:text-white p-1 rounded-md text-xs font-bold"
-                    >
-                      ✕
-                    </button>
-                  </div>
-
-                  <p className="text-[10px] text-neutral-400">
-                    Select clip duration before moving to the next reel:
-                  </p>
-
-                  {/* Preset Options Grid */}
-                  <div className="grid grid-cols-4 gap-1.5 text-[11px] font-bold">
-                    {[
-                      { label: "15s", sec: 15 },
-                      { label: "30s", sec: 30 },
-                      { label: "45s", sec: 45 },
-                      { label: "60s (1m)", sec: 60 },
-                      { label: "90s (1.5m)", sec: 90 },
-                      { label: "2 mins", sec: 120 },
-                      { label: "3 mins", sec: 180 },
-                      { label: "Full Song", sec: 0 },
-                    ].map((opt) => (
-                      <button
-                        key={opt.label}
-                        type="button"
-                        onClick={() => changeDurationLimit(opt.sec)}
-                        className={`py-1.5 px-1 rounded-lg text-center transition flex flex-col items-center justify-center cursor-pointer border ${
-                          durationLimit === opt.sec
-                            ? "bg-gradient-to-r from-pink-600 to-rose-600 text-white border-rose-500 shadow-md scale-102"
-                            : "bg-neutral-800 hover:bg-neutral-700 text-neutral-300 border-neutral-700/60"
-                        }`}
-                      >
-                        <span>{opt.label}</span>
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* Custom Number Input */}
-                  <div className="pt-1.5 border-t border-neutral-800 flex items-center space-x-1.5">
-                    <span className="text-[10px] text-neutral-400 flex-shrink-0">Custom sec:</span>
-                    <input
-                      type="number"
-                      min="5"
-                      max="600"
-                      value={customInputSeconds}
-                      onChange={(e) => setCustomInputSeconds(e.target.value)}
-                      placeholder="e.g. 25, 40, 50, 75"
-                      className="flex-1 px-2.5 py-1 bg-neutral-800 border border-neutral-700 rounded-lg text-xs text-white placeholder:text-neutral-500 focus:outline-none focus:ring-1 focus:ring-rose-500"
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          const val = parseInt(customInputSeconds, 10);
-                          if (!isNaN(val) && val > 0) {
-                            changeDurationLimit(val);
-                            setCustomInputSeconds("");
-                          }
-                        }
-                      }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const val = parseInt(customInputSeconds, 10);
-                        if (!isNaN(val) && val > 0) {
-                          changeDurationLimit(val);
-                          setCustomInputSeconds("");
-                        }
-                      }}
-                      className="px-3 py-1 bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold rounded-lg transition cursor-pointer"
-                    >
-                      Set
-                    </button>
-                  </div>
-                </div>
-              )}
-
               {/* BOTTOM REEL INFO (Clean Minimalist Instagram Overlay - No Big Cluttering Buttons!) */}
               <div
-                className={`relative z-20 p-4 pb-2 space-y-1.5 transition-opacity duration-300 ${
+                className={`relative z-20 p-4 pb-2.5 space-y-1.5 transition-opacity duration-300 ${
                   cleanView ? "opacity-0 pointer-events-none" : "opacity-100"
                 }`}
               >
@@ -964,7 +821,7 @@ export function MusicReelsView({
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        setShowDurationPicker(true);
+                        setShowMoreMenu(true);
                       }}
                       className="text-rose-300 hover:text-white flex items-center space-x-1 cursor-pointer bg-black/40 hover:bg-black/60 px-2 py-0.5 rounded-full border border-white/10"
                       title="Click to customize reel duration"
@@ -986,7 +843,7 @@ export function MusicReelsView({
                           durationLimit === 0
                             ? Math.min(100, (currentSecond / (currentTrack?.duration || 180)) * 100)
                             : Math.min(100, (currentSecond / durationLimit) * 100)
-                        }%`,
+                      }%`,
                       }}
                     />
                   </div>
@@ -994,8 +851,8 @@ export function MusicReelsView({
               </div>
             </div>
 
-            {/* RIGHT ACTION BAR (Clean vertical stack for all interactions) */}
-            <div className="flex flex-col items-center justify-end space-y-3 pb-3">
+            {/* RIGHT ACTION BAR (Clean 7-item stack with Three-Dots Dropdown) */}
+            <div className="flex flex-col items-center justify-end space-y-2.5 pb-2">
               {/* Up Arrow (Previous Reel) */}
               <button
                 type="button"
@@ -1008,11 +865,11 @@ export function MusicReelsView({
               </button>
 
               {/* Like Heart Button */}
-              <div className="flex flex-col items-center space-y-1">
+              <div className="flex flex-col items-center space-y-0.5">
                 <button
                   type="button"
                   onClick={triggerLike}
-                  className={`w-12 h-12 rounded-full flex items-center justify-center transition-all shadow-xl cursor-pointer ${
+                  className={`w-11 h-11 rounded-full flex items-center justify-center transition-all shadow-xl cursor-pointer ${
                     isCurrentLiked
                       ? "bg-rose-600 text-white scale-110 shadow-rose-500/40"
                       : "bg-neutral-900/90 hover:bg-neutral-800 text-white border border-neutral-700/80 hover:scale-105"
@@ -1020,25 +877,25 @@ export function MusicReelsView({
                   title="Like this Reel (L)"
                 >
                   <Heart
-                    className={`w-6 h-6 ${isCurrentLiked ? "fill-white text-white" : "text-white"}`}
+                    className={`w-5 h-5 ${isCurrentLiked ? "fill-white text-white" : "text-white"}`}
                   />
                 </button>
-                <span className="text-[11px] font-bold text-neutral-300">
+                <span className="text-[10px] font-bold text-neutral-300">
                   {currentTrack ? getLikeCount(currentTrack.id) : 105}
                 </span>
               </div>
 
               {/* Reaction Emoji Trigger */}
-              <div className="relative flex flex-col items-center space-y-1">
+              <div className="relative flex flex-col items-center space-y-0.5">
                 <button
                   type="button"
                   onClick={() => setShowReactionMenu((v) => !v)}
-                  className="w-12 h-12 rounded-full bg-neutral-900/90 hover:bg-neutral-800 border border-neutral-700/80 flex items-center justify-center text-white transition shadow-xl cursor-pointer hover:scale-105"
+                  className="w-11 h-11 rounded-full bg-neutral-900/90 hover:bg-neutral-800 border border-neutral-700/80 flex items-center justify-center text-white transition shadow-xl cursor-pointer hover:scale-105"
                   title="React to Reel"
                 >
-                  <MessageCircle className="w-6 h-6 text-white" />
+                  <MessageCircle className="w-5 h-5 text-white" />
                 </button>
-                <span className="text-[11px] font-bold text-neutral-300">React</span>
+                <span className="text-[10px] font-bold text-neutral-300">React</span>
 
                 {/* Reaction Picker Popup */}
                 {showReactionMenu && (
@@ -1058,18 +915,18 @@ export function MusicReelsView({
               </div>
 
               {/* Mute / Unmute Button (Controlled via postMessage, no video reload/restart!) */}
-              <div className="flex flex-col items-center space-y-1">
+              <div className="flex flex-col items-center space-y-0.5">
                 <button
                   type="button"
                   onClick={toggleMute}
-                  className={`w-12 h-12 rounded-full flex items-center justify-center transition shadow-xl cursor-pointer border ${
+                  className={`w-11 h-11 rounded-full flex items-center justify-center transition shadow-xl cursor-pointer border ${
                     isMuted
                       ? "bg-amber-600/30 text-amber-300 border-amber-500/50 hover:bg-amber-600/40"
                       : "bg-neutral-900/90 hover:bg-neutral-800 text-white border-neutral-700/80"
                   }`}
                   title="Toggle Mute (M)"
                 >
-                  {isMuted ? <VolumeX className="w-6 h-6" /> : <Volume2 className="w-6 h-6" />}
+                  {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
                 </button>
                 <span className="text-[10px] font-bold text-neutral-400">
                   {isMuted ? "Unmute" : "Sound"}
@@ -1077,7 +934,7 @@ export function MusicReelsView({
               </div>
 
               {/* Play Full Song in Jam Button */}
-              <div className="flex flex-col items-center space-y-1">
+              <div className="flex flex-col items-center space-y-0.5">
                 <button
                   type="button"
                   onClick={handlePlayFullSong}
@@ -1089,51 +946,216 @@ export function MusicReelsView({
                 <span className="text-[10px] font-bold text-neutral-300">Jam</span>
               </div>
 
-              {/* Add to Queue Button */}
-              <div className="flex flex-col items-center space-y-1">
+              {/* THREE DOTS MORE OPTIONS BUTTON (Dropdown Trigger) */}
+              <div className="relative flex flex-col items-center space-y-0.5">
                 <button
                   type="button"
-                  onClick={handleAddToQueue}
-                  className="w-11 h-11 rounded-full bg-neutral-900/90 hover:bg-neutral-800 text-white border border-neutral-700/80 flex items-center justify-center transition shadow-xl cursor-pointer hover:scale-105 active:scale-95"
-                  title="Add to Jam Queue"
+                  onClick={() => setShowMoreMenu((v) => !v)}
+                  className={`w-11 h-11 rounded-full flex items-center justify-center transition shadow-xl cursor-pointer border ${
+                    showMoreMenu
+                      ? "bg-rose-600 text-white border-rose-400 scale-105"
+                      : "bg-neutral-900/90 hover:bg-neutral-800 text-white border-neutral-700/80 hover:scale-105"
+                  }`}
+                  title="More Reel Options (Duration, Queue, Replay, Zoom)"
                 >
-                  <ListPlus className="w-5 h-5 text-white" />
+                  <MoreVertical className="w-5 h-5 text-white" />
                 </button>
-                <span className="text-[10px] font-bold text-neutral-300">+ Queue</span>
-              </div>
+                <span className="text-[10px] font-bold text-neutral-400">More</span>
 
-              {/* Restart Reel Clip */}
-              <div className="flex flex-col items-center space-y-1">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setCurrentSecond(0);
-                    setIsPlaying(true);
-                    postYtReelCommand("seekTo", [0, true]);
-                    postYtReelCommand("playVideo");
-                    showToast("Replayed clip");
-                  }}
-                  className="w-10 h-10 rounded-full bg-neutral-900/90 hover:bg-neutral-800 border border-neutral-700/80 flex items-center justify-center text-white transition shadow-lg cursor-pointer hover:scale-105"
-                  title="Replay Clip"
-                >
-                  <RotateCcw className="w-4 h-4 text-neutral-300" />
-                </button>
-                <span className="text-[10px] font-bold text-neutral-400">Replay</span>
-              </div>
+                {/* THREE DOTS DROPDOWN POPOVER */}
+                {showMoreMenu && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-40 bg-black/40 backdrop-blur-xs"
+                      onClick={() => setShowMoreMenu(false)}
+                    />
+                    <div
+                      onClick={(e) => e.stopPropagation()}
+                      className="absolute right-14 bottom-0 z-50 w-72 bg-neutral-900/95 backdrop-blur-2xl border border-neutral-700/80 rounded-2xl p-3.5 shadow-2xl animate-in zoom-in-95 duration-150 space-y-3"
+                    >
+                      {/* Header */}
+                      <div className="flex items-center justify-between border-b border-neutral-800 pb-2">
+                        <div className="flex items-center space-x-1.5 text-xs font-bold text-white">
+                          <MoreHorizontal className="w-4 h-4 text-rose-400" />
+                          <span>Reel Settings & Actions</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setShowMoreMenu(false)}
+                          className="text-neutral-400 hover:text-white p-1 rounded-md text-xs font-bold cursor-pointer"
+                        >
+                          ✕
+                        </button>
+                      </div>
 
-              {/* Custom Duration Shortcut Button */}
-              <div className="flex flex-col items-center space-y-1">
-                <button
-                  type="button"
-                  onClick={() => setShowDurationPicker((v) => !v)}
-                  className="w-10 h-10 rounded-full bg-neutral-900/90 hover:bg-neutral-800 border border-neutral-700/80 flex items-center justify-center text-rose-400 transition shadow-lg cursor-pointer hover:scale-105"
-                  title="Change Reel Duration Limit"
-                >
-                  <Clock className="w-4 h-4 text-rose-400" />
-                </button>
-                <span className="text-[10px] font-bold text-neutral-400">
-                  {formatDurationLabel(durationLimit)}
-                </span>
+                      {/* Clip Duration Section */}
+                      <div>
+                        <div className="flex items-center justify-between text-[11px] font-bold text-neutral-300 mb-1.5">
+                          <span className="flex items-center space-x-1">
+                            <Clock className="w-3.5 h-3.5 text-rose-400" />
+                            <span>Clip Duration:</span>
+                          </span>
+                          <span className="text-rose-400 font-extrabold">{formatDurationLabel(durationLimit)}</span>
+                        </div>
+                        <div className="grid grid-cols-4 gap-1 text-[10px] font-bold">
+                          {[
+                            { label: "15s", sec: 15 },
+                            { label: "30s", sec: 30 },
+                            { label: "45s", sec: 45 },
+                            { label: "1m", sec: 60 },
+                            { label: "1.5m", sec: 90 },
+                            { label: "2m", sec: 120 },
+                            { label: "3m", sec: 180 },
+                            { label: "Full", sec: 0 },
+                          ].map((opt) => (
+                            <button
+                              key={opt.label}
+                              type="button"
+                              onClick={() => {
+                                changeDurationLimit(opt.sec);
+                              }}
+                              className={`py-1.5 px-1 rounded-lg text-center transition cursor-pointer border ${
+                                durationLimit === opt.sec
+                                  ? "bg-rose-600 text-white border-rose-500 shadow-sm"
+                                  : "bg-neutral-800 hover:bg-neutral-700 text-neutral-300 border-neutral-700/60"
+                              }`}
+                            >
+                              {opt.label}
+                            </button>
+                          ))}
+                        </div>
+
+                        {/* Custom seconds input */}
+                        <div className="pt-2 flex items-center space-x-1.5">
+                          <input
+                            type="number"
+                            min="5"
+                            max="600"
+                            value={customInputSeconds}
+                            onChange={(e) => setCustomInputSeconds(e.target.value)}
+                            placeholder="Custom sec (e.g. 25)"
+                            className="flex-1 px-2.5 py-1 bg-neutral-800 border border-neutral-700 rounded-lg text-xs text-white placeholder:text-neutral-500 focus:outline-none focus:ring-1 focus:ring-rose-500"
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                const val = parseInt(customInputSeconds, 10);
+                                if (!isNaN(val) && val > 0) {
+                                  changeDurationLimit(val);
+                                  setCustomInputSeconds("");
+                                }
+                              }
+                            }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const val = parseInt(customInputSeconds, 10);
+                              if (!isNaN(val) && val > 0) {
+                                changeDurationLimit(val);
+                                setCustomInputSeconds("");
+                              }
+                            }}
+                            className="px-2.5 py-1 bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold rounded-lg transition cursor-pointer"
+                          >
+                            Set
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Action List */}
+                      <div className="space-y-1 pt-1.5 border-t border-neutral-800">
+                        {/* Add to Queue */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            handleAddToQueue();
+                            setShowMoreMenu(false);
+                          }}
+                          className="w-full px-2.5 py-2 rounded-xl bg-neutral-800/80 hover:bg-neutral-700/80 text-white text-xs font-semibold flex items-center justify-between transition cursor-pointer"
+                        >
+                          <span className="flex items-center space-x-2">
+                            <ListPlus className="w-4 h-4 text-emerald-400" />
+                            <span>Add to Jam Queue</span>
+                          </span>
+                          <span className="text-[10px] text-neutral-400">+ Queue</span>
+                        </button>
+
+                        {/* Replay Clip */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCurrentSecond(0);
+                            setIsPlaying(true);
+                            postYtReelCommand("seekTo", [0, true]);
+                            postYtReelCommand("playVideo");
+                            showToast("Replayed clip");
+                            setShowMoreMenu(false);
+                          }}
+                          className="w-full px-2.5 py-2 rounded-xl bg-neutral-800/80 hover:bg-neutral-700/80 text-white text-xs font-semibold flex items-center justify-between transition cursor-pointer"
+                        >
+                          <span className="flex items-center space-x-2">
+                            <RotateCcw className="w-4 h-4 text-blue-400" />
+                            <span>Replay from Start</span>
+                          </span>
+                          <span className="text-[10px] text-neutral-400">0:00</span>
+                        </button>
+
+                        {/* Auto-Advance Toggle */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAutoAdvance((v) => !v);
+                            showToast(autoAdvance ? "Auto-Next disabled" : `Auto-Next enabled (${formatDurationLabel(durationLimit)})`);
+                          }}
+                          className="w-full px-2.5 py-2 rounded-xl bg-neutral-800/80 hover:bg-neutral-700/80 text-white text-xs font-semibold flex items-center justify-between transition cursor-pointer"
+                        >
+                          <span className="flex items-center space-x-2">
+                            <Sparkles className="w-4 h-4 text-amber-400" />
+                            <span>Auto-Advance to Next</span>
+                          </span>
+                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${autoAdvance ? "bg-emerald-500/20 text-emerald-400" : "bg-neutral-700 text-neutral-400"}`}>
+                            {autoAdvance ? "ON" : "OFF"}
+                          </span>
+                        </button>
+
+                        {/* Video Aspect Fit/Fill Toggle */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFitMode((m) => (m === "fill" ? "fit" : "fill"));
+                          }}
+                          className="w-full px-2.5 py-2 rounded-xl bg-neutral-800/80 hover:bg-neutral-700/80 text-white text-xs font-semibold flex items-center justify-between transition cursor-pointer"
+                        >
+                          <span className="flex items-center space-x-2">
+                            <Maximize2 className="w-4 h-4 text-purple-400" />
+                            <span>Aspect Mode</span>
+                          </span>
+                          <span className="text-[10px] font-bold text-neutral-300">
+                            {fitMode === "fill" ? "Crop Fill" : "Fit"}
+                          </span>
+                        </button>
+
+                        {/* Clean View Toggle */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCleanView((v) => !v);
+                            showToast(cleanView ? "Overlay visible" : "Clean View: Text clutter hidden!");
+                            setShowMoreMenu(false);
+                          }}
+                          className="w-full px-2.5 py-2 rounded-xl bg-neutral-800/80 hover:bg-neutral-700/80 text-white text-xs font-semibold flex items-center justify-between transition cursor-pointer"
+                        >
+                          <span className="flex items-center space-x-2">
+                            {cleanView ? <Eye className="w-4 h-4 text-rose-400" /> : <EyeOff className="w-4 h-4 text-neutral-400" />}
+                            <span>{cleanView ? "Show Text Overlays" : "Clean View"}</span>
+                          </span>
+                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${cleanView ? "bg-rose-500/20 text-rose-400" : "bg-neutral-700 text-neutral-400"}`}>
+                            {cleanView ? "Active" : "Off"}
+                          </span>
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* Down Arrow (Next Reel) */}
@@ -1150,7 +1172,7 @@ export function MusicReelsView({
         )}
       </div>
 
-      {/* Global CSS for floating reactions in reels */}
+      {/* Global CSS for floating reactions and smooth snap-scrolling transitions */}
       <style jsx global>{`
         @keyframes floatUpReel {
           0% {
@@ -1161,6 +1183,36 @@ export function MusicReelsView({
             opacity: 0;
             transform: translateY(-260px) scale(1.4);
           }
+        }
+
+        @keyframes reelSlideInUp {
+          0% {
+            opacity: 0.35;
+            transform: translateY(70px) scale(0.96);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+
+        @keyframes reelSlideInDown {
+          0% {
+            opacity: 0.35;
+            transform: translateY(-70px) scale(0.96);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+
+        .animate-reel-up {
+          animation: reelSlideInUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        .animate-reel-down {
+          animation: reelSlideInDown 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
       `}</style>
     </div>
