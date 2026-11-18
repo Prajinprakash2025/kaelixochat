@@ -22,6 +22,7 @@ import {
   ArrowLeft,
   SlidersHorizontal,
   Plus,
+  Clock,
 } from "lucide-react";
 import { MusicTrack, WorkspaceMember } from "@/types";
 import { useMusic } from "@/context/music-context";
@@ -63,13 +64,61 @@ export function MusicReelsView({
   const [isLoading, setIsLoading] = useState(false);
   const [page, setPage] = useState(1);
 
-  // Playback & 60-Second Timer
+  // Playback & Custom Duration Timer (15s, 30s, 45s, 60s, 90s, 120s, or 0 for Full Song)
   const [isPlaying, setIsPlaying] = useState(true);
   const [isMuted, setIsMuted] = useState(false);
   const [currentSecond, setCurrentSecond] = useState(0);
+  const [durationLimit, setDurationLimit] = useState<number>(60);
+  const [showDurationPicker, setShowDurationPicker] = useState<boolean>(false);
+  const [customInputSeconds, setCustomInputSeconds] = useState<string>("");
   const [autoAdvance, setAutoAdvance] = useState(true);
   const [fitMode, setFitMode] = useState<"fill" | "fit">("fill");
   const [showPlayPauseIcon, setShowPlayPauseIcon] = useState<"play" | "pause" | null>(null);
+
+  // Load duration preference from localStorage
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const savedDuration = localStorage.getItem("kaelixo_reels_duration");
+        if (savedDuration) {
+          const parsed = parseInt(savedDuration, 10);
+          if (!isNaN(parsed) && parsed >= 0) {
+            setDurationLimit(parsed);
+          }
+        }
+      } catch {}
+    }
+  }, []);
+
+  const changeDurationLimit = (seconds: number) => {
+    setDurationLimit(seconds);
+    setCurrentSecond(0);
+    setShowDurationPicker(false);
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("kaelixo_reels_duration", seconds.toString());
+      } catch {}
+    }
+    showToast(
+      seconds === 0
+        ? "Reel duration set to: Full Song"
+        : `Reel duration set to: ${seconds} seconds`
+    );
+  };
+
+  const formatDurationLabel = (sec: number) => {
+    if (sec === 0 || sec >= 9999) return "Full Song";
+    if (sec < 60) return `${sec}s`;
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return s > 0 ? `${m}m ${s}s` : `${m}m`;
+  };
+
+  const formatTime = (sec: number) => {
+    const m = Math.floor(sec / 60);
+    const s = Math.floor(sec % 60);
+    return `${m}:${s < 10 ? "0" : ""}${s}`;
+  };
 
   // Likes & Interactions
   const [likedMap, setLikedMap] = useState<Record<string, boolean>>({});
@@ -150,15 +199,18 @@ export function MusicReelsView({
     fetchReels(catId, 1, false);
   };
 
-  // 60-Second Loop & Auto-Advance Timer
+  // Dynamic Loop & Auto-Advance Timer using customizable durationLimit
   useEffect(() => {
     if (!isPlaying) return;
 
     const interval = setInterval(() => {
       setCurrentSecond((sec) => {
-        if (sec >= 60) {
+        const cur = reels[activeIndex];
+        const effectiveLimit =
+          durationLimit === 0 ? cur?.duration || 180 : durationLimit;
+        if (sec >= effectiveLimit) {
           if (autoAdvance) {
-            // Auto advance to next reel at 60 seconds
+            // Auto advance to next reel at user's custom duration
             handleNextReel();
             return 0;
           }
@@ -170,7 +222,7 @@ export function MusicReelsView({
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [isPlaying, autoAdvance, reels.length, activeIndex]);
+  }, [isPlaying, autoAdvance, reels, activeIndex, durationLimit]);
 
   // Reset second and prefetch when reel changes
   useEffect(() => {
@@ -397,11 +449,23 @@ export function MusicReelsView({
           <div className="flex items-center space-x-2">
             <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping" />
             <h2 className="text-xs sm:text-sm font-black uppercase tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-pink-400 via-rose-400 to-amber-300">
-              60s Music Reels
+              Music Reels
             </h2>
             <span className="text-[10px] bg-rose-500/20 text-rose-400 border border-rose-500/30 px-2 py-0.5 rounded-full font-bold">
               Insta Feed
             </span>
+
+            {/* Quick Duration Limit Pill */}
+            <button
+              type="button"
+              onClick={() => setShowDurationPicker((v) => !v)}
+              className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-neutral-900 hover:bg-neutral-800 text-rose-300 border border-neutral-700/80 hover:border-rose-500/60 transition flex items-center space-x-1 cursor-pointer"
+              title="Click to customize reel duration"
+            >
+              <Clock className="w-3 h-3 text-rose-400" />
+              <span>⏱️ {formatDurationLabel(durationLimit)}</span>
+              <ChevronDown className="w-2.5 h-2.5 text-neutral-400" />
+            </button>
           </div>
         </div>
 
@@ -528,23 +592,38 @@ export function MusicReelsView({
                 </span>
               </div>
 
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-1.5">
+                {/* Custom Duration Limit Selector Button */}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowDurationPicker((v) => !v);
+                  }}
+                  className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-black/50 hover:bg-neutral-800 text-rose-300 border border-rose-500/40 backdrop-blur-md transition flex items-center space-x-1 cursor-pointer shadow-xs hover:scale-102"
+                  title="Click to customize reel duration (15s, 30s, 60s, custom)"
+                >
+                  <Clock className="w-3 h-3 text-rose-400" />
+                  <span>{durationLimit === 0 ? "Full" : `${durationLimit}s`}</span>
+                  <ChevronDown className="w-2.5 h-2.5 text-neutral-400" />
+                </button>
+
                 {/* Auto Next Toggle */}
                 <button
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
                     setAutoAdvance((v) => !v);
-                    showToast(autoAdvance ? "Auto-Next disabled" : "Auto-Next enabled (60s)");
+                    showToast(autoAdvance ? "Auto-Next disabled" : `Auto-Next enabled (${formatDurationLabel(durationLimit)})`);
                   }}
                   className={`px-2.5 py-1 rounded-full text-[10px] font-bold border transition flex items-center space-x-1 cursor-pointer ${
                     autoAdvance
                       ? "bg-rose-500/30 text-rose-300 border-rose-500/40"
                       : "bg-black/40 text-neutral-400 border-white/10"
                   }`}
-                  title="Auto-scroll to next reel when 60s completes"
+                  title="Auto-scroll to next reel when duration limit completes"
                 >
-                  <span>⚡ 60s Auto: {autoAdvance ? "ON" : "OFF"}</span>
+                  <span>⚡ Auto: {autoAdvance ? "ON" : "OFF"}</span>
                 </button>
 
                 {/* Fit / Fill Aspect Toggle */}
@@ -561,6 +640,95 @@ export function MusicReelsView({
                 </button>
               </div>
             </div>
+
+            {/* DURATION SELECTOR POPUP MODAL */}
+            {showDurationPicker && (
+              <div
+                onClick={(e) => e.stopPropagation()}
+                className="absolute top-14 left-3 right-3 z-50 bg-neutral-900/95 backdrop-blur-xl border border-rose-500/40 rounded-2xl p-3.5 shadow-2xl animate-in zoom-in-95 duration-150 space-y-2.5"
+              >
+                <div className="flex items-center justify-between border-b border-neutral-800 pb-1.5">
+                  <div className="flex items-center space-x-1.5 text-xs font-bold text-white">
+                    <Clock className="w-3.5 h-3.5 text-rose-400" />
+                    <span>Custom Reel Duration</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowDurationPicker(false)}
+                    className="text-neutral-400 hover:text-white p-1 rounded-md text-xs font-bold"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                <p className="text-[10px] text-neutral-400">
+                  Select clip duration before moving to the next reel:
+                </p>
+
+                {/* Preset Options Grid */}
+                <div className="grid grid-cols-4 gap-1.5 text-[11px] font-bold">
+                  {[
+                    { label: "15s", sec: 15 },
+                    { label: "30s", sec: 30 },
+                    { label: "45s", sec: 45 },
+                    { label: "60s (1m)", sec: 60 },
+                    { label: "90s (1.5m)", sec: 90 },
+                    { label: "2 mins", sec: 120 },
+                    { label: "3 mins", sec: 180 },
+                    { label: "Full Song", sec: 0 },
+                  ].map((opt) => (
+                    <button
+                      key={opt.label}
+                      type="button"
+                      onClick={() => changeDurationLimit(opt.sec)}
+                      className={`py-1.5 px-1 rounded-lg text-center transition flex flex-col items-center justify-center cursor-pointer border ${
+                        durationLimit === opt.sec
+                          ? "bg-gradient-to-r from-pink-600 to-rose-600 text-white border-rose-500 shadow-md scale-102"
+                          : "bg-neutral-800 hover:bg-neutral-700 text-neutral-300 border-neutral-700/60"
+                      }`}
+                    >
+                      <span>{opt.label}</span>
+                    </button>
+                  ))}
+                </div>
+
+                {/* Custom Number Input */}
+                <div className="pt-1.5 border-t border-neutral-800 flex items-center space-x-1.5">
+                  <span className="text-[10px] text-neutral-400 flex-shrink-0">Custom sec:</span>
+                  <input
+                    type="number"
+                    min="5"
+                    max="600"
+                    value={customInputSeconds}
+                    onChange={(e) => setCustomInputSeconds(e.target.value)}
+                    placeholder="e.g. 25, 40, 50, 75"
+                    className="flex-1 px-2.5 py-1 bg-neutral-800 border border-neutral-700 rounded-lg text-xs text-white placeholder:text-neutral-500 focus:outline-none focus:ring-1 focus:ring-rose-500"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        const val = parseInt(customInputSeconds, 10);
+                        if (!isNaN(val) && val > 0) {
+                          changeDurationLimit(val);
+                          setCustomInputSeconds("");
+                        }
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const val = parseInt(customInputSeconds, 10);
+                      if (!isNaN(val) && val > 0) {
+                        changeDurationLimit(val);
+                        setCustomInputSeconds("");
+                      }
+                    }}
+                    className="px-3 py-1 bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold rounded-lg transition cursor-pointer"
+                  >
+                    Set
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* BOTTOM REEL INFO (Title, Artist, Audio Track Ticker, 60s Progress Bar) */}
             <div className="relative z-20 p-4 space-y-2.5">
@@ -582,7 +750,9 @@ export function MusicReelsView({
                       ✓
                     </span>
                   </div>
-                  <span className="text-[10px] text-white/70">Kaelixo Audio • 60s Clip</span>
+                  <span className="text-[10px] text-white/70">
+                    Kaelixo Audio • {durationLimit === 0 ? "Full Song" : `${formatDurationLabel(durationLimit)} Clip`}
+                  </span>
                 </div>
               </div>
 
@@ -601,7 +771,7 @@ export function MusicReelsView({
                 />
                 <div className="min-w-0 flex-1 overflow-hidden whitespace-nowrap">
                   <p className="text-[11px] truncate text-white/90 font-medium">
-                    ♫ {currentTrack?.title} • {currentTrack?.artist} • 60s Reel Highlight
+                    ♫ {currentTrack?.title} • {currentTrack?.artist} • {durationLimit === 0 ? "Full Track" : `${formatDurationLabel(durationLimit)} Highlight`}
                   </p>
                 </div>
               </div>
@@ -632,17 +802,37 @@ export function MusicReelsView({
                 </button>
               </div>
 
-              {/* 60-SECOND NEON SCRUBBER PROGRESS BAR */}
+              {/* CUSTOMIZABLE NEON SCRUBBER PROGRESS BAR */}
               <div className="pt-2">
                 <div className="flex items-center justify-between text-[10px] text-white/80 font-mono mb-1">
-                  <span>⏱️ 0:{currentSecond < 10 ? `0${currentSecond}` : currentSecond}</span>
-                  <span className="text-white/60">60s Reel Limit</span>
-                  <span>1:00</span>
+                  <span>⏱️ {formatTime(currentSecond)}</span>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowDurationPicker(true);
+                    }}
+                    className="text-rose-300 hover:text-white hover:underline flex items-center space-x-1 cursor-pointer bg-white/10 hover:bg-white/20 px-2 py-0.5 rounded-full"
+                    title="Click to customize reel duration"
+                  >
+                    <span>{durationLimit === 0 ? "Full Song" : `${durationLimit}s Limit`} ▾</span>
+                  </button>
+                  <span>
+                    {durationLimit === 0
+                      ? formatTime(currentTrack?.duration || 180)
+                      : formatTime(durationLimit)}
+                  </span>
                 </div>
                 <div className="w-full h-1.5 bg-white/20 rounded-full overflow-hidden backdrop-blur-sm relative">
                   <div
                     className="h-full bg-gradient-to-r from-rose-500 via-pink-500 to-emerald-400 transition-all duration-1000 ease-linear rounded-full shadow-[0_0_8px_rgba(244,63,94,0.6)]"
-                    style={{ width: `${(currentSecond / 60) * 100}%` }}
+                    style={{
+                      width: `${
+                        durationLimit === 0
+                          ? Math.min(100, (currentSecond / (currentTrack?.duration || 180)) * 100)
+                          : Math.min(100, (currentSecond / durationLimit) * 100)
+                      }%`,
+                    }}
                   />
                 </div>
               </div>
@@ -734,21 +924,36 @@ export function MusicReelsView({
               </span>
             </div>
 
-            {/* Restart 60s Reel */}
+            {/* Restart Reel Clip */}
             <div className="flex flex-col items-center space-y-1">
               <button
                 type="button"
                 onClick={() => {
                   setCurrentSecond(0);
                   setIsPlaying(true);
-                  showToast("Replayed 60s clip");
+                  showToast("Replayed clip");
                 }}
                 className="w-10 h-10 rounded-full bg-neutral-900/90 hover:bg-neutral-800 border border-neutral-700/80 flex items-center justify-center text-white transition shadow-lg cursor-pointer hover:scale-105"
-                title="Replay 60s Clip"
+                title="Replay Clip"
               >
                 <RotateCcw className="w-4 h-4 text-neutral-300" />
               </button>
               <span className="text-[10px] font-bold text-neutral-400">Replay</span>
+            </div>
+
+            {/* Custom Duration Shortcut Button */}
+            <div className="flex flex-col items-center space-y-1">
+              <button
+                type="button"
+                onClick={() => setShowDurationPicker((v) => !v)}
+                className="w-10 h-10 rounded-full bg-neutral-900/90 hover:bg-neutral-800 border border-neutral-700/80 flex items-center justify-center text-rose-400 transition shadow-lg cursor-pointer hover:scale-105"
+                title="Change Reel Duration Limit"
+              >
+                <Clock className="w-4 h-4 text-rose-400" />
+              </button>
+              <span className="text-[10px] font-bold text-neutral-400">
+                {durationLimit === 0 ? "Full" : `${durationLimit}s`}
+              </span>
             </div>
 
             {/* Down Arrow (Next Reel) */}

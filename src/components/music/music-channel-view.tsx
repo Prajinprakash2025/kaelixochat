@@ -350,9 +350,9 @@ export function MusicChannelView({
             className="flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-bold text-neutral-600 dark:text-neutral-300 hover:text-white hover:bg-gradient-to-r hover:from-purple-600 hover:via-pink-600 hover:to-rose-600 border border-neutral-200 dark:border-neutral-700/80 hover:border-transparent flex items-center justify-center space-x-2 transition cursor-pointer group shadow-xs"
           >
             <Film className="w-4 h-4 text-pink-500 group-hover:text-white" />
-            <span>📱 60s Music Reels</span>
+            <span>📱 Music Reels</span>
             <span className="text-[9px] bg-rose-500 text-white px-1.5 py-0.5 rounded-full uppercase font-black animate-pulse">
-              Insta Feed
+              Custom ⏱️
             </span>
           </button>
         </div>
@@ -365,7 +365,7 @@ export function MusicChannelView({
           }}
           className="text-xs font-bold text-rose-500 hover:text-rose-400 flex items-center space-x-1.5 transition cursor-pointer py-1 px-2.5 rounded-lg hover:bg-rose-500/10"
         >
-          <span>✨ Scroll 60s Video Clips like Reels →</span>
+          <span>✨ Scroll Video Clips like Reels (Custom Duration) →</span>
         </button>
       </div>
 
@@ -503,7 +503,7 @@ export function MusicChannelView({
                       title="Watch as 60s Reel"
                     >
                       <Film className="w-3.5 h-3.5" />
-                      <span className="hidden sm:inline">60s Reel</span>
+                      <span className="hidden sm:inline">Reel</span>
                     </button>
                     <button
                       type="button"
@@ -794,7 +794,7 @@ export function MusicChannelView({
                         title="Watch 60s Reel"
                       >
                         <Film className="w-2.5 h-2.5" />
-                        <span>60s Reel</span>
+                        <span>Reel</span>
                       </button>
                       <button
                         type="button"
