@@ -315,6 +315,272 @@ const PRESET_CATEGORIES: MusicCategory[] = [
   { id: "nostalgia", name: "90s Evergreen", icon: "📻", group: "mood" },
 ];
 
+export const FEATURED_ARTISTS = [
+  {
+    id: "sushin-shyam",
+    name: "Sushin Shyam",
+    tag: "Aavesham • Manjummel Boys",
+    query: "Sushin Shyam songs",
+    image: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=600&q=80",
+    monthlyListeners: "4.8M listeners",
+  },
+  {
+    id: "anirudh",
+    name: "Anirudh Ravichander",
+    tag: "Leo • Jailer • Master",
+    query: "Anirudh Ravichander songs",
+    image: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?auto=format&fit=crop&w=600&q=80",
+    monthlyListeners: "14.2M listeners",
+  },
+  {
+    id: "ar-rahman",
+    name: "A.R. Rahman",
+    tag: "Rockstar • Dil Se • PS1",
+    query: "AR Rahman songs",
+    image: "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?auto=format&fit=crop&w=600&q=80",
+    monthlyListeners: "22.5M listeners",
+  },
+  {
+    id: "arijit-singh",
+    name: "Arijit Singh",
+    tag: "Kesariya • Tum Hi Ho",
+    query: "Arijit Singh songs",
+    image: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=600&q=80",
+    monthlyListeners: "38.1M listeners",
+  },
+  {
+    id: "dabzee",
+    name: "Dabzee",
+    tag: "Illuminati • Manavaalan Thug",
+    query: "Dabzee songs",
+    image: "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?auto=format&fit=crop&w=600&q=80",
+    monthlyListeners: "3.2M listeners",
+  },
+  {
+    id: "vishnu-vijay",
+    name: "Vishnu Vijay",
+    tag: "Premalu • Thallumaala",
+    query: "Vishnu Vijay songs",
+    image: "https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?auto=format&fit=crop&w=600&q=80",
+    monthlyListeners: "2.9M listeners",
+  },
+  {
+    id: "sid-sriram",
+    name: "Sid Sriram",
+    tag: "Ennodu Nee Irundhaal",
+    query: "Sid Sriram songs",
+    image: "https://images.unsplash.com/photo-1465847899084-d164df4dedc6?auto=format&fit=crop&w=600&q=80",
+    monthlyListeners: "9.5M listeners",
+  },
+  {
+    id: "taylor-swift",
+    name: "Taylor Swift",
+    tag: "1989 • Midnights • Pop",
+    query: "Taylor Swift hits",
+    image: "https://images.unsplash.com/photo-1520523839898-50712825e3a7?auto=format&fit=crop&w=600&q=80",
+    monthlyListeners: "105M listeners",
+  },
+  {
+    id: "bts",
+    name: "BTS",
+    tag: "Dynamite • Butter • K-Pop",
+    query: "BTS songs",
+    image: "https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?auto=format&fit=crop&w=600&q=80",
+    monthlyListeners: "28M listeners",
+  },
+  {
+    id: "the-weeknd",
+    name: "The Weeknd",
+    tag: "Blinding Lights • Starboy",
+    query: "The Weeknd hits",
+    image: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=600&q=80",
+    monthlyListeners: "112M listeners",
+  },
+  {
+    id: "coldplay",
+    name: "Coldplay",
+    tag: "Yellow • Viva La Vida",
+    query: "Coldplay hits",
+    image: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=600&q=80",
+    monthlyListeners: "84M listeners",
+  },
+  {
+    id: "shreya-ghoshal",
+    name: "Shreya Ghoshal",
+    tag: "Melody Queen • Evergreen",
+    query: "Shreya Ghoshal songs",
+    image: "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=600&q=80",
+    monthlyListeners: "26M listeners",
+  },
+];
+
+export const FEATURED_ALBUMS = [
+  {
+    id: "album-aavesham",
+    title: "Aavesham",
+    artist: "Sushin Shyam",
+    year: "2024",
+    tracksCount: 8,
+    image: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=600&q=80",
+    query: "Aavesham full album songs",
+  },
+  {
+    id: "album-manjummel-boys",
+    title: "Manjummel Boys",
+    artist: "Sushin Shyam",
+    year: "2024",
+    tracksCount: 6,
+    image: "https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=600&q=80",
+    query: "Manjummel Boys full album songs",
+  },
+  {
+    id: "album-premalu",
+    title: "Premalu",
+    artist: "Vishnu Vijay",
+    year: "2024",
+    tracksCount: 6,
+    image: "https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?auto=format&fit=crop&w=600&q=80",
+    query: "Premalu full album songs",
+  },
+  {
+    id: "album-leo",
+    title: "Leo",
+    artist: "Anirudh Ravichander",
+    year: "2023",
+    tracksCount: 7,
+    image: "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?auto=format&fit=crop&w=600&q=80",
+    query: "Leo songs Anirudh",
+  },
+  {
+    id: "album-jailer",
+    title: "Jailer",
+    artist: "Anirudh Ravichander",
+    year: "2023",
+    tracksCount: 8,
+    image: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=600&q=80",
+    query: "Jailer songs Anirudh",
+  },
+  {
+    id: "album-animal",
+    title: "Animal",
+    artist: "Pritam & Harshavardhan",
+    year: "2023",
+    tracksCount: 10,
+    image: "https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=600&q=80",
+    query: "Animal songs Pritam",
+  },
+  {
+    id: "album-rockstar",
+    title: "Rockstar",
+    artist: "A.R. Rahman",
+    year: "2011",
+    tracksCount: 14,
+    image: "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?auto=format&fit=crop&w=600&q=80",
+    query: "Rockstar AR Rahman songs",
+  },
+  {
+    id: "album-starboy",
+    title: "Starboy",
+    artist: "The Weeknd",
+    year: "2016",
+    tracksCount: 18,
+    image: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=600&q=80",
+    query: "Starboy The Weeknd album",
+  },
+  {
+    id: "album-1989",
+    title: "1989 (Taylor's Version)",
+    artist: "Taylor Swift",
+    year: "2023",
+    tracksCount: 21,
+    image: "https://images.unsplash.com/photo-1520523839898-50712825e3a7?auto=format&fit=crop&w=600&q=80",
+    query: "Taylor Swift 1989 album",
+  },
+];
+
+export const FEATURED_GENRES = [
+  {
+    id: "malayalam-viral",
+    name: "Malayalam Viral",
+    query: "malayalam trending songs",
+    icon: "🌴",
+    gradient: "from-emerald-600 via-teal-600 to-cyan-700",
+    description: "Aavesham, Premalu, Dabzee, Sushin Shyam hits",
+  },
+  {
+    id: "tamil-hits",
+    name: "Tamil Hits",
+    query: "tamil trending viral songs",
+    icon: "⚡",
+    gradient: "from-amber-600 via-orange-600 to-red-700",
+    description: "Anirudh, AR Rahman, Yuvan, Harris hits",
+  },
+  {
+    id: "bollywood-melodies",
+    name: "Bollywood Melodies",
+    query: "hindi bollywood hit songs",
+    icon: "🌙",
+    gradient: "from-purple-600 via-fuchsia-600 to-pink-700",
+    description: "Arijit Singh, Pritam, Shreya, romantic classics",
+  },
+  {
+    id: "global-pop",
+    name: "Global Pop",
+    query: "top global pop hits billboard",
+    icon: "🌍",
+    gradient: "from-blue-600 via-indigo-600 to-violet-700",
+    description: "Taylor Swift, The Weeknd, Dua Lipa, Bruno Mars",
+  },
+  {
+    id: "lofi-chill",
+    name: "Lo-Fi & Study",
+    query: "lofi hip hop chill beats study relax",
+    icon: "☕",
+    gradient: "from-indigo-700 via-purple-700 to-rose-700",
+    description: "Peaceful instrumental beats for focus and code",
+  },
+  {
+    id: "gym-bass",
+    name: "Gym & High Bass",
+    query: "workout high bass edm workout mix",
+    icon: "🏋️",
+    gradient: "from-red-600 via-rose-600 to-orange-700",
+    description: "Heavy bass, trap, and phonk for maximum workout",
+  },
+  {
+    id: "indie-vibes",
+    name: "Indie & Acoustic",
+    query: "indie acoustic songs",
+    icon: "🎸",
+    gradient: "from-teal-600 via-emerald-600 to-lime-700",
+    description: "Raw acoustic guitar, indie folk, and chill melodies",
+  },
+  {
+    id: "90s-nostalgia",
+    name: "90s Evergreen",
+    query: "90s evergreen hits songs",
+    icon: "📻",
+    gradient: "from-orange-600 via-amber-600 to-yellow-600",
+    description: "Golden 90s nostalgia across Malayalam, Tamil & Hindi",
+  },
+  {
+    id: "k-pop-fever",
+    name: "K-Pop Fever",
+    query: "kpop viral songs bts blackpink",
+    icon: "🌸",
+    gradient: "from-pink-500 via-rose-500 to-fuchsia-600",
+    description: "BTS, BLACKPINK, NewJeans, Stray Kids hype",
+  },
+  {
+    id: "hiphop-rap",
+    name: "Hip-Hop & Rap",
+    query: "hip hop rap trending songs",
+    icon: "🔥",
+    gradient: "from-violet-800 via-purple-900 to-zinc-900",
+    description: "Hard-hitting lyrical beats, rap & drill anthems",
+  },
+];
+
 // Sub-nav Pills
 const NAV_TABS = [
   { id: "home", label: "Home", icon: Home },
@@ -782,6 +1048,907 @@ export function MusicChannelView({
     showToast(`🔀 Shuffled & playing ${pool.length} tracks!`);
   };
 
+  // Clear Recently Played History
+  const handleClearRecent = () => {
+    setRecentTracks([]);
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.removeItem("kaelixo_recently_played_tracks");
+      } catch {}
+    }
+    showToast("Cleared recently played history");
+  };
+
+  // Play All tracks in a view
+  const handlePlayAllInView = (tracks: MusicTrack[]) => {
+    if (tracks.length === 0) return;
+    unlockMobileAudio();
+    handlePlaySong(tracks[0], tracks);
+    showToast(`Playing all ${tracks.length} tracks!`);
+  };
+
+  // Shuffle All tracks in a view
+  const handleShuffleAllInView = (tracks: MusicTrack[]) => {
+    if (tracks.length === 0) return;
+    unlockMobileAudio();
+    const shuffled = [...tracks].sort(() => Math.random() - 0.5);
+    handlePlaySong(shuffled[0], shuffled);
+    showToast(`Shuffled & playing ${shuffled.length} tracks!`);
+  };
+
+  // Play Artist Top Tracks
+  const handlePlayArtist = async (artist: (typeof FEATURED_ARTISTS)[0]) => {
+    unlockMobileAudio();
+    showToast(`Loading hits by ${artist.name}...`);
+    try {
+      setIsSearching(true);
+      const res = await fetch(`/api/music/search?q=${encodeURIComponent(artist.query)}`);
+      const data = await res.json();
+      if (data.tracks && data.tracks.length > 0) {
+        handlePlaySong(data.tracks[0], data.tracks);
+        setCatalogTracks(data.tracks);
+        setActiveTab("songs");
+        showToast(`Now playing top tracks by ${artist.name}`);
+      } else {
+        showToast(`Could not load tracks for ${artist.name}`);
+      }
+    } catch {
+      showToast(`Error playing ${artist.name}`);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  // Play Album Tracks
+  const handlePlayAlbum = async (album: (typeof FEATURED_ALBUMS)[0]) => {
+    unlockMobileAudio();
+    showToast(`Loading album "${album.title}"...`);
+    try {
+      setIsSearching(true);
+      const res = await fetch(`/api/music/search?q=${encodeURIComponent(album.query)}`);
+      const data = await res.json();
+      if (data.tracks && data.tracks.length > 0) {
+        handlePlaySong(data.tracks[0], data.tracks);
+        setCatalogTracks(data.tracks);
+        setActiveTab("songs");
+        showToast(`Playing album "${album.title}"`);
+      } else {
+        showToast(`Could not load album "${album.title}"`);
+      }
+    } catch {
+      showToast(`Error loading album "${album.title}"`);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  // Play Genre Radio
+  const handlePlayGenre = (genre: (typeof FEATURED_GENRES)[0]) => {
+    unlockMobileAudio();
+    showToast(`Starting ${genre.name} Radio...`);
+    setActiveCategory(genre.id);
+    fetchCategoryTracks(genre.id, 1, false);
+    setActiveTab("home");
+  };
+
+  // ================= DEDICATED TAB VIEW RENDERERS =================
+  const renderSongsView = () => (
+    <div className="px-4 sm:px-6 py-4 space-y-5 animate-in fade-in duration-200">
+      {/* Top Header Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-neutral-900/60 border border-neutral-800 rounded-2xl p-4 sm:p-5 backdrop-blur-md">
+        <div>
+          <div className="flex items-center space-x-2">
+            <button
+              type="button"
+              onClick={() => setActiveTab("home")}
+              className="text-neutral-400 hover:text-white p-1 -ml-1 rounded-lg hover:bg-neutral-800 transition"
+              title="Back to Home"
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </button>
+            <div className="w-8 h-8 rounded-xl bg-purple-600/20 text-purple-400 flex items-center justify-center">
+              <Music className="w-4 h-4" />
+            </div>
+            <h2 className="text-xl sm:text-2xl font-black text-white">All Songs Catalog</h2>
+            <span className="text-xs font-bold text-purple-400 bg-purple-500/10 px-2.5 py-0.5 rounded-full border border-purple-500/20">
+              {catalogTracks.length} tracks
+            </span>
+          </div>
+          <p className="text-xs text-neutral-400 mt-1">
+            Browse, search and stream from your team music library & YouTube recommendations
+          </p>
+        </div>
+
+        {/* Action Buttons: Play All & Shuffle */}
+        <div className="flex items-center space-x-2">
+          <button
+            type="button"
+            onClick={() => handlePlayAllInView(catalogTracks)}
+            className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white text-xs font-bold shadow-md shadow-purple-900/30 flex items-center space-x-1.5 transition cursor-pointer"
+          >
+            <Play className="w-3.5 h-3.5 fill-current" />
+            <span>Play All</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => handleShuffleAllInView(catalogTracks)}
+            className="px-3.5 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-200 text-xs font-semibold border border-neutral-700 flex items-center space-x-1.5 transition cursor-pointer"
+          >
+            <Shuffle className="w-3.5 h-3.5" />
+            <span>Shuffle</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Search & Filter Bar */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
+          <Search className="w-4 h-4 text-neutral-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search any song, artist, film or paste YouTube link..."
+            className="w-full pl-10 pr-4 py-2.5 bg-neutral-900/90 border border-neutral-800 rounded-xl text-xs sm:text-sm text-white placeholder:text-neutral-500 focus:outline-none focus:ring-1 focus:ring-purple-500 shadow-inner"
+          />
+        </div>
+      </div>
+
+      {/* Grid of Songs */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+        {catalogTracks.map((t, idx) => {
+          const isThisPlaying = currentTrack?.id === t.id && isPlaying;
+          const isLiked = !!likedMap[t.id];
+
+          return (
+            <div
+              key={`${t.id}-${idx}`}
+              onClick={() => handlePlaySong(t)}
+              className={`group p-2.5 rounded-xl border transition cursor-pointer flex flex-col justify-between ${
+                isThisPlaying
+                  ? "bg-purple-950/40 border-purple-500/60 shadow-lg shadow-purple-950/40"
+                  : "bg-neutral-900/70 hover:bg-neutral-800/80 border-neutral-800/80 hover:border-neutral-700"
+              }`}
+            >
+              <div className="relative aspect-video rounded-lg overflow-hidden bg-neutral-950 mb-2">
+                <img
+                  src={t.thumbnail}
+                  alt={t.title}
+                  className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                />
+                <div
+                  className={`absolute inset-0 flex items-center justify-center transition ${
+                    isThisPlaying ? "bg-black/50" : "bg-black/30 opacity-0 group-hover:opacity-100"
+                  }`}
+                >
+                  {isThisPlaying ? (
+                    <div className="flex items-center space-x-0.5">
+                      <span className="w-1 h-3.5 bg-purple-400 rounded-full animate-bounce" />
+                      <span className="w-1 h-5 bg-purple-400 rounded-full animate-[bounce_1s_infinite_200ms]" />
+                      <span className="w-1 h-3 bg-purple-400 rounded-full animate-[bounce_1s_infinite_400ms]" />
+                    </div>
+                  ) : (
+                    <div className="w-7 h-7 rounded-full bg-purple-600 flex items-center justify-center shadow-md">
+                      <Play className="w-3.5 h-3.5 fill-white text-white ml-0.5" />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <p
+                  className={`text-xs font-bold truncate ${
+                    isThisPlaying ? "text-purple-400" : "text-white"
+                  }`}
+                  title={t.title}
+                >
+                  {cleanSongTitle(t.title)}
+                </p>
+                <p className="text-[11px] text-neutral-400 truncate mt-0.5" title={t.artist}>
+                  {cleanArtistName(t.artist)}
+                </p>
+
+                <div className="flex items-center justify-between mt-2 pt-1 border-t border-neutral-800/50">
+                  <span className="text-[10px] text-neutral-500 font-mono">
+                    {t.durationFormatted || "3:30"}
+                  </span>
+                  <div className="flex items-center space-x-1">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSongToAddToPlaylist(t);
+                      }}
+                      className="text-[10px] text-purple-400 hover:text-white font-bold px-1.5 py-0.5 rounded hover:bg-purple-900/40 transition cursor-pointer flex items-center space-x-0.5 border border-purple-500/30"
+                      title="Add to Playlist"
+                    >
+                      <FolderPlus className="w-3 h-3" />
+                      <span>Playlist</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        addToQueue(t);
+                        showToast("Added to queue");
+                      }}
+                      className="p-1 text-neutral-400 hover:text-white rounded hover:bg-neutral-800 transition"
+                      title="Add to Queue"
+                    >
+                      <ListPlus className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleLike(t);
+                      }}
+                      className="p-1 text-neutral-400 hover:text-rose-400 rounded hover:bg-neutral-800 transition"
+                      title={isLiked ? "Unlike" : "Like"}
+                    >
+                      <Heart
+                        className={`w-3.5 h-3.5 ${isLiked ? "fill-rose-500 text-rose-500" : ""}`}
+                      />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Endless Sentinel */}
+      <div ref={observerTargetRef} className="pt-6 pb-12 flex items-center justify-center">
+        {isLoading && (
+          <div className="flex items-center space-x-2 text-xs font-semibold text-purple-400 py-3 animate-pulse">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            <span>Loading more songs endlessly from YouTube...</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  const renderPlaylistsView = () => (
+    <div className="px-4 sm:px-6 py-4 space-y-6 animate-in fade-in duration-200">
+      {/* Top Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-neutral-900/60 border border-neutral-800 rounded-2xl p-4 sm:p-5 backdrop-blur-md">
+        <div>
+          <div className="flex items-center space-x-2">
+            <button
+              type="button"
+              onClick={() => setActiveTab("home")}
+              className="text-neutral-400 hover:text-white p-1 -ml-1 rounded-lg hover:bg-neutral-800 transition"
+              title="Back to Home"
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </button>
+            <div className="w-8 h-8 rounded-xl bg-purple-600/20 text-purple-400 flex items-center justify-center">
+              <Library className="w-4 h-4" />
+            </div>
+            <h2 className="text-xl sm:text-2xl font-black text-white">Your Playlists & Mixes</h2>
+            <span className="text-xs font-bold text-purple-400 bg-purple-500/10 px-2.5 py-0.5 rounded-full border border-purple-500/20">
+              {playlists.length} playlists
+            </span>
+          </div>
+          <p className="text-xs text-neutral-400 mt-1">
+            Curated team vibes, study mixes, workout energy, and custom collections
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setIsCreatePlaylistOpen(true)}
+          className="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white text-xs font-bold shadow-md shadow-purple-900/30 flex items-center space-x-1.5 transition cursor-pointer self-start sm:self-auto"
+        >
+          <Plus className="w-4 h-4" />
+          <span>Create Playlist</span>
+        </button>
+      </div>
+
+      {/* Grid of Playlists */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
+        {playlists.map((pl) => {
+          const count = pl.id === "liked" ? likedTracks.length : (playlistTracksMap[pl.id]?.length ?? pl.songCount);
+          return (
+            <div
+              key={pl.id}
+              onClick={() => setSelectedPlaylistId(pl.id)}
+              className="group p-3 rounded-2xl bg-neutral-900/60 hover:bg-neutral-800/80 border border-neutral-800/80 hover:border-purple-500/50 transition duration-200 cursor-pointer flex flex-col justify-between shadow-lg"
+            >
+              <div className="relative aspect-square rounded-xl overflow-hidden bg-neutral-950 mb-3 shadow-md">
+                {pl.thumbnail ? (
+                  <img
+                    src={pl.thumbnail}
+                    alt={pl.name}
+                    className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+                  />
+                ) : (
+                  <div
+                    className={`w-full h-full bg-gradient-to-br ${
+                      pl.gradient || "from-purple-600 to-pink-600"
+                    } flex items-center justify-center text-4xl`}
+                  >
+                    {pl.icon || "🎵"}
+                  </div>
+                )}
+                {/* Play hover button */}
+                <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
+                  <div className="w-10 h-10 rounded-full bg-white text-neutral-950 flex items-center justify-center shadow-xl">
+                    <Play className="w-4 h-4 fill-current ml-0.5" />
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <p className="text-xs sm:text-sm font-bold text-white truncate group-hover:text-purple-300 transition">
+                  {pl.name}
+                </p>
+                <p className="text-[11px] text-neutral-400 mt-0.5 truncate">
+                  {pl.description || `${count} songs`}
+                </p>
+                <div className="flex items-center justify-between mt-2 pt-2 border-t border-neutral-800/60 text-[10px] text-neutral-400 font-semibold">
+                  <span>{count} songs</span>
+                  <span className="text-purple-400 group-hover:underline">Open →</span>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+
+        {/* + Create New Playlist Card */}
+        <div
+          onClick={() => setIsCreatePlaylistOpen(true)}
+          className="p-4 rounded-2xl border-2 border-dashed border-neutral-800 hover:border-purple-500 bg-neutral-900/30 hover:bg-purple-950/20 transition cursor-pointer flex flex-col items-center justify-center text-center group min-h-[200px]"
+        >
+          <div className="w-12 h-12 rounded-2xl bg-neutral-800 group-hover:bg-purple-600 text-neutral-400 group-hover:text-white flex items-center justify-center transition mb-3 shadow-md">
+            <Plus className="w-6 h-6" />
+          </div>
+          <p className="text-xs sm:text-sm font-bold text-neutral-300 group-hover:text-white">
+            Create Playlist
+          </p>
+          <p className="text-[10px] text-neutral-500 mt-1 max-w-[120px]">
+            Make custom team mix or mood collection
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderArtistsView = () => (
+    <div className="px-4 sm:px-6 py-4 space-y-6 animate-in fade-in duration-200">
+      {/* Top Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-neutral-900/60 border border-neutral-800 rounded-2xl p-4 sm:p-5 backdrop-blur-md">
+        <div>
+          <div className="flex items-center space-x-2">
+            <button
+              type="button"
+              onClick={() => setActiveTab("home")}
+              className="text-neutral-400 hover:text-white p-1 -ml-1 rounded-lg hover:bg-neutral-800 transition"
+              title="Back to Home"
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </button>
+            <div className="w-8 h-8 rounded-xl bg-purple-600/20 text-purple-400 flex items-center justify-center">
+              <Mic2 className="w-4 h-4" />
+            </div>
+            <h2 className="text-xl sm:text-2xl font-black text-white">Top Artists & Composers</h2>
+            <span className="text-xs font-bold text-purple-400 bg-purple-500/10 px-2.5 py-0.5 rounded-full border border-purple-500/20">
+              {FEATURED_ARTISTS.length} Featured
+            </span>
+          </div>
+          <p className="text-xs text-neutral-400 mt-1">
+            Tap any artist to start streaming their top tracks or view full discography
+          </p>
+        </div>
+      </div>
+
+      {/* Grid of Artists */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
+        {FEATURED_ARTISTS.map((artist) => (
+          <div
+            key={artist.id}
+            onClick={() => handlePlayArtist(artist)}
+            className="group p-3.5 rounded-2xl bg-neutral-900/60 hover:bg-neutral-800/80 border border-neutral-800/80 hover:border-purple-500/50 transition duration-200 cursor-pointer flex flex-col items-center text-center shadow-lg"
+          >
+            <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden bg-neutral-950 mb-3 shadow-xl ring-2 ring-transparent group-hover:ring-purple-500/60 transition">
+              <img
+                src={artist.image}
+                alt={artist.name}
+                className="w-full h-full object-cover group-hover:scale-110 transition duration-500"
+              />
+              <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
+                <div className="w-9 h-9 rounded-full bg-purple-600 text-white flex items-center justify-center shadow-lg">
+                  <Play className="w-4 h-4 fill-current ml-0.5" />
+                </div>
+              </div>
+            </div>
+
+            <p className="text-xs sm:text-sm font-bold text-white truncate max-w-full group-hover:text-purple-300 transition">
+              {artist.name}
+            </p>
+            <p className="text-[10px] text-neutral-400 mt-0.5 line-clamp-1">
+              {artist.tag}
+            </p>
+            <span className="text-[9px] font-mono text-purple-400/90 mt-1">
+              {artist.monthlyListeners}
+            </span>
+
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                handlePlayArtist(artist);
+              }}
+              className="mt-3 w-full py-1.5 rounded-xl bg-purple-600/20 hover:bg-purple-600 text-purple-300 hover:text-white border border-purple-500/30 text-[11px] font-bold transition flex items-center justify-center space-x-1"
+            >
+              <Play className="w-3 h-3 fill-current" />
+              <span>Play Hits</span>
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  const renderAlbumsView = () => (
+    <div className="px-4 sm:px-6 py-4 space-y-6 animate-in fade-in duration-200">
+      {/* Top Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-neutral-900/60 border border-neutral-800 rounded-2xl p-4 sm:p-5 backdrop-blur-md">
+        <div>
+          <div className="flex items-center space-x-2">
+            <button
+              type="button"
+              onClick={() => setActiveTab("home")}
+              className="text-neutral-400 hover:text-white p-1 -ml-1 rounded-lg hover:bg-neutral-800 transition"
+              title="Back to Home"
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </button>
+            <div className="w-8 h-8 rounded-xl bg-purple-600/20 text-purple-400 flex items-center justify-center">
+              <Disc3 className="w-4 h-4" />
+            </div>
+            <h2 className="text-xl sm:text-2xl font-black text-white">Soundtracks & Studio Albums</h2>
+            <span className="text-xs font-bold text-purple-400 bg-purple-500/10 px-2.5 py-0.5 rounded-full border border-purple-500/20">
+              {FEATURED_ALBUMS.length} Albums
+            </span>
+          </div>
+          <p className="text-xs text-neutral-400 mt-1">
+            Stream whole album soundtracks and superhit movie collections in HD audio
+          </p>
+        </div>
+      </div>
+
+      {/* Grid of Albums */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
+        {FEATURED_ALBUMS.map((album) => (
+          <div
+            key={album.id}
+            onClick={() => handlePlayAlbum(album)}
+            className="group p-3 rounded-2xl bg-neutral-900/60 hover:bg-neutral-800/80 border border-neutral-800/80 hover:border-purple-500/50 transition duration-200 cursor-pointer flex flex-col justify-between shadow-lg"
+          >
+            <div className="relative aspect-square rounded-xl overflow-hidden bg-neutral-950 mb-3 shadow-md">
+              <img
+                src={album.image}
+                alt={album.title}
+                className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+              />
+              <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
+                <div className="w-10 h-10 rounded-full bg-purple-600 text-white flex items-center justify-center shadow-xl">
+                  <Play className="w-4 h-4 fill-current ml-0.5" />
+                </div>
+              </div>
+              <span className="absolute bottom-2 right-2 text-[10px] font-bold bg-black/70 backdrop-blur-md px-1.5 py-0.5 rounded text-white">
+                {album.tracksCount} tracks
+              </span>
+            </div>
+
+            <div>
+              <p className="text-xs sm:text-sm font-bold text-white truncate group-hover:text-purple-300 transition">
+                {album.title}
+              </p>
+              <p className="text-[11px] text-neutral-400 truncate mt-0.5">
+                {album.artist}
+              </p>
+              <div className="flex items-center justify-between mt-2 pt-2 border-t border-neutral-800/60 text-[10px] text-neutral-500 font-semibold">
+                <span>{album.year} • Soundtrack</span>
+                <span className="text-purple-400 font-bold group-hover:underline">Play →</span>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  const renderGenresView = () => (
+    <div className="px-4 sm:px-6 py-4 space-y-6 animate-in fade-in duration-200">
+      {/* Top Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-neutral-900/60 border border-neutral-800 rounded-2xl p-4 sm:p-5 backdrop-blur-md">
+        <div>
+          <div className="flex items-center space-x-2">
+            <button
+              type="button"
+              onClick={() => setActiveTab("home")}
+              className="text-neutral-400 hover:text-white p-1 -ml-1 rounded-lg hover:bg-neutral-800 transition"
+              title="Back to Home"
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </button>
+            <div className="w-8 h-8 rounded-xl bg-purple-600/20 text-purple-400 flex items-center justify-center">
+              <Tag className="w-4 h-4" />
+            </div>
+            <h2 className="text-xl sm:text-2xl font-black text-white">Browse All Genres & Moods</h2>
+            <span className="text-xs font-bold text-purple-400 bg-purple-500/10 px-2.5 py-0.5 rounded-full border border-purple-500/20">
+              {FEATURED_GENRES.length} Radios
+            </span>
+          </div>
+          <p className="text-xs text-neutral-400 mt-1">
+            Pick any vibe or language to start endless live radio recommendations
+          </p>
+        </div>
+      </div>
+
+      {/* Grid of Genres */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+        {FEATURED_GENRES.map((genre) => (
+          <div
+            key={genre.id}
+            onClick={() => handlePlayGenre(genre)}
+            className={`group p-5 rounded-2xl bg-gradient-to-br ${genre.gradient} border border-white/10 hover:border-white/30 transition duration-200 cursor-pointer flex flex-col justify-between shadow-xl relative overflow-hidden min-h-[140px]`}
+          >
+            <div className="flex items-start justify-between">
+              <span className="text-3xl sm:text-4xl filter drop-shadow-md group-hover:scale-110 transition duration-300">
+                {genre.icon}
+              </span>
+              <div className="w-8 h-8 rounded-full bg-white/20 group-hover:bg-white text-white group-hover:text-neutral-950 flex items-center justify-center transition shadow-md">
+                <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
+              </div>
+            </div>
+
+            <div className="mt-4">
+              <h3 className="text-base sm:text-lg font-black text-white tracking-tight drop-shadow-sm">
+                {genre.name}
+              </h3>
+              <p className="text-xs text-white/80 line-clamp-1 mt-0.5">
+                {genre.description}
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  const renderLikedView = () => (
+    <div className="px-4 sm:px-6 py-4 space-y-6 animate-in fade-in duration-200">
+      {/* Top Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-neutral-900/60 border border-neutral-800 rounded-2xl p-4 sm:p-5 backdrop-blur-md">
+        <div>
+          <div className="flex items-center space-x-2">
+            <button
+              type="button"
+              onClick={() => setActiveTab("home")}
+              className="text-neutral-400 hover:text-white p-1 -ml-1 rounded-lg hover:bg-neutral-800 transition"
+              title="Back to Home"
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </button>
+            <div className="w-8 h-8 rounded-xl bg-rose-600/20 text-rose-400 flex items-center justify-center">
+              <Heart className="w-4 h-4 fill-rose-500 text-rose-500" />
+            </div>
+            <h2 className="text-xl sm:text-2xl font-black text-white">Liked Songs</h2>
+            <span className="text-xs font-bold text-rose-400 bg-rose-500/10 px-2.5 py-0.5 rounded-full border border-rose-500/20">
+              {likedTracks.length} tracks
+            </span>
+          </div>
+          <p className="text-xs text-neutral-400 mt-1">
+            All your favorite tracks saved across live Jam sessions
+          </p>
+        </div>
+
+        {likedTracks.length > 0 && (
+          <div className="flex items-center space-x-2">
+            <button
+              type="button"
+              onClick={() => handlePlayAllInView(likedTracks)}
+              className="px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold shadow-md shadow-rose-900/30 flex items-center space-x-1.5 transition cursor-pointer"
+            >
+              <Play className="w-3.5 h-3.5 fill-current" />
+              <span>Play All</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleShuffleAllInView(likedTracks)}
+              className="px-3.5 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-200 text-xs font-semibold border border-neutral-700 flex items-center space-x-1.5 transition cursor-pointer"
+            >
+              <Shuffle className="w-3.5 h-3.5" />
+              <span>Shuffle</span>
+            </button>
+          </div>
+        )}
+      </div>
+
+      {likedTracks.length === 0 ? (
+        <div className="p-12 text-center bg-neutral-900/40 border border-neutral-800 rounded-2xl space-y-3">
+          <div className="w-14 h-14 rounded-2xl bg-rose-500/10 text-rose-400 flex items-center justify-center mx-auto">
+            <Heart className="w-7 h-7" />
+          </div>
+          <h3 className="text-base font-bold text-white">No liked songs yet</h3>
+          <p className="text-xs text-neutral-400 max-w-sm mx-auto">
+            Click the heart icon on any track while listening or browsing to save it to your Liked collection.
+          </p>
+          <button
+            type="button"
+            onClick={() => setActiveTab("home")}
+            className="mt-2 px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold transition shadow-xs"
+          >
+            Explore Songs
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+          {likedTracks.map((t, idx) => {
+            const isThisPlaying = currentTrack?.id === t.id && isPlaying;
+            return (
+              <div
+                key={`${t.id}-${idx}`}
+                onClick={() => handlePlaySong(t)}
+                className={`group p-2.5 rounded-xl border transition cursor-pointer flex flex-col justify-between ${
+                  isThisPlaying
+                    ? "bg-purple-950/40 border-purple-500/60 shadow-lg shadow-purple-950/40"
+                    : "bg-neutral-900/70 hover:bg-neutral-800/80 border-neutral-800/80 hover:border-neutral-700"
+                }`}
+              >
+                <div className="relative aspect-video rounded-lg overflow-hidden bg-neutral-950 mb-2">
+                  <img
+                    src={t.thumbnail}
+                    alt={t.title}
+                    className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                  />
+                  <div
+                    className={`absolute inset-0 flex items-center justify-center transition ${
+                      isThisPlaying ? "bg-black/50" : "bg-black/30 opacity-0 group-hover:opacity-100"
+                    }`}
+                  >
+                    {isThisPlaying ? (
+                      <div className="flex items-center space-x-0.5">
+                        <span className="w-1 h-3.5 bg-purple-400 rounded-full animate-bounce" />
+                        <span className="w-1 h-5 bg-purple-400 rounded-full animate-[bounce_1s_infinite_200ms]" />
+                        <span className="w-1 h-3 bg-purple-400 rounded-full animate-[bounce_1s_infinite_400ms]" />
+                      </div>
+                    ) : (
+                      <div className="w-7 h-7 rounded-full bg-purple-600 flex items-center justify-center shadow-md">
+                        <Play className="w-3.5 h-3.5 fill-white text-white ml-0.5" />
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <p
+                    className={`text-xs font-bold truncate ${
+                      isThisPlaying ? "text-purple-400" : "text-white"
+                    }`}
+                    title={t.title}
+                  >
+                    {cleanSongTitle(t.title)}
+                  </p>
+                  <p className="text-[11px] text-neutral-400 truncate mt-0.5" title={t.artist}>
+                    {cleanArtistName(t.artist)}
+                  </p>
+
+                  <div className="flex items-center justify-between mt-2 pt-1 border-t border-neutral-800/50">
+                    <span className="text-[10px] text-neutral-500 font-mono">
+                      {t.durationFormatted || "3:30"}
+                    </span>
+                    <div className="flex items-center space-x-1">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSongToAddToPlaylist(t);
+                        }}
+                        className="text-[10px] text-purple-400 hover:text-white font-bold px-1.5 py-0.5 rounded hover:bg-purple-900/40 transition cursor-pointer flex items-center space-x-0.5 border border-purple-500/30"
+                        title="Add to Playlist"
+                      >
+                        <FolderPlus className="w-3 h-3" />
+                        <span>Playlist</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleLike(t);
+                        }}
+                        className="p-1 text-rose-500 hover:text-neutral-400 rounded hover:bg-neutral-800 transition"
+                        title="Remove from Liked"
+                      >
+                        <Heart className="w-3.5 h-3.5 fill-rose-500" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+
+  const renderRecentView = () => (
+    <div className="px-4 sm:px-6 py-4 space-y-6 animate-in fade-in duration-200">
+      {/* Top Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-neutral-900/60 border border-neutral-800 rounded-2xl p-4 sm:p-5 backdrop-blur-md">
+        <div>
+          <div className="flex items-center space-x-2">
+            <button
+              type="button"
+              onClick={() => setActiveTab("home")}
+              className="text-neutral-400 hover:text-white p-1 -ml-1 rounded-lg hover:bg-neutral-800 transition"
+              title="Back to Home"
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </button>
+            <div className="w-8 h-8 rounded-xl bg-purple-600/20 text-purple-400 flex items-center justify-center">
+              <Clock className="w-4 h-4" />
+            </div>
+            <h2 className="text-xl sm:text-2xl font-black text-white">Recently Played</h2>
+            <span className="text-xs font-bold text-purple-400 bg-purple-500/10 px-2.5 py-0.5 rounded-full border border-purple-500/20">
+              {recentTracks.length} tracks
+            </span>
+          </div>
+          <p className="text-xs text-neutral-400 mt-1">
+            Tracks you recently enjoyed during your live team Jam sessions
+          </p>
+        </div>
+
+        {recentTracks.length > 0 && (
+          <div className="flex items-center space-x-2">
+            <button
+              type="button"
+              onClick={() => handlePlayAllInView(recentTracks)}
+              className="px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold shadow-md shadow-purple-900/30 flex items-center space-x-1.5 transition cursor-pointer"
+            >
+              <Play className="w-3.5 h-3.5 fill-current" />
+              <span>Play All</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleClearRecent}
+              className="px-3.5 py-2 rounded-xl bg-neutral-800 hover:bg-rose-950/40 text-neutral-300 hover:text-rose-300 text-xs font-semibold border border-neutral-700 hover:border-rose-500/40 flex items-center space-x-1.5 transition cursor-pointer"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>Clear History</span>
+            </button>
+          </div>
+        )}
+      </div>
+
+      {recentTracks.length === 0 ? (
+        <div className="p-12 text-center bg-neutral-900/40 border border-neutral-800 rounded-2xl space-y-3">
+          <div className="w-14 h-14 rounded-2xl bg-neutral-800 text-neutral-400 flex items-center justify-center mx-auto">
+            <Clock className="w-7 h-7" />
+          </div>
+          <h3 className="text-base font-bold text-white">No recently played tracks</h3>
+          <p className="text-xs text-neutral-400 max-w-sm mx-auto">
+            Songs you play will automatically appear here for quick replay and queuing.
+          </p>
+          <button
+            type="button"
+            onClick={() => setActiveTab("home")}
+            className="mt-2 px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold transition shadow-xs"
+          >
+            Start Listening
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+          {recentTracks.map((t, idx) => {
+            const isThisPlaying = currentTrack?.id === t.id && isPlaying;
+            const isLiked = !!likedMap[t.id];
+            return (
+              <div
+                key={`${t.id}-${idx}`}
+                onClick={() => handlePlaySong(t)}
+                className={`group p-2.5 rounded-xl border transition cursor-pointer flex flex-col justify-between ${
+                  isThisPlaying
+                    ? "bg-purple-950/40 border-purple-500/60 shadow-lg shadow-purple-950/40"
+                    : "bg-neutral-900/70 hover:bg-neutral-800/80 border-neutral-800/80 hover:border-neutral-700"
+                }`}
+              >
+                <div className="relative aspect-video rounded-lg overflow-hidden bg-neutral-950 mb-2">
+                  <img
+                    src={t.thumbnail}
+                    alt={t.title}
+                    className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                  />
+                  <div
+                    className={`absolute inset-0 flex items-center justify-center transition ${
+                      isThisPlaying ? "bg-black/50" : "bg-black/30 opacity-0 group-hover:opacity-100"
+                    }`}
+                  >
+                    {isThisPlaying ? (
+                      <div className="flex items-center space-x-0.5">
+                        <span className="w-1 h-3.5 bg-purple-400 rounded-full animate-bounce" />
+                        <span className="w-1 h-5 bg-purple-400 rounded-full animate-[bounce_1s_infinite_200ms]" />
+                        <span className="w-1 h-3 bg-purple-400 rounded-full animate-[bounce_1s_infinite_400ms]" />
+                      </div>
+                    ) : (
+                      <div className="w-7 h-7 rounded-full bg-purple-600 flex items-center justify-center shadow-md">
+                        <Play className="w-3.5 h-3.5 fill-white text-white ml-0.5" />
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <p
+                    className={`text-xs font-bold truncate ${
+                      isThisPlaying ? "text-purple-400" : "text-white"
+                    }`}
+                    title={t.title}
+                  >
+                    {cleanSongTitle(t.title)}
+                  </p>
+                  <p className="text-[11px] text-neutral-400 truncate mt-0.5" title={t.artist}>
+                    {cleanArtistName(t.artist)}
+                  </p>
+
+                  <div className="flex items-center justify-between mt-2 pt-1 border-t border-neutral-800/50">
+                    <span className="text-[10px] text-neutral-500 font-mono">
+                      {t.durationFormatted || "3:30"}
+                    </span>
+                    <div className="flex items-center space-x-1">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSongToAddToPlaylist(t);
+                        }}
+                        className="text-[10px] text-purple-400 hover:text-white font-bold px-1.5 py-0.5 rounded hover:bg-purple-900/40 transition cursor-pointer flex items-center space-x-0.5 border border-purple-500/30"
+                        title="Add to Playlist"
+                      >
+                        <FolderPlus className="w-3 h-3" />
+                        <span>Playlist</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          addToQueue(t);
+                          showToast("Added to queue");
+                        }}
+                        className="p-1 text-neutral-400 hover:text-white rounded hover:bg-neutral-800 transition"
+                        title="Add to Queue"
+                      >
+                        <ListPlus className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleLike(t);
+                        }}
+                        className="p-1 text-neutral-400 hover:text-rose-400 rounded hover:bg-neutral-800 transition"
+                      >
+                        <Heart
+                          className={`w-3.5 h-3.5 ${isLiked ? "fill-rose-500 text-rose-500" : ""}`}
+                        />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+
   // Import from YouTube Action
   const handleImportYouTube = async () => {
     const url = importUrl.trim();
@@ -1159,8 +2326,22 @@ export function MusicChannelView({
             )}
           </div>
         </div>
+      ) : activeTab === "songs" ? (
+        renderSongsView()
+      ) : activeTab === "playlists" ? (
+        renderPlaylistsView()
+      ) : activeTab === "artists" ? (
+        renderArtistsView()
+      ) : activeTab === "albums" ? (
+        renderAlbumsView()
+      ) : activeTab === "genres" ? (
+        renderGenresView()
+      ) : activeTab === "liked" ? (
+        renderLikedView()
+      ) : activeTab === "recent" ? (
+        renderRecentView()
       ) : (
-        /* 4. MAIN DASHBOARD CONTENT (When no specific playlist is open) */
+        /* 4. MAIN DASHBOARD CONTENT (When activeTab === "home") */
         <div className="px-4 sm:px-6 py-3 space-y-6">
           {/* ================= HERO TWO-PANEL SECTION: NOW PLAYING & QUICK ACTIONS (Exact Screenshot) ================= */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">

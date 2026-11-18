@@ -210,6 +210,14 @@ export default function KaelixoApp() {
   // Dynamic Workspace Members State (Features 25 & 26 / R7)
   const [teamMembers, setTeamMembers] = useState<WorkspaceMember[]>(TEAM_MEMBERS);
 
+  // Navigation History Stack for < and > Header Buttons
+  const [navHistory, setNavHistory] = useState<
+    { channelId: string; dmRecipientId?: string | null; channelName: string }[]
+  >([]);
+  const [historyIndex, setHistoryIndex] = useState<number>(-1);
+  const isNavigatingHistoryRef = useRef<boolean>(false);
+  const [isHistoryDropdownOpen, setIsHistoryDropdownOpen] = useState<boolean>(false);
+
   // Real-time Presence State (Feature 20 / R5)
   const [presenceMap, setPresenceMap] = useState<PresenceMap>({});
 
@@ -2081,6 +2089,78 @@ export default function KaelixoApp() {
     }
   };
 
+  // Track Channel & DM Navigation History for < and > header arrows
+  useEffect(() => {
+    if (isNavigatingHistoryRef.current) {
+      isNavigatingHistoryRef.current = false;
+      return;
+    }
+    const name = activeDmRecipient
+      ? activeDmRecipient.name
+      : channels.find((c) => c.id === activeChannelId)?.name || "channel";
+
+    setNavHistory((prev) => {
+      const current = {
+        channelId: activeChannelId,
+        dmRecipientId: activeDmRecipient?.id || null,
+        channelName: name,
+      };
+      if (prev.length > 0 && historyIndex >= 0) {
+        const last = prev[historyIndex];
+        if (
+          last &&
+          last.channelId === current.channelId &&
+          last.dmRecipientId === current.dmRecipientId
+        ) {
+          return prev;
+        }
+      }
+      const nextHistory = prev.slice(0, historyIndex + 1);
+      return [...nextHistory, current];
+    });
+    setHistoryIndex((prev) => prev + 1);
+  }, [activeChannelId, activeDmRecipient, channels]);
+
+  const handleNavBack = () => {
+    if (historyIndex > 0) {
+      const targetIndex = historyIndex - 1;
+      const target = navHistory[targetIndex];
+      if (target) {
+        isNavigatingHistoryRef.current = true;
+        setHistoryIndex(targetIndex);
+        if (target.dmRecipientId) {
+          const rec = teamMembers.find((m) => m.id === target.dmRecipientId) || null;
+          setActiveDmRecipient(rec);
+        } else {
+          setActiveDmRecipient(null);
+          setActiveChannelId(target.channelId);
+        }
+      }
+    } else if (typeof window !== "undefined" && window.history.length > 1) {
+      window.history.back();
+    }
+  };
+
+  const handleNavForward = () => {
+    if (historyIndex < navHistory.length - 1) {
+      const targetIndex = historyIndex + 1;
+      const target = navHistory[targetIndex];
+      if (target) {
+        isNavigatingHistoryRef.current = true;
+        setHistoryIndex(targetIndex);
+        if (target.dmRecipientId) {
+          const rec = teamMembers.find((m) => m.id === target.dmRecipientId) || null;
+          setActiveDmRecipient(rec);
+        } else {
+          setActiveDmRecipient(null);
+          setActiveChannelId(target.channelId);
+        }
+      }
+    } else if (typeof window !== "undefined") {
+      window.history.forward();
+    }
+  };
+
   const handleSelectRegularChannel = (channelId: string) => {
     if (rightPanelMode === "thread") {
       setRightPanelMode("none");
@@ -2937,38 +3017,101 @@ export default function KaelixoApp() {
         className="hidden md:flex h-10 w-full items-center justify-between px-3 border-b select-none flex-shrink-0 z-40 transition-colors duration-200"
       >
         {/* Left: History Nav arrows */}
-        <div className="flex items-center space-x-1">
+        <div className="relative flex items-center space-x-1">
           <button
             type="button"
-            className="p-1 rounded-md opacity-75 hover:opacity-100 hover:bg-white/15 dark:hover:bg-white/15 transition cursor-pointer"
-            title="Back"
+            onClick={handleNavBack}
+            className={`p-1 rounded-md transition cursor-pointer ${
+              historyIndex > 0
+                ? "opacity-90 hover:opacity-100 hover:bg-white/15 dark:hover:bg-white/15"
+                : "opacity-40 hover:bg-transparent cursor-not-allowed"
+            }`}
+            title="Back (Alt+Left)"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
           <button
             type="button"
-            className="p-1 rounded-md opacity-75 hover:opacity-100 hover:bg-white/15 dark:hover:bg-white/15 transition cursor-pointer"
-            title="Forward"
+            onClick={handleNavForward}
+            className={`p-1 rounded-md transition cursor-pointer ${
+              historyIndex < navHistory.length - 1
+                ? "opacity-90 hover:opacity-100 hover:bg-white/15 dark:hover:bg-white/15"
+                : "opacity-40 hover:bg-transparent cursor-not-allowed"
+            }`}
+            title="Forward (Alt+Right)"
           >
             <ChevronRight className="w-4 h-4" />
           </button>
           <button
             type="button"
-            onClick={() =>
-              setActiveToast({
-                id: `history-${Date.now()}`,
-                senderName: "History",
-                content: `Recently visited: #${activeChannel.name}`,
-                channelName: activeChannel.name,
-                channelId: activeChannelId,
-                messageId: "",
-              })
-            }
+            onClick={() => setIsHistoryDropdownOpen((v) => !v)}
             className="p-1 rounded-md opacity-75 hover:opacity-100 hover:bg-white/15 dark:hover:bg-white/15 transition cursor-pointer"
             title="History"
           >
             <Clock className="w-4 h-4" />
           </button>
+
+          {/* History Dropdown Menu */}
+          {isHistoryDropdownOpen && (
+            <div
+              className="absolute left-0 top-full mt-1.5 w-64 bg-neutral-900 border border-neutral-700/80 rounded-xl shadow-2xl p-2 z-50 text-neutral-200 text-xs animate-in fade-in zoom-in-95 duration-150"
+              style={{ color: "#ffffff" }}
+            >
+              <div className="flex items-center justify-between px-2 py-1.5 border-b border-neutral-800 text-[11px] font-bold text-neutral-400 uppercase tracking-wider">
+                <span>Recent Navigation</span>
+                <span className="text-[10px] text-neutral-500 font-mono">
+                  {navHistory.length} items
+                </span>
+              </div>
+              <div className="py-1 max-h-60 overflow-y-auto space-y-0.5">
+                {navHistory.length === 0 ? (
+                  <div className="px-3 py-3 text-center text-neutral-500 text-xs">
+                    No history yet
+                  </div>
+                ) : (
+                  navHistory.map((item, idx) => {
+                    const isCurrent = idx === historyIndex;
+                    return (
+                      <button
+                        key={`${item.channelId}-${item.dmRecipientId}-${idx}`}
+                        type="button"
+                        onClick={() => {
+                          isNavigatingHistoryRef.current = true;
+                          setHistoryIndex(idx);
+                          setIsHistoryDropdownOpen(false);
+                          if (item.dmRecipientId) {
+                            const rec =
+                              teamMembers.find((m) => m.id === item.dmRecipientId) || null;
+                            setActiveDmRecipient(rec);
+                          } else {
+                            setActiveDmRecipient(null);
+                            setActiveChannelId(item.channelId);
+                          }
+                        }}
+                        className={`w-full text-left px-2.5 py-1.5 rounded-lg flex items-center justify-between text-xs transition cursor-pointer ${
+                          isCurrent
+                            ? "bg-purple-600/30 text-purple-200 font-bold border border-purple-500/40"
+                            : "hover:bg-neutral-800 text-neutral-300"
+                        }`}
+                      >
+                        <div className="flex items-center space-x-2 truncate">
+                          <span className="text-neutral-500 text-[10px]">
+                            {item.dmRecipientId ? "@" : "#"}
+                          </span>
+                          <span className="truncate">{item.channelName}</span>
+                        </div>
+                        {isCurrent && (
+                          <span className="text-[10px] text-purple-400 font-bold uppercase tracking-wider">
+                            Current
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Center: Search Kaelixo Pill */}
