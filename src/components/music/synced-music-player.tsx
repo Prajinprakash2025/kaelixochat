@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState } from "react";
 import {
   Play,
   Pause,
@@ -13,366 +13,46 @@ import {
   Sparkles,
   Maximize2,
   Minimize2,
-  ExternalLink,
-  Flame,
-  Music,
   X,
   Users,
 } from "lucide-react";
-import { MusicTrack, MusicSyncState, WorkspaceMember, MusicReaction } from "@/types";
-import { musicSync } from "@/utils/music-realtime";
+import { useMusic } from "@/context/music-context";
 
 interface SyncedMusicPlayerProps {
-  currentUser: WorkspaceMember;
   onClose?: () => void;
   mode?: "full" | "embedded" | "modal";
-  initialTrack?: MusicTrack | null;
-  onTrackChange?: (track: MusicTrack | null) => void;
-  onPlayStateChange?: (isPlaying: boolean) => void;
 }
 
 export function SyncedMusicPlayer({
-  currentUser,
   onClose,
   mode = "full",
-  initialTrack = null,
-  onTrackChange,
-  onPlayStateChange,
 }: SyncedMusicPlayerProps) {
-  const [currentTrack, setCurrentTrack] = useState<MusicTrack | null>(initialTrack);
-  const [isPlaying, setIsPlaying] = useState<boolean>(false);
-  const [currentTime, setCurrentTime] = useState<number>(0);
-  const [duration, setDuration] = useState<number>(0);
-  const [volume, setVolume] = useState<number>(85);
-  const [isMuted, setIsMuted] = useState<boolean>(false);
-  const [queue, setQueue] = useState<MusicTrack[]>([]);
-  const [showQueue, setShowQueue] = useState<boolean>(false);
-  const [showVideo, setShowVideo] = useState<boolean>(false);
-  const [activeDj, setActiveDj] = useState<{ id: string; name: string; avatar: string } | null>(null);
-  const [listeners, setListeners] = useState<WorkspaceMember[]>([currentUser]);
-  const [reactions, setReactions] = useState<MusicReaction[]>([]);
-  const [origin, setOrigin] = useState<string>("");
+  const {
+    currentTrack,
+    isPlaying,
+    currentTime,
+    duration,
+    volume,
+    isMuted,
+    queue,
+    showVideo,
+    activeDj,
+    listeners,
+    reactions,
+    togglePlay,
+    seekTo,
+    setVolume,
+    toggleMute,
+    removeFromQueue,
+    clearQueue,
+    playNext,
+    playPrevious,
+    setShowVideo,
+    sendReaction,
+    playTrack,
+  } = useMusic();
 
-  const iframeRef = useRef<HTMLIFrameElement | null>(null);
-  const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Set origin on mount
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      setOrigin(window.location.origin);
-    }
-  }, []);
-
-  const isInitialMount = useRef(true);
-
-  // Sync initialTrack prop when user selects a song
-  useEffect(() => {
-    if (isInitialMount.current) {
-      isInitialMount.current = false;
-      if (initialTrack) {
-        setCurrentTrack(initialTrack);
-      }
-      return;
-    }
-
-    if (initialTrack) {
-      setCurrentTrack(initialTrack);
-      setIsPlaying(true);
-      onTrackChange?.(initialTrack);
-      onPlayStateChange?.(true);
-      setTimeout(() => {
-        postYtCommand("playVideo");
-      }, 300);
-    }
-  }, [initialTrack]);
-
-  // Helper to send postMessage commands to the YouTube iframe
-  const postYtCommand = (func: string, args: any[] = []) => {
-    if (iframeRef.current?.contentWindow) {
-      try {
-        iframeRef.current.contentWindow.postMessage(
-          JSON.stringify({ event: "command", func, args }),
-          "*"
-        );
-      } catch (err) {
-        console.warn("postYtCommand error:", err);
-      }
-    }
-  };
-
-  // 1. Initialize Realtime Sync
-  useEffect(() => {
-    musicSync.init(currentUser, "workspace-hq");
-
-    const unsubAction = musicSync.subscribe((action) => {
-      switch (action.type) {
-        case "PLAY": {
-          const track = action.payload.track as MusicTrack;
-          const pos = action.payload.position || 0;
-          const elapsed = (Date.now() - action.sentAt) / 1000;
-          const targetPos = Math.max(0, pos + elapsed);
-
-          setActiveDj(action.sender);
-          setCurrentTrack(track);
-          setIsPlaying(true);
-          onPlayStateChange?.(true);
-          onTrackChange?.(track);
-
-          setTimeout(() => {
-            postYtCommand("seekTo", [targetPos, true]);
-            postYtCommand("playVideo");
-          }, 300);
-          break;
-        }
-
-        case "PAUSE": {
-          setIsPlaying(false);
-          onPlayStateChange?.(false);
-          postYtCommand("pauseVideo");
-          if (action.payload.position !== undefined) {
-            postYtCommand("seekTo", [action.payload.position, true]);
-          }
-          break;
-        }
-
-        case "SEEK": {
-          const pos = action.payload.position || 0;
-          const elapsed = (Date.now() - action.sentAt) / 1000;
-          const targetPos = pos + elapsed;
-          setCurrentTime(targetPos);
-          postYtCommand("seekTo", [targetPos, true]);
-          break;
-        }
-
-        case "TRACK_CHANGE": {
-          const track = action.payload.track as MusicTrack;
-          setActiveDj(action.sender);
-          setCurrentTrack(track);
-          setIsPlaying(true);
-          onTrackChange?.(track);
-          onPlayStateChange?.(true);
-          break;
-        }
-
-        case "QUEUE_ADD": {
-          const track = action.payload.track as MusicTrack;
-          setQueue((prev) => [...prev, track]);
-          break;
-        }
-
-        case "QUEUE_REMOVE": {
-          const idx = action.payload.index;
-          setQueue((prev) => prev.filter((_, i) => i !== idx));
-          break;
-        }
-
-        case "SYNC_REQUEST": {
-          if (currentTrack) {
-            musicSync.respondState(
-              {
-                currentTrack,
-                isPlaying,
-                position: currentTime,
-                sentAt: Date.now(),
-                dj: activeDj || { id: currentUser.id, name: currentUser.name, avatar: currentUser.avatar },
-                queue,
-              },
-              currentUser
-            );
-          }
-          break;
-        }
-
-        case "SYNC_RESPONSE": {
-          const state = action.payload as MusicSyncState;
-          if (state && state.currentTrack && (!currentTrack || currentTrack.id !== state.currentTrack.id)) {
-            const elapsed = (Date.now() - state.sentAt) / 1000;
-            const targetPos = (state.position || 0) + (state.isPlaying ? elapsed : 0);
-
-            setCurrentTrack(state.currentTrack);
-            setIsPlaying(state.isPlaying);
-            setActiveDj(state.dj);
-            setQueue(state.queue || []);
-            onTrackChange?.(state.currentTrack);
-            onPlayStateChange?.(state.isPlaying);
-
-            setTimeout(() => {
-              postYtCommand("seekTo", [targetPos, true]);
-              if (state.isPlaying) {
-                postYtCommand("playVideo");
-              } else {
-                postYtCommand("pauseVideo");
-              }
-            }, 400);
-          }
-          break;
-        }
-
-        case "REACTION": {
-          triggerReactionAnimation(action.payload.emoji, action.sender.name);
-          break;
-        }
-      }
-    });
-
-    const unsubPresence = musicSync.subscribePresence((activeListeners) => {
-      setListeners(activeListeners.length > 0 ? activeListeners : [currentUser]);
-    });
-
-    return () => {
-      unsubAction();
-      unsubPresence();
-    };
-  }, [currentUser, currentTrack, isPlaying, currentTime, activeDj, queue]);
-
-  // 2. Listen to YouTube postMessage events for accurate time & state
-  useEffect(() => {
-    const handleWindowMessage = (e: MessageEvent) => {
-      try {
-        const data = typeof e.data === "string" ? JSON.parse(e.data) : e.data;
-        if (data?.event === "infoDelivery" && data.info) {
-          if (data.info.currentTime !== undefined) {
-            setCurrentTime(data.info.currentTime);
-          }
-          if (data.info.duration !== undefined && data.info.duration > 0) {
-            setDuration(data.info.duration);
-          }
-          if (data.info.playerState !== undefined) {
-            // 1: PLAYING, 2: PAUSED, 0: ENDED
-            if (data.info.playerState === 1) {
-              setIsPlaying(true);
-              onPlayStateChange?.(true);
-            } else if (data.info.playerState === 2) {
-              setIsPlaying(false);
-              onPlayStateChange?.(false);
-            } else if (data.info.playerState === 0) {
-              handlePlayNext();
-            }
-          }
-        }
-      } catch {
-        // Safe to ignore non-JSON messages
-      }
-    };
-
-    window.addEventListener("message", handleWindowMessage);
-    return () => window.removeEventListener("message", handleWindowMessage);
-  }, [queue, currentTrack]);
-
-  // Tell iframe we are listening to events whenever iframe changes
-  const onIframeLoad = () => {
-    if (iframeRef.current?.contentWindow) {
-      try {
-        iframeRef.current.contentWindow.postMessage(
-          JSON.stringify({ event: "listening" }),
-          "*"
-        );
-        postYtCommand("setVolume", [volume]);
-        if (isPlaying) {
-          postYtCommand("playVideo");
-        }
-      } catch {}
-    }
-  };
-
-  // Periodic ticker fallback
-  useEffect(() => {
-    if (isPlaying) {
-      progressIntervalRef.current = setInterval(() => {
-        postYtCommand("listening");
-      }, 1000);
-    } else {
-      if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
-    }
-    return () => {
-      if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
-    };
-  }, [isPlaying]);
-
-  // Toggle Play / Pause
-  const togglePlay = () => {
-    const next = !isPlaying;
-    setIsPlaying(next);
-    onPlayStateChange?.(next);
-
-    if (next) {
-      postYtCommand("playVideo");
-      if (currentTrack) {
-        musicSync.play(currentTrack, currentTime, currentUser);
-        setActiveDj({ id: currentUser.id, name: currentUser.name, avatar: currentUser.avatar });
-      }
-    } else {
-      postYtCommand("pauseVideo");
-      musicSync.pause(currentTime, currentUser);
-    }
-  };
-
-  // Seek
-  const handleSeek = (newTime: number) => {
-    setCurrentTime(newTime);
-    postYtCommand("seekTo", [newTime, true]);
-    musicSync.seek(newTime, currentUser);
-  };
-
-  // Volume
-  const handleVolumeChange = (newVol: number) => {
-    setVolume(newVol);
-    setIsMuted(newVol === 0);
-    postYtCommand("setVolume", [newVol]);
-  };
-
-  const toggleMute = () => {
-    if (isMuted) {
-      postYtCommand("unMute");
-      postYtCommand("setVolume", [volume || 70]);
-      setIsMuted(false);
-    } else {
-      postYtCommand("mute");
-      setIsMuted(true);
-    }
-  };
-
-  // Next Track
-  const handlePlayNext = () => {
-    if (queue.length > 0) {
-      const next = queue[0];
-      setQueue((prev) => prev.slice(1));
-      playSpecificTrack(next);
-    } else if (currentTrack) {
-      handleSeek(0);
-    }
-  };
-
-  // Play Specific Track
-  const playSpecificTrack = (track: MusicTrack) => {
-    setCurrentTrack(track);
-    setCurrentTime(0);
-    setIsPlaying(true);
-    setActiveDj({ id: currentUser.id, name: currentUser.name, avatar: currentUser.avatar });
-    onTrackChange?.(track);
-    onPlayStateChange?.(true);
-
-    musicSync.play(track, 0, currentUser);
-  };
-
-  // Reactions
-  const triggerReactionAnimation = (emoji: string, userName: string) => {
-    const reaction: MusicReaction = {
-      id: `rx-${Date.now()}-${Math.random()}`,
-      emoji,
-      userName,
-      sentAt: Date.now(),
-    };
-    setReactions((prev) => [...prev, reaction]);
-    setTimeout(() => {
-      setReactions((prev) => prev.filter((r) => r.id !== reaction.id));
-    }, 2500);
-  };
-
-  const handleSendReaction = (emoji: string) => {
-    triggerReactionAnimation(emoji, currentUser.name);
-    musicSync.sendReaction(emoji, currentUser);
-  };
+  const [showQueue, setShowQueue] = useState(false);
 
   const formatSeconds = (sec: number) => {
     if (!sec || isNaN(sec)) return "0:00";
@@ -405,7 +85,11 @@ export function SyncedMusicPlayer({
       {/* Header Bar */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-800/80 bg-neutral-950/40">
         <div className="flex items-center space-x-2.5">
-          <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+          <div
+            className={`w-2.5 h-2.5 rounded-full ${
+              isPlaying ? "bg-emerald-500 animate-pulse" : "bg-neutral-600"
+            }`}
+          />
           <div className="flex items-center space-x-1.5">
             <Radio className="w-4 h-4 text-emerald-400" />
             <span className="text-xs font-bold tracking-wider text-emerald-400 uppercase">
@@ -457,34 +141,6 @@ export function SyncedMusicPlayer({
             </button>
           )}
         </div>
-      </div>
-
-      {/* Embedded YouTube Media Engine (Always visible in DOM with valid dimensions so Chrome/Brave never blocks audio) */}
-      <div
-        className={`w-full transition-all duration-300 bg-black overflow-hidden ${
-          showVideo
-            ? "aspect-video border-b border-neutral-800"
-            : "h-20 opacity-90 border-b border-neutral-800/60"
-        }`}
-      >
-        {currentTrack ? (
-          <iframe
-            ref={iframeRef}
-            key={currentTrack.id}
-            src={`https://www.youtube-nocookie.com/embed/${currentTrack.id}?autoplay=1&enablejsapi=1&origin=${encodeURIComponent(
-              origin || ""
-            )}&rel=0&modestbranding=1&playsinline=1`}
-            title={currentTrack.title}
-            onLoad={onIframeLoad}
-            className="w-full h-full border-0"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-            allowFullScreen
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-xs text-neutral-500 bg-neutral-950">
-            Select a song below to start playing
-          </div>
-        )}
       </div>
 
       {/* Main Track Display Area */}
@@ -575,7 +231,7 @@ export function SyncedMusicPlayer({
               <button
                 key={emoji}
                 type="button"
-                onClick={() => handleSendReaction(emoji)}
+                onClick={() => sendReaction(emoji)}
                 className="w-7 h-7 rounded-lg bg-neutral-800/70 hover:bg-neutral-700 hover:scale-125 transition-all text-sm flex items-center justify-center cursor-pointer active:scale-95"
                 title={`Send ${emoji}`}
               >
@@ -598,7 +254,7 @@ export function SyncedMusicPlayer({
               min={0}
               max={duration || 100}
               value={currentTime}
-              onChange={(e) => handleSeek(Number(e.target.value))}
+              onChange={(e) => seekTo(Number(e.target.value))}
               className="w-full h-1.5 bg-neutral-700 rounded-lg appearance-none cursor-pointer accent-emerald-500 group-hover:h-2 transition-all"
             />
           </div>
@@ -636,7 +292,7 @@ export function SyncedMusicPlayer({
         <div className="flex items-center space-x-3">
           <button
             type="button"
-            onClick={() => handleSeek(0)}
+            onClick={playPrevious}
             className="p-2 text-neutral-400 hover:text-white hover:bg-neutral-800 rounded-lg transition cursor-pointer"
             title="Restart Track"
           >
@@ -652,7 +308,7 @@ export function SyncedMusicPlayer({
                 ? "bg-emerald-500 hover:bg-emerald-400 text-neutral-950 shadow-emerald-500/20"
                 : "bg-white hover:bg-neutral-200 text-neutral-950 shadow-white/20"
             } disabled:opacity-50 disabled:cursor-not-allowed`}
-            title={isPlaying ? "Pause for Everyone" : "Play for Everyone"}
+            title={isPlaying ? "Pause for Everyone (2 Devices)" : "Play for Everyone (2 Devices)"}
           >
             {isPlaying ? (
               <Pause className="w-5 h-5 fill-current" />
@@ -663,7 +319,7 @@ export function SyncedMusicPlayer({
 
           <button
             type="button"
-            onClick={handlePlayNext}
+            onClick={playNext}
             className="p-2 text-neutral-400 hover:text-white hover:bg-neutral-800 rounded-lg transition cursor-pointer"
             title="Next Track"
           >
@@ -690,7 +346,7 @@ export function SyncedMusicPlayer({
             min={0}
             max={100}
             value={isMuted ? 0 : volume}
-            onChange={(e) => handleVolumeChange(Number(e.target.value))}
+            onChange={(e) => setVolume(Number(e.target.value))}
             className="w-16 sm:w-20 h-1 bg-neutral-700 rounded-lg appearance-none cursor-pointer accent-emerald-500"
           />
         </div>
@@ -706,7 +362,7 @@ export function SyncedMusicPlayer({
             {queue.length > 0 && (
               <button
                 type="button"
-                onClick={() => setQueue([])}
+                onClick={clearQueue}
                 className="text-[11px] text-red-400 hover:text-red-300 cursor-pointer"
               >
                 Clear All
@@ -727,8 +383,8 @@ export function SyncedMusicPlayer({
                 >
                   <div
                     onClick={() => {
-                      setQueue((prev) => prev.filter((_, i) => i !== idx));
-                      playSpecificTrack(t);
+                      removeFromQueue(idx);
+                      playTrack(t, 0);
                     }}
                     className="flex items-center space-x-2.5 min-w-0 flex-1 cursor-pointer"
                   >
@@ -756,7 +412,7 @@ export function SyncedMusicPlayer({
                     </span>
                     <button
                       type="button"
-                      onClick={() => setQueue((prev) => prev.filter((_, i) => i !== idx))}
+                      onClick={() => removeFromQueue(idx)}
                       className="text-neutral-500 hover:text-red-400 p-1 rounded cursor-pointer"
                       title="Remove"
                     >

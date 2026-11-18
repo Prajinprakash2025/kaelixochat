@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import {
   Play,
   Pause,
@@ -9,35 +9,21 @@ import {
   X,
   Radio,
   Users,
-  Volume2,
 } from "lucide-react";
-import { MusicTrack, WorkspaceMember } from "@/types";
-import { musicSync } from "@/utils/music-realtime";
+import { useMusic } from "@/context/music-context";
 
-interface FloatingMusicBarProps {
-  currentTrack: MusicTrack | null;
-  isPlaying: boolean;
-  currentUser: WorkspaceMember;
-  onExpand: () => void;
-  onClose: () => void;
-}
+export function FloatingMusicBar() {
+  const {
+    currentTrack,
+    isPlaying,
+    activeDj,
+    listeners,
+    togglePlay,
+    playNext,
+    setIsPlayerOpen,
+  } = useMusic();
 
-export function FloatingMusicBar({
-  currentTrack,
-  isPlaying,
-  currentUser,
-  onExpand,
-  onClose,
-}: FloatingMusicBarProps) {
   if (!currentTrack) return null;
-
-  const togglePlay = () => {
-    if (isPlaying) {
-      musicSync.pause(0, currentUser);
-    } else {
-      musicSync.play(currentTrack, 0, currentUser);
-    }
-  };
 
   return (
     <aside
@@ -46,7 +32,7 @@ export function FloatingMusicBar({
     >
       {/* Mini Album Art with Vinyl Hole */}
       <div
-        onClick={onExpand}
+        onClick={() => setIsPlayerOpen(true)}
         className="relative w-12 h-12 rounded-xl overflow-hidden shadow-md flex-shrink-0 cursor-pointer group"
       >
         <img
@@ -63,20 +49,24 @@ export function FloatingMusicBar({
 
       {/* Track Info */}
       <div
-        onClick={onExpand}
+        onClick={() => setIsPlayerOpen(true)}
         className="min-w-0 flex-1 px-3 cursor-pointer select-none"
       >
         <div className="flex items-center space-x-1.5 mb-0.5">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+          <span
+            className={`w-1.5 h-1.5 rounded-full ${
+              isPlaying ? "bg-emerald-400 animate-pulse" : "bg-neutral-500"
+            }`}
+          />
           <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">
-            Ad-Free Jam
+            {listeners.length > 1 ? `Synced (${listeners.length} devices)` : "Ad-Free Jam"}
           </span>
         </div>
         <p className="text-xs font-bold text-white truncate drop-shadow-sm">
           {currentTrack.title}
         </p>
         <p className="text-[11px] text-neutral-400 truncate">
-          {currentTrack.artist}
+          {activeDj ? `DJ: ${activeDj.name}` : currentTrack.artist}
         </p>
       </div>
 
@@ -85,8 +75,12 @@ export function FloatingMusicBar({
         <button
           type="button"
           onClick={togglePlay}
-          className="w-8 h-8 rounded-full bg-emerald-500 hover:bg-emerald-400 text-neutral-950 flex items-center justify-center transition active:scale-95 cursor-pointer shadow-md"
-          title={isPlaying ? "Pause for Everyone" : "Play for Everyone"}
+          className={`w-8 h-8 rounded-full flex items-center justify-center transition active:scale-95 cursor-pointer shadow-md ${
+            isPlaying
+              ? "bg-emerald-500 hover:bg-emerald-400 text-neutral-950"
+              : "bg-white hover:bg-neutral-200 text-neutral-950"
+          }`}
+          title={isPlaying ? "Pause for All Devices" : "Play for All Devices"}
         >
           {isPlaying ? (
             <Pause className="w-4 h-4 fill-current" />
@@ -97,20 +91,20 @@ export function FloatingMusicBar({
 
         <button
           type="button"
-          onClick={onExpand}
+          onClick={playNext}
           className="p-1.5 text-neutral-400 hover:text-white rounded-lg hover:bg-neutral-800 transition cursor-pointer"
-          title="Expand Player"
+          title="Next Track"
         >
-          <Maximize2 className="w-4 h-4" />
+          <SkipForward className="w-4 h-4" />
         </button>
 
         <button
           type="button"
-          onClick={onClose}
-          className="p-1.5 text-neutral-400 hover:text-red-400 rounded-lg hover:bg-neutral-800 transition cursor-pointer"
-          title="Close Player"
+          onClick={() => setIsPlayerOpen(true)}
+          className="p-1.5 text-neutral-400 hover:text-white rounded-lg hover:bg-neutral-800 transition cursor-pointer"
+          title="Expand Player"
         >
-          <X className="w-4 h-4" />
+          <Maximize2 className="w-4 h-4" />
         </button>
       </div>
     </aside>

@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { MusicTrack, WorkspaceMember, Message } from "@/types";
 import { SyncedMusicPlayer } from "./synced-music-player";
-import { musicSync } from "@/utils/music-realtime";
+import { useMusic } from "@/context/music-context";
 
 interface MusicChannelViewProps {
   currentUser: WorkspaceMember;
@@ -29,11 +29,11 @@ export function MusicChannelView({
   messages,
   onSendMessage,
 }: MusicChannelViewProps) {
+  const { playTrack, addToQueue, currentTrack } = useMusic();
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<MusicTrack[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [trendingTracks, setTrendingTracks] = useState<MusicTrack[]>([]);
-  const [activeTrack, setActiveTrack] = useState<MusicTrack | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Load trending and curated tracks on mount
@@ -43,9 +43,6 @@ export function MusicChannelView({
       .then((data) => {
         if (data.tracks) {
           setTrendingTracks(data.tracks);
-          if (!activeTrack && data.tracks.length > 0) {
-            setActiveTrack(data.tracks[0]);
-          }
         }
       })
       .catch((err) => console.warn("Failed to load trending music:", err));
@@ -81,13 +78,12 @@ export function MusicChannelView({
   };
 
   const handlePlaySong = (track: MusicTrack) => {
-    setActiveTrack(track);
-    musicSync.play(track, 0, currentUser);
-    showToast(`Playing "${track.title}" for everyone!`);
+    playTrack(track, 0);
+    showToast(`Playing "${track.title}" on all devices!`);
   };
 
   const handleAddToQueue = (track: MusicTrack) => {
-    musicSync.addToQueue(track, currentUser);
+    addToQueue(track);
     showToast(`Added "${track.title}" to queue`);
   };
 
@@ -103,11 +99,7 @@ export function MusicChannelView({
 
       {/* Hero Synced Player */}
       <div className="w-full max-w-4xl mx-auto">
-        <SyncedMusicPlayer
-          currentUser={currentUser}
-          initialTrack={activeTrack}
-          onTrackChange={(t) => setActiveTrack(t)}
-        />
+        <SyncedMusicPlayer mode="embedded" />
       </div>
 
       {/* Search & URL Input Bar */}
@@ -159,7 +151,7 @@ export function MusicChannelView({
                     className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold flex items-center space-x-1 transition cursor-pointer shadow-sm"
                   >
                     <Play className="w-3.5 h-3.5 fill-current" />
-                    <span>Play</span>
+                    <span>Play (All Devices)</span>
                   </button>
                   <button
                     type="button"
@@ -186,7 +178,7 @@ export function MusicChannelView({
             </h3>
           </div>
           <span className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold">
-            Zero Ads • 100% Synced
+            Zero Ads • 2-Device Synced
           </span>
         </div>
 
@@ -194,7 +186,11 @@ export function MusicChannelView({
           {trendingTracks.map((t) => (
             <div
               key={t.id}
-              className="group p-3 rounded-xl bg-white dark:bg-neutral-900/90 border border-neutral-200 dark:border-neutral-800/80 hover:border-emerald-500/50 hover:shadow-md transition flex items-center space-x-3 cursor-pointer"
+              className={`group p-3 rounded-xl bg-white dark:bg-neutral-900/90 border transition flex items-center space-x-3 cursor-pointer ${
+                currentTrack?.id === t.id
+                  ? "border-emerald-500 ring-2 ring-emerald-500/20 shadow-md"
+                  : "border-neutral-200 dark:border-neutral-800/80 hover:border-emerald-500/50 hover:shadow-md"
+              }`}
             >
               <div className="relative w-12 h-12 rounded-lg overflow-hidden flex-shrink-0">
                 <img
