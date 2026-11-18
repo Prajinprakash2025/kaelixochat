@@ -21,6 +21,7 @@ import {
   Tag,
   Film,
   Radio,
+  Heart,
 } from "lucide-react";
 import { MusicTrack, WorkspaceMember, Message } from "@/types";
 import { SyncedMusicPlayer } from "./synced-music-player";
@@ -85,6 +86,7 @@ export function MusicChannelView({
   const [activeCategory, setActiveCategory] = useState("trending");
   const [viewMode, setViewMode] = useState<"jam" | "reels">("jam");
   const [reelsInitialIndex, setReelsInitialIndex] = useState(0);
+  const [reelsCategory, setReelsCategory] = useState<string>("reels");
   const [tracks, setTracks] = useState<MusicTrack[]>([]);
   const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
@@ -302,6 +304,7 @@ export function MusicChannelView({
       <MusicReelsView
         initialTracks={tracks}
         initialIndex={reelsInitialIndex}
+        initialCategory={reelsCategory}
         onPlayFullTrack={(track) => {
           playTrack(track, 0, tracks);
           setViewMode("jam");
@@ -330,7 +333,7 @@ export function MusicChannelView({
         </div>
       )}
 
-      {/* View Switcher: Audio Jam vs 60s Music Reels (Insta Feed) */}
+      {/* View Switcher: Audio Jam vs 60s Music Reels (Insta Feed) vs Liked Reels */}
       <div className="w-full max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 bg-white dark:bg-neutral-900/80 p-2 rounded-2xl border border-neutral-200 dark:border-neutral-800 shadow-sm">
         <div className="flex items-center space-x-1.5 w-full sm:w-auto">
           <button
@@ -344,6 +347,7 @@ export function MusicChannelView({
           <button
             type="button"
             onClick={() => {
+              setReelsCategory("reels");
               setReelsInitialIndex(0);
               setViewMode("reels");
             }}
@@ -355,11 +359,25 @@ export function MusicChannelView({
               Custom ⏱️
             </span>
           </button>
+          <button
+            type="button"
+            onClick={() => {
+              setReelsCategory("liked");
+              setReelsInitialIndex(0);
+              setViewMode("reels");
+            }}
+            className="flex-1 sm:flex-none px-3.5 py-2 rounded-xl text-xs font-bold text-neutral-600 dark:text-neutral-300 hover:text-white hover:bg-rose-600 border border-neutral-200 dark:border-neutral-700/80 hover:border-transparent flex items-center justify-center space-x-1.5 transition cursor-pointer group shadow-xs"
+            title="View your saved liked reels"
+          >
+            <Heart className="w-3.5 h-3.5 text-rose-500 group-hover:text-white fill-rose-500" />
+            <span>❤️ Liked Reels</span>
+          </button>
         </div>
 
         <button
           type="button"
           onClick={() => {
+            setReelsCategory("reels");
             setReelsInitialIndex(0);
             setViewMode("reels");
           }}

@@ -23,6 +23,8 @@ import {
   SlidersHorizontal,
   Plus,
   Clock,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { MusicTrack, WorkspaceMember } from "@/types";
 import { useMusic } from "@/context/music-context";
@@ -30,13 +32,46 @@ import { useMusic } from "@/context/music-context";
 interface MusicReelsViewProps {
   initialTracks?: MusicTrack[];
   initialIndex?: number;
+  initialCategory?: string;
   onPlayFullTrack?: (track: MusicTrack) => void;
   onAddToQueue?: (track: MusicTrack) => void;
   onBackToJam?: () => void;
   currentUser?: WorkspaceMember;
 }
 
-const REEL_CATEGORIES = [
+// Clean YouTube song titles to remove ugly SEO clutter, movie credits, and pipes
+export function cleanSongTitle(title: string): string {
+  if (!title) return "";
+  let clean = title;
+
+  // Split by pipe if present
+  if (clean.includes("|")) {
+    clean = clean.split("|")[0].trim();
+  }
+
+  // Remove common YouTube metadata suffixes and brackets
+  clean = clean
+    .replace(/\s*-\s*(official\s*)?(video|audio|lyric(s)?|music\s*video|visualizer|teaser|trailer|song).*$/gi, "")
+    .replace(/\s*[\(\[](official\s*)?(music\s*)?(video|audio|lyric(s)?|4k|hd|remastered|full\s*song|visualizer|special\s*edition).*?[\)\]]/gi, "")
+    .replace(/\s*[\(\[](from\s+["'].*?["']|from\s+.*?|soundtrack)[\)\]]/gi, "")
+    .replace(/\s*[\(\[](feat\.|ft\.).*?[\)\]]/gi, "")
+    .replace(/^@/, "")
+    .trim();
+
+  // If too short, fallback gracefully
+  if (clean.length >= 2) return clean;
+  return title.split("|")[0].trim() || title;
+}
+
+export function cleanArtistName(artist: string): string {
+  if (!artist) return "Artist";
+  return artist
+    .replace(/\s*-\s*topic/gi, "")
+    .replace(/\s*official/gi, "")
+    .trim() || artist;
+}
+
+const DEFAULT_REEL_CATEGORIES = [
   { id: "reels", name: "Trending Reels", icon: "🔥" },
   { id: "malayalam reels", name: "Malayalam Viral", icon: "🌴" },
   { id: "tamil reels", name: "Tamil Hits", icon: "⚡" },
@@ -51,6 +86,7 @@ const REEL_CATEGORIES = [
 export function MusicReelsView({
   initialTracks = [],
   initialIndex = 0,
+  initialCategory,
   onPlayFullTrack,
   onAddToQueue,
   onBackToJam,
@@ -58,11 +94,14 @@ export function MusicReelsView({
 }: MusicReelsViewProps) {
   const { playTrack, addToQueue, unlockMobileAudio } = useMusic();
 
-  const [activeCategory, setActiveCategory] = useState("reels");
+  const [activeCategory, setActiveCategory] = useState(initialCategory || "reels");
   const [reels, setReels] = useState<MusicTrack[]>(initialTracks);
   const [activeIndex, setActiveIndex] = useState(initialIndex || 0);
   const [isLoading, setIsLoading] = useState(false);
   const [page, setPage] = useState(1);
+
+  // Clean View Mode (hides all text clutter over video)
+  const [cleanView, setCleanView] = useState(false);
 
   // Playback & Custom Duration Timer (Default: 2 minutes / 120s)
   const [isPlaying, setIsPlaying] = useState(true);
@@ -74,6 +113,49 @@ export function MusicReelsView({
   const [autoAdvance, setAutoAdvance] = useState(true);
   const [fitMode, setFitMode] = useState<"fill" | "fit">("fill");
   const [showPlayPauseIcon, setShowPlayPauseIcon] = useState<"play" | "pause" | null>(null);
+
+  // YouTube IFrame Ref & Safe postMessage Control (prevents restarting video on mute/unmute)
+  const iframeRef = useRef<HTMLIFrameElement | null>(null);
+  const isMutedRef = useRef(isMuted);
+
+  useEffect(() => {
+    isMutedRef.current = isMuted;
+  }, [isMuted]);
+
+  // PostMessage helper to control YouTube IFrame directly WITHOUT modifying src URL
+  const postYtReelCommand = useCallback((func: string, args: any[] = []) => {
+    if (iframeRef.current?.contentWindow) {
+      try {
+        iframeRef.current.contentWindow.postMessage(
+          JSON.stringify({ event: "command", func, args }),
+          "*"
+        );
+      } catch (err) {
+        console.warn("postYtReelCommand error:", err);
+      }
+    }
+  }, []);
+
+  // Mute / Unmute handler using postMessage (prevents video reload / restart bug!)
+  const toggleMute = useCallback(() => {
+    unlockMobileAudio();
+    setIsMuted((prev) => {
+      const next = !prev;
+      postYtReelCommand(next ? "mute" : "unMute");
+      return next;
+    });
+  }, [unlockMobileAudio, postYtReelCommand]);
+
+  // Play / Pause toggle with YouTube API command
+  const togglePlayPause = useCallback(() => {
+    setIsPlaying((prev) => {
+      const next = !prev;
+      postYtReelCommand(next ? "playVideo" : "pauseVideo");
+      setShowPlayPauseIcon(next ? "play" : "pause");
+      setTimeout(() => setShowPlayPauseIcon(null), 700);
+      return next;
+    });
+  }, [postYtReelCommand]);
 
   // Load duration preference from localStorage (defaults to 120s / 2 minutes)
   useEffect(() => {
@@ -123,8 +205,9 @@ export function MusicReelsView({
     return `${m}:${s < 10 ? "0" : ""}${s}`;
   };
 
-  // Likes & Interactions
+  // Likes & Dedicated "Liked Reels" Persistent Storage
   const [likedMap, setLikedMap] = useState<Record<string, boolean>>({});
+  const [likedTracks, setLikedTracks] = useState<MusicTrack[]>([]);
   const [likeCountMap, setLikeCountMap] = useState<Record<string, number>>({});
   const [showHeartBurst, setShowHeartBurst] = useState(false);
   const [showReactionMenu, setShowReactionMenu] = useState(false);
@@ -138,13 +221,26 @@ export function MusicReelsView({
   const wheelTimeout = useRef<NodeJS.Timeout | null>(null);
   const doubleClickTimeout = useRef<NodeJS.Timeout | null>(null);
 
-  // Load liked items from localStorage
+  // Load liked reels and map from localStorage
   useEffect(() => {
     if (typeof window !== "undefined") {
       try {
-        const savedLikes = localStorage.getItem("kaelixo_reels_liked");
-        if (savedLikes) {
-          setLikedMap(JSON.parse(savedLikes));
+        const savedTracks = localStorage.getItem("kaelixo_liked_reels_tracks");
+        if (savedTracks) {
+          const parsed = JSON.parse(savedTracks);
+          if (Array.isArray(parsed)) {
+            setLikedTracks(parsed);
+            const map: Record<string, boolean> = {};
+            parsed.forEach((t) => {
+              if (t && t.id) map[t.id] = true;
+            });
+            setLikedMap(map);
+          }
+        } else {
+          const savedLikes = localStorage.getItem("kaelixo_reels_liked");
+          if (savedLikes) {
+            setLikedMap(JSON.parse(savedLikes));
+          }
         }
       } catch {}
     }
@@ -159,6 +255,9 @@ export function MusicReelsView({
   // Fetch Reels for selected category
   const fetchReels = useCallback(
     async (category: string, pageNum: number, append: boolean = false) => {
+      if (category === "liked") {
+        return;
+      }
       setIsLoading(true);
       try {
         const seed = Date.now();
@@ -190,7 +289,7 @@ export function MusicReelsView({
 
   // Initial load if no tracks passed
   useEffect(() => {
-    if (reels.length === 0) {
+    if (reels.length === 0 && activeCategory !== "liked") {
       fetchReels(activeCategory, 1, false);
     }
   }, [activeCategory, fetchReels, reels.length]);
@@ -199,7 +298,13 @@ export function MusicReelsView({
   const handleCategorySelect = (catId: string) => {
     setActiveCategory(catId);
     setPage(1);
-    fetchReels(catId, 1, false);
+    if (catId === "liked") {
+      setReels(likedTracks);
+      setActiveIndex(0);
+      setCurrentSecond(0);
+    } else {
+      fetchReels(catId, 1, false);
+    }
   };
 
   // Dynamic Loop & Auto-Advance Timer using customizable durationLimit
@@ -232,8 +337,8 @@ export function MusicReelsView({
     setCurrentSecond(0);
     setIsPlaying(true);
 
-    // Prefetch next page if reaching end
-    if (activeIndex >= reels.length - 3 && !isLoading) {
+    // Prefetch next page if reaching end (only for non-liked categories)
+    if (activeCategory !== "liked" && activeIndex >= reels.length - 3 && !isLoading) {
       const nextPage = page + 1;
       setPage(nextPage);
       fetchReels(activeCategory, nextPage, true);
@@ -272,7 +377,7 @@ export function MusicReelsView({
         togglePlayPause();
       } else if (e.key.toLowerCase() === "m") {
         e.preventDefault();
-        setIsMuted((m) => !m);
+        toggleMute();
       } else if (e.key.toLowerCase() === "l") {
         e.preventDefault();
         triggerLike();
@@ -281,7 +386,7 @@ export function MusicReelsView({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [activeIndex, reels.length]);
+  }, [activeIndex, reels.length, toggleMute, togglePlayPause]);
 
   // Mouse wheel scroll handler (throttled)
   const handleWheel = (e: React.WheelEvent) => {
@@ -329,16 +434,7 @@ export function MusicReelsView({
     }
   };
 
-  const togglePlayPause = () => {
-    setIsPlaying((prev) => {
-      const next = !prev;
-      setShowPlayPauseIcon(next ? "play" : "pause");
-      setTimeout(() => setShowPlayPauseIcon(null), 700);
-      return next;
-    });
-  };
-
-  // Like action
+  // Like action: Saves full track object to "Liked Reels" section and localStorage
   const currentTrack = reels[activeIndex];
   const isCurrentLiked = currentTrack ? !!likedMap[currentTrack.id] : false;
 
@@ -347,21 +443,33 @@ export function MusicReelsView({
     unlockMobileAudio();
 
     const trackId = currentTrack.id;
-    const nextLiked = !likedMap[trackId];
+    const wasLiked = !!likedMap[trackId];
+    const nextLiked = !wasLiked;
 
-    const updated = { ...likedMap, [trackId]: nextLiked };
-    setLikedMap(updated);
+    const nextMap = { ...likedMap, [trackId]: nextLiked };
+    setLikedMap(nextMap);
+
+    let nextTracks: MusicTrack[];
+    if (nextLiked) {
+      const exists = likedTracks.some((t) => t.id === trackId);
+      nextTracks = exists ? likedTracks : [currentTrack, ...likedTracks];
+      setShowHeartBurst(true);
+      setTimeout(() => setShowHeartBurst(false), 900);
+      showToast("❤️ Saved to Liked Reels!");
+    } else {
+      nextTracks = likedTracks.filter((t) => t.id !== trackId);
+      showToast("Removed from Liked Reels");
+      if (activeCategory === "liked") {
+        setReels(nextTracks);
+      }
+    }
+    setLikedTracks(nextTracks);
 
     if (typeof window !== "undefined") {
       try {
-        localStorage.setItem("kaelixo_reels_liked", JSON.stringify(updated));
+        localStorage.setItem("kaelixo_reels_liked", JSON.stringify(nextMap));
+        localStorage.setItem("kaelixo_liked_reels_tracks", JSON.stringify(nextTracks));
       } catch {}
-    }
-
-    if (nextLiked) {
-      setShowHeartBurst(true);
-      setTimeout(() => setShowHeartBurst(false), 900);
-      showToast("❤️ Liked reel!");
     }
   };
 
@@ -410,14 +518,19 @@ export function MusicReelsView({
     return likeCountMap[trackId] + (likedMap[trackId] ? 1 : 0);
   };
 
-  if (reels.length === 0) {
+  if (reels.length === 0 && activeCategory !== "liked") {
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-8 text-neutral-400 space-y-4">
         <Disc3 className="w-12 h-12 text-emerald-500 animate-spin" />
-        <p className="text-sm font-semibold text-white">Loading 60s viral reels...</p>
+        <p className="text-sm font-semibold text-white">Loading viral reels...</p>
       </div>
     );
   }
+
+  const categoryList = [
+    { id: "liked", name: `Liked (${likedTracks.length})`, icon: "❤️" },
+    ...DEFAULT_REEL_CATEGORIES,
+  ];
 
   return (
     <div
@@ -437,7 +550,7 @@ export function MusicReelsView({
 
       {/* TOP NAVIGATION & CATEGORY BAR */}
       <div className="w-full max-w-5xl mx-auto px-4 pt-3 pb-2 z-20 flex flex-col sm:flex-row items-center justify-between gap-2.5 border-b border-neutral-900/80 bg-neutral-950/80 backdrop-blur-md">
-        <div className="flex items-center space-x-3 w-full sm:w-auto justify-between sm:justify-start">
+        <div className="flex items-center space-x-2.5 w-full sm:w-auto justify-between sm:justify-start">
           {onBackToJam && (
             <button
               type="button"
@@ -458,6 +571,25 @@ export function MusicReelsView({
               Insta Feed
             </span>
 
+            {/* Direct Liked Reels Shelf Button */}
+            <button
+              type="button"
+              onClick={() => handleCategorySelect("liked")}
+              className={`px-2.5 py-1 rounded-full text-[10px] font-bold transition flex items-center space-x-1 cursor-pointer border ${
+                activeCategory === "liked"
+                  ? "bg-rose-600 text-white border-rose-400 shadow-sm"
+                  : "bg-neutral-900 hover:bg-neutral-800 text-rose-300 border-rose-500/30"
+              }`}
+              title="View all your saved liked reels"
+            >
+              <Heart
+                className={`w-3 h-3 ${
+                  activeCategory === "liked" ? "fill-white text-white" : "fill-rose-400 text-rose-400"
+                }`}
+              />
+              <span>Liked ({likedTracks.length})</span>
+            </button>
+
             {/* Quick Duration Limit Pill */}
             <button
               type="button"
@@ -474,7 +606,7 @@ export function MusicReelsView({
 
         {/* Category Pills */}
         <div className="flex items-center space-x-1.5 overflow-x-auto w-full sm:w-auto pb-1 scrollbar-none">
-          {REEL_CATEGORIES.map((cat) => (
+          {categoryList.map((cat) => (
             <button
               key={cat.id}
               type="button"
@@ -494,482 +626,528 @@ export function MusicReelsView({
 
       {/* CENTER REEL STAGE */}
       <div className="flex-1 flex items-center justify-center relative p-2 sm:p-4 overflow-hidden">
-        {/* Instagram Reel Container (Vertical 9:16 Aspect Ratio) */}
-        <div className="flex items-center space-x-3 sm:space-x-5 h-full max-h-[780px]">
-          {/* Vertical 9:16 Video Card */}
-          <div
-            onClick={handleVideoClick}
-            className="relative w-[340px] xs:w-[380px] sm:w-[410px] aspect-[9/16] h-full max-h-[760px] rounded-3xl overflow-hidden bg-black shadow-2xl border border-neutral-800/80 flex flex-col justify-between group select-none cursor-pointer"
-          >
-            {/* Background Video Player (YouTube embedded with vertical crop/fit) */}
-            <div className="absolute inset-0 overflow-hidden bg-neutral-950 flex items-center justify-center">
-              {currentTrack && (
-                <iframe
-                  key={currentTrack.id}
-                  src={`https://www.youtube-nocookie.com/embed/${currentTrack.id}?autoplay=1&mute=${
-                    isMuted ? 1 : 0
-                  }&controls=0&modestbranding=1&rel=0&playsinline=1&enablejsapi=1&loop=1&playlist=${
-                    currentTrack.id
-                  }`}
-                  title={currentTrack.title}
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  style={
-                    fitMode === "fill"
-                      ? {
-                          width: "320%",
-                          height: "100%",
-                          maxWidth: "none",
-                          position: "absolute",
-                          left: "50%",
-                          top: "50%",
-                          transform: "translate(-50%, -50%)",
-                          pointerEvents: "none",
-                        }
-                      : {
-                          width: "100%",
-                          height: "100%",
-                          pointerEvents: "none",
-                        }
-                  }
-                />
-              )}
-
-              {/* Atmospheric blurred backdrop for 'fit' mode */}
-              {fitMode === "fit" && currentTrack && (
-                <div
-                  className="absolute inset-0 -z-10 bg-cover bg-center filter blur-2xl opacity-40 scale-125"
-                  style={{ backgroundImage: `url(${currentTrack.thumbnail})` }}
-                />
-              )}
+        {activeCategory === "liked" && reels.length === 0 ? (
+          <div className="flex flex-col items-center justify-center p-8 text-neutral-400 space-y-4 text-center max-w-sm bg-neutral-900/80 backdrop-blur-md rounded-3xl border border-neutral-800 shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="w-16 h-16 rounded-full bg-rose-500/20 border border-rose-500/30 flex items-center justify-center text-rose-500 animate-pulse">
+              <Heart className="w-8 h-8 fill-rose-500" />
             </div>
-
-            {/* Dark Vignette Overlay for Crisp Readability */}
-            <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-transparent to-black/90 pointer-events-none" />
-
-            {/* Live Floating Reactions (Moving Upward) */}
-            <div className="absolute inset-0 pointer-events-none overflow-hidden z-30">
-              {floatingReactions.map((r) => (
-                <div
-                  key={r.id}
-                  className="absolute text-4xl animate-bounce filter drop-shadow-lg"
-                  style={{
-                    left: `${r.x}%`,
-                    bottom: "20%",
-                    animation: "floatUpReel 1.8s ease-out forwards",
-                  }}
-                >
-                  {r.emoji}
-                </div>
-              ))}
+            <div>
+              <h3 className="text-base font-bold text-white">No Liked Reels Yet</h3>
+              <p className="text-xs text-neutral-400 mt-1">
+                Tap the ❤️ heart button on any reel to save it here so you can watch and listen to your favorites anytime!
+              </p>
             </div>
+            <button
+              type="button"
+              onClick={() => handleCategorySelect("reels")}
+              className="px-4 py-2 rounded-xl bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-500 hover:to-rose-500 text-white text-xs font-bold shadow-lg transition cursor-pointer"
+            >
+              🔥 Explore Trending Reels
+            </button>
+          </div>
+        ) : (
+          /* Instagram Reel Container (Vertical 9:16 Aspect Ratio) */
+          <div className="flex items-center space-x-3 sm:space-x-5 h-full max-h-[780px]">
+            {/* Vertical 9:16 Video Card */}
+            <div
+              onClick={handleVideoClick}
+              className="relative w-[340px] xs:w-[380px] sm:w-[410px] aspect-[9/16] h-full max-h-[760px] rounded-3xl overflow-hidden bg-black shadow-2xl border border-neutral-800/80 flex flex-col justify-between group select-none cursor-pointer"
+            >
+              {/* Background Video Player (YouTube embedded with vertical crop/fit) */}
+              <div className="absolute inset-0 overflow-hidden bg-neutral-950 flex items-center justify-center">
+                {currentTrack && (
+                  <iframe
+                    ref={iframeRef}
+                    key={currentTrack.id}
+                    src={`https://www.youtube-nocookie.com/embed/${currentTrack.id}?autoplay=1&controls=0&modestbranding=1&rel=0&playsinline=1&enablejsapi=1&loop=1&playlist=${currentTrack.id}`}
+                    title={currentTrack.title}
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    onLoad={() => {
+                      if (isMutedRef.current) {
+                        postYtReelCommand("mute");
+                      }
+                      if (!isPlaying) {
+                        postYtReelCommand("pauseVideo");
+                      }
+                    }}
+                    style={
+                      fitMode === "fill"
+                        ? {
+                            width: "320%",
+                            height: "100%",
+                            maxWidth: "none",
+                            position: "absolute",
+                            left: "50%",
+                            top: "50%",
+                            transform: "translate(-50%, -50%)",
+                            pointerEvents: "none",
+                          }
+                        : {
+                            width: "100%",
+                            height: "100%",
+                            pointerEvents: "none",
+                          }
+                    }
+                  />
+                )}
 
-            {/* Popping Heart Burst Animation on Like */}
-            {showHeartBurst && (
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-40 animate-in zoom-in-50 duration-300">
-                <div className="relative">
-                  <Heart className="w-24 h-24 text-rose-500 fill-rose-500 drop-shadow-2xl animate-pulse" />
-                  <Sparkles className="w-10 h-10 text-amber-300 absolute -top-3 -right-3 animate-spin" />
-                </div>
+                {/* Atmospheric blurred backdrop for 'fit' mode */}
+                {fitMode === "fit" && currentTrack && (
+                  <div
+                    className="absolute inset-0 -z-10 bg-cover bg-center filter blur-2xl opacity-40 scale-125"
+                    style={{ backgroundImage: `url(${currentTrack.thumbnail})` }}
+                  />
+                )}
               </div>
-            )}
 
-            {/* Quick Play/Pause Center Fade Icon */}
-            {showPlayPauseIcon && (
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-40 animate-in fade-in zoom-in-75 duration-200">
-                <div className="w-16 h-16 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center text-white shadow-xl">
-                  {showPlayPauseIcon === "play" ? (
-                    <Play className="w-8 h-8 fill-current ml-1 text-emerald-400" />
-                  ) : (
-                    <Pause className="w-8 h-8 fill-current text-white" />
-                  )}
-                </div>
-              </div>
-            )}
+              {/* Dark Vignette Overlay for Crisp Readability */}
+              <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/85 pointer-events-none" />
 
-            {/* TOP BAR INSIDE REEL */}
-            <div className="relative z-20 p-4 flex items-center justify-between text-xs font-semibold">
-              <div className="flex items-center space-x-2 bg-black/40 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/10">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span className="text-[11px] text-white/90">
-                  Reel {activeIndex + 1} of {reels.length}
-                </span>
-              </div>
-
-              <div className="flex items-center space-x-1.5">
-                {/* Custom Duration Limit Selector Button */}
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setShowDurationPicker((v) => !v);
-                  }}
-                  className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-black/50 hover:bg-neutral-800 text-rose-300 border border-rose-500/40 backdrop-blur-md transition flex items-center space-x-1 cursor-pointer shadow-xs hover:scale-102"
-                  title="Click to customize reel duration (15s, 30s, 60s, custom)"
-                >
-                  <Clock className="w-3 h-3 text-rose-400" />
-                  <span>{formatDurationLabel(durationLimit)}</span>
-                  <ChevronDown className="w-2.5 h-2.5 text-neutral-400" />
-                </button>
-
-                {/* Auto Next Toggle */}
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setAutoAdvance((v) => !v);
-                    showToast(autoAdvance ? "Auto-Next disabled" : `Auto-Next enabled (${formatDurationLabel(durationLimit)})`);
-                  }}
-                  className={`px-2.5 py-1 rounded-full text-[10px] font-bold border transition flex items-center space-x-1 cursor-pointer ${
-                    autoAdvance
-                      ? "bg-rose-500/30 text-rose-300 border-rose-500/40"
-                      : "bg-black/40 text-neutral-400 border-white/10"
-                  }`}
-                  title="Auto-scroll to next reel when duration limit completes"
-                >
-                  <span>⚡ Auto: {autoAdvance ? "ON" : "OFF"}</span>
-                </button>
-
-                {/* Fit / Fill Aspect Toggle */}
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setFitMode((m) => (m === "fill" ? "fit" : "fill"));
-                  }}
-                  className="p-1.5 rounded-full bg-black/40 backdrop-blur-md border border-white/10 text-white/80 hover:text-white transition cursor-pointer"
-                  title="Toggle Video Zoom Fit / Fill"
-                >
-                  <Maximize2 className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
-
-            {/* DURATION SELECTOR POPUP MODAL */}
-            {showDurationPicker && (
-              <div
-                onClick={(e) => e.stopPropagation()}
-                className="absolute top-14 left-3 right-3 z-50 bg-neutral-900/95 backdrop-blur-xl border border-rose-500/40 rounded-2xl p-3.5 shadow-2xl animate-in zoom-in-95 duration-150 space-y-2.5"
-              >
-                <div className="flex items-center justify-between border-b border-neutral-800 pb-1.5">
-                  <div className="flex items-center space-x-1.5 text-xs font-bold text-white">
-                    <Clock className="w-3.5 h-3.5 text-rose-400" />
-                    <span>Custom Reel Duration</span>
+              {/* Live Floating Reactions (Moving Upward) */}
+              <div className="absolute inset-0 pointer-events-none overflow-hidden z-30">
+                {floatingReactions.map((r) => (
+                  <div
+                    key={r.id}
+                    className="absolute text-4xl animate-bounce filter drop-shadow-lg"
+                    style={{
+                      left: `${r.x}%`,
+                      bottom: "20%",
+                      animation: "floatUpReel 1.8s ease-out forwards",
+                    }}
+                  >
+                    {r.emoji}
                   </div>
+                ))}
+              </div>
+
+              {/* Popping Heart Burst Animation on Like */}
+              {showHeartBurst && (
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-40 animate-in zoom-in-50 duration-300">
+                  <div className="relative">
+                    <Heart className="w-24 h-24 text-rose-500 fill-rose-500 drop-shadow-2xl animate-pulse" />
+                    <Sparkles className="w-10 h-10 text-amber-300 absolute -top-3 -right-3 animate-spin" />
+                  </div>
+                </div>
+              )}
+
+              {/* Quick Play/Pause Center Fade Icon */}
+              {showPlayPauseIcon && (
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-40 animate-in fade-in zoom-in-75 duration-200">
+                  <div className="w-16 h-16 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center text-white shadow-xl">
+                    {showPlayPauseIcon === "play" ? (
+                      <Play className="w-8 h-8 fill-current ml-1 text-emerald-400" />
+                    ) : (
+                      <Pause className="w-8 h-8 fill-current text-white" />
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* TOP BAR INSIDE REEL */}
+              <div className="relative z-20 p-3.5 flex items-center justify-between text-xs font-semibold">
+                <div className="flex items-center space-x-2 bg-black/40 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/10">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="text-[11px] text-white/90">
+                    {activeCategory === "liked" ? "Liked Reel" : "Reel"} {activeIndex + 1} of {reels.length}
+                  </span>
+                </div>
+
+                <div className="flex items-center space-x-1.5">
+                  {/* Clean View Toggle (Hides all text clutter over video) */}
                   <button
                     type="button"
-                    onClick={() => setShowDurationPicker(false)}
-                    className="text-neutral-400 hover:text-white p-1 rounded-md text-xs font-bold"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setCleanView((v) => !v);
+                      showToast(cleanView ? "Overlay visible" : "Clean View: Text clutter hidden!");
+                    }}
+                    className={`px-2 py-1 rounded-full text-[10px] font-bold border transition flex items-center space-x-1 cursor-pointer backdrop-blur-md ${
+                      cleanView
+                        ? "bg-rose-500/40 text-rose-200 border-rose-400 shadow-sm"
+                        : "bg-black/50 text-neutral-300 border-white/15 hover:text-white"
+                    }`}
+                    title="Toggle Clean View (hides text clutter to enjoy full video)"
                   >
-                    ✕
+                    {cleanView ? (
+                      <Eye className="w-3 h-3 text-rose-300" />
+                    ) : (
+                      <EyeOff className="w-3 h-3 text-neutral-300" />
+                    )}
+                    <span>{cleanView ? "Info" : "Clean"}</span>
+                  </button>
+
+                  {/* Custom Duration Limit Selector Button */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowDurationPicker((v) => !v);
+                    }}
+                    className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-black/50 hover:bg-neutral-800 text-rose-300 border border-rose-500/40 backdrop-blur-md transition flex items-center space-x-1 cursor-pointer shadow-xs hover:scale-102"
+                    title="Click to customize reel duration (15s, 30s, 60s, custom)"
+                  >
+                    <Clock className="w-3 h-3 text-rose-400" />
+                    <span>{formatDurationLabel(durationLimit)}</span>
+                    <ChevronDown className="w-2.5 h-2.5 text-neutral-400" />
+                  </button>
+
+                  {/* Auto Next Toggle */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setAutoAdvance((v) => !v);
+                      showToast(autoAdvance ? "Auto-Next disabled" : `Auto-Next enabled (${formatDurationLabel(durationLimit)})`);
+                    }}
+                    className={`px-2.5 py-1 rounded-full text-[10px] font-bold border transition flex items-center space-x-1 cursor-pointer ${
+                      autoAdvance
+                        ? "bg-rose-500/30 text-rose-300 border-rose-500/40"
+                        : "bg-black/40 text-neutral-400 border-white/10"
+                    }`}
+                    title="Auto-scroll to next reel when duration limit completes"
+                  >
+                    <span>⚡ Auto: {autoAdvance ? "ON" : "OFF"}</span>
+                  </button>
+
+                  {/* Fit / Fill Aspect Toggle */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setFitMode((m) => (m === "fill" ? "fit" : "fill"));
+                    }}
+                    className="p-1.5 rounded-full bg-black/40 backdrop-blur-md border border-white/10 text-white/80 hover:text-white transition cursor-pointer"
+                    title="Toggle Video Zoom Fit / Fill"
+                  >
+                    <Maximize2 className="w-3.5 h-3.5" />
                   </button>
                 </div>
+              </div>
 
-                <p className="text-[10px] text-neutral-400">
-                  Select clip duration before moving to the next reel:
-                </p>
-
-                {/* Preset Options Grid */}
-                <div className="grid grid-cols-4 gap-1.5 text-[11px] font-bold">
-                  {[
-                    { label: "15s", sec: 15 },
-                    { label: "30s", sec: 30 },
-                    { label: "45s", sec: 45 },
-                    { label: "60s (1m)", sec: 60 },
-                    { label: "90s (1.5m)", sec: 90 },
-                    { label: "2 mins", sec: 120 },
-                    { label: "3 mins", sec: 180 },
-                    { label: "Full Song", sec: 0 },
-                  ].map((opt) => (
+              {/* DURATION SELECTOR POPUP MODAL */}
+              {showDurationPicker && (
+                <div
+                  onClick={(e) => e.stopPropagation()}
+                  className="absolute top-14 left-3 right-3 z-50 bg-neutral-900/95 backdrop-blur-xl border border-rose-500/40 rounded-2xl p-3.5 shadow-2xl animate-in zoom-in-95 duration-150 space-y-2.5"
+                >
+                  <div className="flex items-center justify-between border-b border-neutral-800 pb-1.5">
+                    <div className="flex items-center space-x-1.5 text-xs font-bold text-white">
+                      <Clock className="w-3.5 h-3.5 text-rose-400" />
+                      <span>Custom Reel Duration</span>
+                    </div>
                     <button
-                      key={opt.label}
                       type="button"
-                      onClick={() => changeDurationLimit(opt.sec)}
-                      className={`py-1.5 px-1 rounded-lg text-center transition flex flex-col items-center justify-center cursor-pointer border ${
-                        durationLimit === opt.sec
-                          ? "bg-gradient-to-r from-pink-600 to-rose-600 text-white border-rose-500 shadow-md scale-102"
-                          : "bg-neutral-800 hover:bg-neutral-700 text-neutral-300 border-neutral-700/60"
-                      }`}
+                      onClick={() => setShowDurationPicker(false)}
+                      className="text-neutral-400 hover:text-white p-1 rounded-md text-xs font-bold"
                     >
-                      <span>{opt.label}</span>
+                      ✕
                     </button>
-                  ))}
-                </div>
+                  </div>
 
-                {/* Custom Number Input */}
-                <div className="pt-1.5 border-t border-neutral-800 flex items-center space-x-1.5">
-                  <span className="text-[10px] text-neutral-400 flex-shrink-0">Custom sec:</span>
-                  <input
-                    type="number"
-                    min="5"
-                    max="600"
-                    value={customInputSeconds}
-                    onChange={(e) => setCustomInputSeconds(e.target.value)}
-                    placeholder="e.g. 25, 40, 50, 75"
-                    className="flex-1 px-2.5 py-1 bg-neutral-800 border border-neutral-700 rounded-lg text-xs text-white placeholder:text-neutral-500 focus:outline-none focus:ring-1 focus:ring-rose-500"
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
+                  <p className="text-[10px] text-neutral-400">
+                    Select clip duration before moving to the next reel:
+                  </p>
+
+                  {/* Preset Options Grid */}
+                  <div className="grid grid-cols-4 gap-1.5 text-[11px] font-bold">
+                    {[
+                      { label: "15s", sec: 15 },
+                      { label: "30s", sec: 30 },
+                      { label: "45s", sec: 45 },
+                      { label: "60s (1m)", sec: 60 },
+                      { label: "90s (1.5m)", sec: 90 },
+                      { label: "2 mins", sec: 120 },
+                      { label: "3 mins", sec: 180 },
+                      { label: "Full Song", sec: 0 },
+                    ].map((opt) => (
+                      <button
+                        key={opt.label}
+                        type="button"
+                        onClick={() => changeDurationLimit(opt.sec)}
+                        className={`py-1.5 px-1 rounded-lg text-center transition flex flex-col items-center justify-center cursor-pointer border ${
+                          durationLimit === opt.sec
+                            ? "bg-gradient-to-r from-pink-600 to-rose-600 text-white border-rose-500 shadow-md scale-102"
+                            : "bg-neutral-800 hover:bg-neutral-700 text-neutral-300 border-neutral-700/60"
+                        }`}
+                      >
+                        <span>{opt.label}</span>
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Custom Number Input */}
+                  <div className="pt-1.5 border-t border-neutral-800 flex items-center space-x-1.5">
+                    <span className="text-[10px] text-neutral-400 flex-shrink-0">Custom sec:</span>
+                    <input
+                      type="number"
+                      min="5"
+                      max="600"
+                      value={customInputSeconds}
+                      onChange={(e) => setCustomInputSeconds(e.target.value)}
+                      placeholder="e.g. 25, 40, 50, 75"
+                      className="flex-1 px-2.5 py-1 bg-neutral-800 border border-neutral-700 rounded-lg text-xs text-white placeholder:text-neutral-500 focus:outline-none focus:ring-1 focus:ring-rose-500"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          const val = parseInt(customInputSeconds, 10);
+                          if (!isNaN(val) && val > 0) {
+                            changeDurationLimit(val);
+                            setCustomInputSeconds("");
+                          }
+                        }
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
                         const val = parseInt(customInputSeconds, 10);
                         if (!isNaN(val) && val > 0) {
                           changeDurationLimit(val);
                           setCustomInputSeconds("");
                         }
-                      }
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const val = parseInt(customInputSeconds, 10);
-                      if (!isNaN(val) && val > 0) {
-                        changeDurationLimit(val);
-                        setCustomInputSeconds("");
-                      }
-                    }}
-                    className="px-3 py-1 bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold rounded-lg transition cursor-pointer"
-                  >
-                    Set
-                  </button>
+                      }}
+                      className="px-3 py-1 bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold rounded-lg transition cursor-pointer"
+                    >
+                      Set
+                    </button>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* BOTTOM REEL INFO (Title, Artist, Audio Track Ticker, 60s Progress Bar) */}
-            <div className="relative z-20 p-4 space-y-2.5">
-              {/* Creator / DJ Badge */}
-              <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 rounded-full overflow-hidden border border-white/30 bg-neutral-800 shadow-md flex-shrink-0">
-                  <img
-                    src={currentTrack?.thumbnail}
-                    alt={currentTrack?.artist}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center space-x-1.5">
+              {/* BOTTOM REEL INFO (Clean Minimalist Instagram Overlay - No Big Cluttering Buttons!) */}
+              <div
+                className={`relative z-20 p-4 pb-2 space-y-1.5 transition-opacity duration-300 ${
+                  cleanView ? "opacity-0 pointer-events-none" : "opacity-100"
+                }`}
+              >
+                {/* Creator / Channel Handle */}
+                <div className="flex items-center space-x-2">
+                  <div className="w-7 h-7 rounded-full overflow-hidden border border-white/30 bg-neutral-800 shadow-md flex-shrink-0">
+                    <img
+                      src={currentTrack?.thumbnail}
+                      alt={currentTrack?.artist}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div className="min-w-0 flex-1 flex items-center space-x-1.5">
                     <p className="text-xs font-bold text-white drop-shadow-sm truncate">
-                      {currentTrack?.artist}
+                      {cleanArtistName(currentTrack?.artist || "")}
                     </p>
-                    <span className="w-3.5 h-3.5 rounded-full bg-blue-500 text-white flex items-center justify-center text-[8px] font-bold">
+                    <span className="w-3.5 h-3.5 rounded-full bg-blue-500 text-white flex items-center justify-center text-[8px] font-bold flex-shrink-0">
                       ✓
                     </span>
                   </div>
-                  <span className="text-[10px] text-white/70">
-                    Kaelixo Audio • {durationLimit === 0 ? "Full Song" : `${formatDurationLabel(durationLimit)} Clip`}
-                  </span>
                 </div>
-              </div>
 
-              {/* Track Title */}
-              <p className="text-sm font-extrabold text-white leading-tight drop-shadow-md line-clamp-2">
-                {currentTrack?.title}
-              </p>
+                {/* Clean Track Title (No YouTube SEO tags, movie credits, or pipe noise!) */}
+                <p className="text-sm font-extrabold text-white leading-tight drop-shadow-md truncate">
+                  {cleanSongTitle(currentTrack?.title || "")}
+                </p>
 
-              {/* Spinning Vinyl Record Audio Ticker */}
-              <div className="flex items-center space-x-2 text-xs text-white/80 overflow-hidden pt-0.5">
-                <Disc3
-                  className={`w-4 h-4 text-rose-400 flex-shrink-0 ${
-                    isPlaying ? "animate-spin" : ""
-                  }`}
-                  style={{ animationDuration: "3s" }}
-                />
-                <div className="min-w-0 flex-1 overflow-hidden whitespace-nowrap">
+                {/* Spinning Vinyl Record Audio Ticker */}
+                <div className="flex items-center space-x-1.5 text-xs text-white/80 overflow-hidden pt-0.5">
+                  <Disc3
+                    className={`w-3.5 h-3.5 text-rose-400 flex-shrink-0 ${
+                      isPlaying ? "animate-spin" : ""
+                    }`}
+                    style={{ animationDuration: "3s" }}
+                  />
                   <p className="text-[11px] truncate text-white/90 font-medium">
-                    ♫ {currentTrack?.title} • {currentTrack?.artist} • {durationLimit === 0 ? "Full Track" : `${formatDurationLabel(durationLimit)} Highlight`}
+                    ♫ {cleanSongTitle(currentTrack?.title || "")} • {cleanArtistName(currentTrack?.artist || "")}
                   </p>
                 </div>
-              </div>
 
-              {/* Quick Actions (Play in Jam & Add to Queue) */}
-              <div className="flex items-center space-x-2 pt-1">
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handlePlayFullSong();
-                  }}
-                  className="flex-1 py-1.5 px-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold shadow-md transition flex items-center justify-center space-x-1.5 cursor-pointer"
-                >
-                  <Radio className="w-3.5 h-3.5" />
-                  <span>Play Full in Jam</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleAddToQueue();
-                  }}
-                  className="py-1.5 px-3 rounded-xl bg-white/10 hover:bg-white/20 backdrop-blur-md text-white text-xs font-bold transition flex items-center space-x-1 cursor-pointer border border-white/20"
-                >
-                  <ListPlus className="w-3.5 h-3.5" />
-                  <span>+ Queue</span>
-                </button>
-              </div>
-
-              {/* CUSTOMIZABLE NEON SCRUBBER PROGRESS BAR */}
-              <div className="pt-2">
-                <div className="flex items-center justify-between text-[10px] text-white/80 font-mono mb-1">
-                  <span>⏱️ {formatTime(currentSecond)}</span>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowDurationPicker(true);
-                    }}
-                    className="text-rose-300 hover:text-white hover:underline flex items-center space-x-1 cursor-pointer bg-white/10 hover:bg-white/20 px-2 py-0.5 rounded-full"
-                    title="Click to customize reel duration"
-                  >
-                    <span>{durationLimit === 0 ? "Full Song" : `${durationLimit}s Limit`} ▾</span>
-                  </button>
-                  <span>
-                    {durationLimit === 0
-                      ? formatTime(currentTrack?.duration || 180)
-                      : formatTime(durationLimit)}
-                  </span>
-                </div>
-                <div className="w-full h-1.5 bg-white/20 rounded-full overflow-hidden backdrop-blur-sm relative">
-                  <div
-                    className="h-full bg-gradient-to-r from-rose-500 via-pink-500 to-emerald-400 transition-all duration-1000 ease-linear rounded-full shadow-[0_0_8px_rgba(244,63,94,0.6)]"
-                    style={{
-                      width: `${
-                        durationLimit === 0
-                          ? Math.min(100, (currentSecond / (currentTrack?.duration || 180)) * 100)
-                          : Math.min(100, (currentSecond / durationLimit) * 100)
-                      }%`,
-                    }}
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* RIGHT ACTION BAR (Instagram Desktop Layout from user's screenshot) */}
-          <div className="flex flex-col items-center justify-end space-y-4 pb-4">
-            {/* Up Arrow (Previous Reel) */}
-            <button
-              type="button"
-              onClick={handlePrevReel}
-              disabled={activeIndex === 0}
-              className="w-10 h-10 rounded-full bg-neutral-900/90 hover:bg-neutral-800 border border-neutral-700/80 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center text-white transition shadow-lg cursor-pointer hover:scale-105 active:scale-95"
-              title="Previous Reel (Up Arrow)"
-            >
-              <ChevronUp className="w-5 h-5" />
-            </button>
-
-            {/* Like Heart Button */}
-            <div className="flex flex-col items-center space-y-1">
-              <button
-                type="button"
-                onClick={triggerLike}
-                className={`w-12 h-12 rounded-full flex items-center justify-center transition-all shadow-xl cursor-pointer ${
-                  isCurrentLiked
-                    ? "bg-rose-600 text-white scale-110 shadow-rose-500/40"
-                    : "bg-neutral-900/90 hover:bg-neutral-800 text-white border border-neutral-700/80 hover:scale-105"
-                }`}
-                title="Like this Reel (L)"
-              >
-                <Heart
-                  className={`w-6 h-6 ${isCurrentLiked ? "fill-white text-white" : "text-white"}`}
-                />
-              </button>
-              <span className="text-[11px] font-bold text-neutral-300">
-                {currentTrack ? getLikeCount(currentTrack.id) : 105}
-              </span>
-            </div>
-
-            {/* Reaction Emoji Trigger */}
-            <div className="relative flex flex-col items-center space-y-1">
-              <button
-                type="button"
-                onClick={() => setShowReactionMenu((v) => !v)}
-                className="w-12 h-12 rounded-full bg-neutral-900/90 hover:bg-neutral-800 border border-neutral-700/80 flex items-center justify-center text-white transition shadow-xl cursor-pointer hover:scale-105"
-                title="React to Reel"
-              >
-                <MessageCircle className="w-6 h-6 text-white" />
-              </button>
-              <span className="text-[11px] font-bold text-neutral-300">React</span>
-
-              {/* Reaction Picker Popup */}
-              {showReactionMenu && (
-                <div className="absolute right-14 bottom-0 bg-neutral-900 border border-neutral-700 rounded-2xl p-2 shadow-2xl flex items-center space-x-2 z-50 animate-in zoom-in-75 duration-150">
-                  {["🔥", "❤️", "👏", "💜", "💃", "🚀"].map((emoji) => (
+                {/* Sleek Minimal Scrubber Bar & Timestamp */}
+                <div className="pt-1.5">
+                  <div className="flex items-center justify-between text-[10px] text-white/70 font-mono mb-1">
+                    <span>⏱️ {formatTime(currentSecond)}</span>
                     <button
-                      key={emoji}
                       type="button"
-                      onClick={() => sendEmojiReaction(emoji)}
-                      className="text-2xl p-1.5 hover:scale-125 transition transform cursor-pointer"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowDurationPicker(true);
+                      }}
+                      className="text-rose-300 hover:text-white flex items-center space-x-1 cursor-pointer bg-black/40 hover:bg-black/60 px-2 py-0.5 rounded-full border border-white/10"
+                      title="Click to customize reel duration"
                     >
-                      {emoji}
+                      <span>{durationLimit === 0 ? "Full" : `${durationLimit}s`} ▾</span>
                     </button>
-                  ))}
+                    <span>
+                      {durationLimit === 0
+                        ? formatTime(currentTrack?.duration || 180)
+                        : formatTime(durationLimit)}
+                    </span>
+                  </div>
+                  {/* 2px Slim Scrubber Bar */}
+                  <div className="w-full h-1 bg-white/20 rounded-full overflow-hidden backdrop-blur-sm relative">
+                    <div
+                      className="h-full bg-gradient-to-r from-rose-500 via-pink-500 to-emerald-400 transition-all duration-1000 ease-linear rounded-full shadow-[0_0_8px_rgba(244,63,94,0.6)]"
+                      style={{
+                        width: `${
+                          durationLimit === 0
+                            ? Math.min(100, (currentSecond / (currentTrack?.duration || 180)) * 100)
+                            : Math.min(100, (currentSecond / durationLimit) * 100)
+                        }%`,
+                      }}
+                    />
+                  </div>
                 </div>
-              )}
+              </div>
             </div>
 
-            {/* Mute / Unmute Button */}
-            <div className="flex flex-col items-center space-y-1">
+            {/* RIGHT ACTION BAR (Clean vertical stack for all interactions) */}
+            <div className="flex flex-col items-center justify-end space-y-3 pb-3">
+              {/* Up Arrow (Previous Reel) */}
               <button
                 type="button"
-                onClick={() => {
-                  unlockMobileAudio();
-                  setIsMuted((m) => !m);
-                }}
-                className={`w-12 h-12 rounded-full flex items-center justify-center transition shadow-xl cursor-pointer border ${
-                  isMuted
-                    ? "bg-amber-600/30 text-amber-300 border-amber-500/50 hover:bg-amber-600/40"
-                    : "bg-neutral-900/90 hover:bg-neutral-800 text-white border-neutral-700/80"
-                }`}
-                title="Toggle Mute (M)"
+                onClick={handlePrevReel}
+                disabled={activeIndex === 0}
+                className="w-10 h-10 rounded-full bg-neutral-900/90 hover:bg-neutral-800 border border-neutral-700/80 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center text-white transition shadow-lg cursor-pointer hover:scale-105 active:scale-95"
+                title="Previous Reel (Up Arrow)"
               >
-                {isMuted ? <VolumeX className="w-6 h-6" /> : <Volume2 className="w-6 h-6" />}
+                <ChevronUp className="w-5 h-5" />
               </button>
-              <span className="text-[10px] font-bold text-neutral-400">
-                {isMuted ? "Unmute" : "Sound"}
-              </span>
-            </div>
 
-            {/* Restart Reel Clip */}
-            <div className="flex flex-col items-center space-y-1">
+              {/* Like Heart Button */}
+              <div className="flex flex-col items-center space-y-1">
+                <button
+                  type="button"
+                  onClick={triggerLike}
+                  className={`w-12 h-12 rounded-full flex items-center justify-center transition-all shadow-xl cursor-pointer ${
+                    isCurrentLiked
+                      ? "bg-rose-600 text-white scale-110 shadow-rose-500/40"
+                      : "bg-neutral-900/90 hover:bg-neutral-800 text-white border border-neutral-700/80 hover:scale-105"
+                  }`}
+                  title="Like this Reel (L)"
+                >
+                  <Heart
+                    className={`w-6 h-6 ${isCurrentLiked ? "fill-white text-white" : "text-white"}`}
+                  />
+                </button>
+                <span className="text-[11px] font-bold text-neutral-300">
+                  {currentTrack ? getLikeCount(currentTrack.id) : 105}
+                </span>
+              </div>
+
+              {/* Reaction Emoji Trigger */}
+              <div className="relative flex flex-col items-center space-y-1">
+                <button
+                  type="button"
+                  onClick={() => setShowReactionMenu((v) => !v)}
+                  className="w-12 h-12 rounded-full bg-neutral-900/90 hover:bg-neutral-800 border border-neutral-700/80 flex items-center justify-center text-white transition shadow-xl cursor-pointer hover:scale-105"
+                  title="React to Reel"
+                >
+                  <MessageCircle className="w-6 h-6 text-white" />
+                </button>
+                <span className="text-[11px] font-bold text-neutral-300">React</span>
+
+                {/* Reaction Picker Popup */}
+                {showReactionMenu && (
+                  <div className="absolute right-14 bottom-0 bg-neutral-900 border border-neutral-700 rounded-2xl p-2 shadow-2xl flex items-center space-x-2 z-50 animate-in zoom-in-75 duration-150">
+                    {["🔥", "❤️", "👏", "💜", "💃", "🚀"].map((emoji) => (
+                      <button
+                        key={emoji}
+                        type="button"
+                        onClick={() => sendEmojiReaction(emoji)}
+                        className="text-2xl p-1.5 hover:scale-125 transition transform cursor-pointer"
+                      >
+                        {emoji}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Mute / Unmute Button (Controlled via postMessage, no video reload/restart!) */}
+              <div className="flex flex-col items-center space-y-1">
+                <button
+                  type="button"
+                  onClick={toggleMute}
+                  className={`w-12 h-12 rounded-full flex items-center justify-center transition shadow-xl cursor-pointer border ${
+                    isMuted
+                      ? "bg-amber-600/30 text-amber-300 border-amber-500/50 hover:bg-amber-600/40"
+                      : "bg-neutral-900/90 hover:bg-neutral-800 text-white border-neutral-700/80"
+                  }`}
+                  title="Toggle Mute (M)"
+                >
+                  {isMuted ? <VolumeX className="w-6 h-6" /> : <Volume2 className="w-6 h-6" />}
+                </button>
+                <span className="text-[10px] font-bold text-neutral-400">
+                  {isMuted ? "Unmute" : "Sound"}
+                </span>
+              </div>
+
+              {/* Play Full Song in Jam Button */}
+              <div className="flex flex-col items-center space-y-1">
+                <button
+                  type="button"
+                  onClick={handlePlayFullSong}
+                  className="w-11 h-11 rounded-full bg-emerald-600/90 hover:bg-emerald-500 text-white border border-emerald-400/50 flex items-center justify-center transition shadow-xl cursor-pointer hover:scale-105 active:scale-95"
+                  title="Play full song in live channel Jam"
+                >
+                  <Radio className="w-5 h-5 text-white" />
+                </button>
+                <span className="text-[10px] font-bold text-neutral-300">Jam</span>
+              </div>
+
+              {/* Add to Queue Button */}
+              <div className="flex flex-col items-center space-y-1">
+                <button
+                  type="button"
+                  onClick={handleAddToQueue}
+                  className="w-11 h-11 rounded-full bg-neutral-900/90 hover:bg-neutral-800 text-white border border-neutral-700/80 flex items-center justify-center transition shadow-xl cursor-pointer hover:scale-105 active:scale-95"
+                  title="Add to Jam Queue"
+                >
+                  <ListPlus className="w-5 h-5 text-white" />
+                </button>
+                <span className="text-[10px] font-bold text-neutral-300">+ Queue</span>
+              </div>
+
+              {/* Restart Reel Clip */}
+              <div className="flex flex-col items-center space-y-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCurrentSecond(0);
+                    setIsPlaying(true);
+                    postYtReelCommand("seekTo", [0, true]);
+                    postYtReelCommand("playVideo");
+                    showToast("Replayed clip");
+                  }}
+                  className="w-10 h-10 rounded-full bg-neutral-900/90 hover:bg-neutral-800 border border-neutral-700/80 flex items-center justify-center text-white transition shadow-lg cursor-pointer hover:scale-105"
+                  title="Replay Clip"
+                >
+                  <RotateCcw className="w-4 h-4 text-neutral-300" />
+                </button>
+                <span className="text-[10px] font-bold text-neutral-400">Replay</span>
+              </div>
+
+              {/* Custom Duration Shortcut Button */}
+              <div className="flex flex-col items-center space-y-1">
+                <button
+                  type="button"
+                  onClick={() => setShowDurationPicker((v) => !v)}
+                  className="w-10 h-10 rounded-full bg-neutral-900/90 hover:bg-neutral-800 border border-neutral-700/80 flex items-center justify-center text-rose-400 transition shadow-lg cursor-pointer hover:scale-105"
+                  title="Change Reel Duration Limit"
+                >
+                  <Clock className="w-4 h-4 text-rose-400" />
+                </button>
+                <span className="text-[10px] font-bold text-neutral-400">
+                  {formatDurationLabel(durationLimit)}
+                </span>
+              </div>
+
+              {/* Down Arrow (Next Reel) */}
               <button
                 type="button"
-                onClick={() => {
-                  setCurrentSecond(0);
-                  setIsPlaying(true);
-                  showToast("Replayed clip");
-                }}
-                className="w-10 h-10 rounded-full bg-neutral-900/90 hover:bg-neutral-800 border border-neutral-700/80 flex items-center justify-center text-white transition shadow-lg cursor-pointer hover:scale-105"
-                title="Replay Clip"
+                onClick={handleNextReel}
+                className="w-10 h-10 rounded-full bg-neutral-900/90 hover:bg-neutral-800 border border-neutral-700/80 flex items-center justify-center text-white transition shadow-lg cursor-pointer hover:scale-105 active:scale-95"
+                title="Next Reel (Down Arrow)"
               >
-                <RotateCcw className="w-4 h-4 text-neutral-300" />
+                <ChevronDown className="w-5 h-5" />
               </button>
-              <span className="text-[10px] font-bold text-neutral-400">Replay</span>
             </div>
-
-            {/* Custom Duration Shortcut Button */}
-            <div className="flex flex-col items-center space-y-1">
-              <button
-                type="button"
-                onClick={() => setShowDurationPicker((v) => !v)}
-                className="w-10 h-10 rounded-full bg-neutral-900/90 hover:bg-neutral-800 border border-neutral-700/80 flex items-center justify-center text-rose-400 transition shadow-lg cursor-pointer hover:scale-105"
-                title="Change Reel Duration Limit"
-              >
-                <Clock className="w-4 h-4 text-rose-400" />
-              </button>
-              <span className="text-[10px] font-bold text-neutral-400">
-                {formatDurationLabel(durationLimit)}
-              </span>
-            </div>
-
-            {/* Down Arrow (Next Reel) */}
-            <button
-              type="button"
-              onClick={handleNextReel}
-              className="w-10 h-10 rounded-full bg-neutral-900/90 hover:bg-neutral-800 border border-neutral-700/80 flex items-center justify-center text-white transition shadow-lg cursor-pointer hover:scale-105 active:scale-95"
-              title="Next Reel (Down Arrow)"
-            >
-              <ChevronDown className="w-5 h-5" />
-            </button>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Global CSS for floating reactions in reels */}
