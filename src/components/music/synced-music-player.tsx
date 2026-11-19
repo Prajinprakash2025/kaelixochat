@@ -15,6 +15,7 @@ import {
   Minimize2,
   X,
   Users,
+  Share2,
 } from "lucide-react";
 import { useMusic } from "@/context/music-context";
 
@@ -183,7 +184,19 @@ export function SyncedMusicPlayer({
       {/* Main Track Display Area */}
       <div className="p-5 flex flex-col md:flex-row items-center gap-5">
         {/* Rotating Vinyl Cover Art with Waveform */}
-        <div className="relative group flex-shrink-0">
+        <div
+          draggable={!!currentTrack}
+          onDragStart={(e) => {
+            if (!currentTrack) return;
+            e.dataTransfer.setData("application/x-kaelixo-track", JSON.stringify(currentTrack));
+            const shareUrl = currentTrack.url || `https://www.youtube.com/watch?v=${currentTrack.id}`;
+            e.dataTransfer.setData("text/plain", `🎶 **${currentTrack.title}** - ${currentTrack.artist}\n${shareUrl}`);
+            e.dataTransfer.setData("text/uri-list", shareUrl);
+            e.dataTransfer.effectAllowed = "copy";
+          }}
+          className="relative group flex-shrink-0 cursor-grab active:cursor-grabbing"
+          title={currentTrack ? `${currentTrack.title} - ${currentTrack.artist} (Drag to chat)` : undefined}
+        >
           <div
             className={`w-24 h-24 md:w-28 md:h-28 rounded-2xl overflow-hidden shadow-2xl border-2 border-neutral-700/80 relative transition-transform duration-500 ${
               isPlaying ? "scale-105" : "scale-100"
@@ -279,6 +292,24 @@ export function SyncedMusicPlayer({
                 {emoji}
               </button>
             ))}
+
+            {currentTrack && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (typeof window !== "undefined") {
+                    window.dispatchEvent(
+                      new CustomEvent("kaelixo:stage-music-track", { detail: currentTrack })
+                    );
+                  }
+                }}
+                className="ml-2 px-2.5 py-1 rounded-lg bg-neutral-800/90 hover:bg-sky-600/30 text-neutral-300 hover:text-sky-300 border border-neutral-700/60 hover:border-sky-500/40 text-[11px] font-bold flex items-center space-x-1 transition cursor-pointer"
+                title="Share track into Chat composer"
+              >
+                <Share2 className="w-3 h-3 text-sky-400" />
+                <span className="hidden sm:inline">Share to Chat</span>
+              </button>
+            )}
           </div>
         </div>
       </div>

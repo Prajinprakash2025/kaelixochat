@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { Message, WorkspaceMember, reactionsMapToArray } from "@/types";
-import { Pin, MessageSquare, Copy, Check, SmilePlus, Pencil, Trash2, ArrowDown, ChevronDown } from "lucide-react";
+import { Message, WorkspaceMember, reactionsMapToArray, MusicTrack } from "@/types";
+import { Pin, MessageSquare, Copy, Check, SmilePlus, Pencil, Trash2, ArrowDown, ChevronDown, Music } from "lucide-react";
 import { AttachmentPreview } from "./attachment-preview";
 import { EmojiPicker } from "./emoji-picker";
 import { DeleteMessageModal } from "@/components/modals/delete-message-modal";
@@ -150,6 +150,7 @@ export function MessageFeed({
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState("");
   const [messageToDelete, setMessageToDelete] = useState<Message | null>(null);
+  const [isTrackDragging, setIsTrackDragging] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -158,6 +159,36 @@ export function MessageFeed({
   const isNearBottomRef = useRef(true);
   const prevChannelIdRef = useRef<string | undefined>(channelId);
   const prevMessagesLengthRef = useRef(messages.length);
+
+  const handleFeedDragOver = (e: React.DragEvent) => {
+    if (e.dataTransfer.types.includes("application/x-kaelixo-track")) {
+      e.preventDefault();
+      e.stopPropagation();
+      e.dataTransfer.dropEffect = "copy";
+      setIsTrackDragging(true);
+    }
+  };
+
+  const handleFeedDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsTrackDragging(false);
+  };
+
+  const handleFeedDrop = (e: React.DragEvent) => {
+    setIsTrackDragging(false);
+    const rawTrack = e.dataTransfer.getData("application/x-kaelixo-track");
+    if (rawTrack) {
+      e.preventDefault();
+      e.stopPropagation();
+      try {
+        const track = JSON.parse(rawTrack) as MusicTrack;
+        window.dispatchEvent(new CustomEvent("kaelixo:stage-music-track", { detail: track }));
+      } catch (err) {
+        console.warn("Failed to parse track on feed drop:", err);
+      }
+    }
+  };
   const isInitialMountRef = useRef(true);
 
   const scrollToBottom = (behavior: ScrollBehavior = "smooth") => {
@@ -370,8 +401,25 @@ export function MessageFeed({
     <div
       ref={containerRef}
       onScroll={handleScroll}
+      onDragOver={handleFeedDragOver}
+      onDragLeave={handleFeedDragLeave}
+      onDrop={handleFeedDrop}
       className="relative flex-1 overflow-y-auto px-6 py-6 space-y-5 custom-scrollbar"
     >
+      {/* Drag & Drop Song Overlay over Chat Feed */}
+      {isTrackDragging && (
+        <div className="absolute inset-4 z-40 bg-purple-600/15 dark:bg-purple-950/45 border-2 border-dashed border-purple-500 rounded-3xl flex flex-col items-center justify-center backdrop-blur-xs pointer-events-none transition-all shadow-2xl animate-in zoom-in-95">
+          <div className="w-14 h-14 rounded-2xl bg-purple-600 text-white flex items-center justify-center mb-2 shadow-lg animate-bounce">
+            <Music className="w-7 h-7" />
+          </div>
+          <p className="font-extrabold text-base text-purple-700 dark:text-purple-300">
+            Drop song to share in chat
+          </p>
+          <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-1">
+            Releasing here will stage this track ready for playback
+          </p>
+        </div>
+      )}
       {messages.length === 0 ? (
         <div className="h-full flex flex-col items-center justify-center text-center text-neutral-400 py-16">
           <div className="w-16 h-16 rounded-2xl bg-indigo-50 dark:bg-neutral-800 flex items-center justify-center text-indigo-500 mb-3 text-2xl">

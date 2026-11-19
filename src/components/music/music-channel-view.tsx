@@ -64,6 +64,15 @@ export function getContrastTextColor(hexColor?: string): string {
   return "#ffffff";
 }
 
+// Global dispatcher to stage any music track into chat composer or message feed
+export function stageTrackToChat(track: MusicTrack) {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(
+      new CustomEvent("kaelixo:stage-music-track", { detail: track })
+    );
+  }
+}
+
 interface MusicChannelViewProps {
   currentUser: WorkspaceMember;
   messages: Message[];
@@ -618,6 +627,7 @@ interface YouTubeSongCardProps {
   onAddToPlaylist: (e: React.MouseEvent) => void;
   onAddToQueue: (e: React.MouseEvent) => void;
   onHide?: (e: React.MouseEvent) => void;
+  onShareToChat?: (e: React.MouseEvent) => void;
 }
 
 export function YouTubeSongCard({
@@ -629,6 +639,7 @@ export function YouTubeSongCard({
   onAddToPlaylist,
   onAddToQueue,
   onHide,
+  onShareToChat,
 }: YouTubeSongCardProps) {
   const { currentTheme, resolvedMode } = usePreferences();
   const isDark = resolvedMode === "dark";
@@ -639,12 +650,32 @@ export function YouTubeSongCard({
   const cleanArtist = cleanArtistName(track.artist);
   const artistInitial = cleanArtist ? cleanArtist.charAt(0).toUpperCase() : "🎵";
 
+  const handleDragStart = (e: React.DragEvent) => {
+    e.dataTransfer.setData("application/x-kaelixo-track", JSON.stringify(track));
+    const shareUrl = track.url || `https://www.youtube.com/watch?v=${track.id}`;
+    e.dataTransfer.setData("text/plain", `🎶 **${cleanTitle}** - ${cleanArtist}\n${shareUrl}`);
+    e.dataTransfer.setData("text/uri-list", shareUrl);
+    e.dataTransfer.effectAllowed = "copy";
+  };
+
+  const handleShareClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onShareToChat) {
+      onShareToChat(e);
+    } else {
+      stageTrackToChat(track);
+    }
+  };
+
   return (
     <div
       onClick={onPlay}
-      className={`group cursor-pointer select-none flex flex-col transition-all duration-200 ${
+      draggable={true}
+      onDragStart={handleDragStart}
+      className={`group cursor-grab active:cursor-grabbing select-none flex flex-col transition-all duration-200 ${
         isThisPlaying ? "scale-[1.01]" : ""
       }`}
+      title={`${cleanTitle} — ${cleanArtist} (Drag to chat to share)`}
     >
       {/* 16:9 Thumbnail Container matching YouTube 1:1 */}
       <div
@@ -698,6 +729,14 @@ export function YouTubeSongCard({
         <div className="absolute top-2.5 right-2.5 flex items-center space-x-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10">
           <button
             type="button"
+            onClick={handleShareClick}
+            className="w-7 h-7 rounded-full bg-black/70 hover:bg-sky-600 text-white/90 hover:text-white flex items-center justify-center backdrop-blur-md transition cursor-pointer shadow-md"
+            title="Share to Chat (or drag song card)"
+          >
+            <Share2 className="w-3.5 h-3.5" />
+          </button>
+          <button
+            type="button"
             onClick={onToggleLike}
             className={`w-7 h-7 rounded-full flex items-center justify-center backdrop-blur-md transition cursor-pointer shadow-md ${
               isLiked
@@ -734,6 +773,13 @@ export function YouTubeSongCard({
               <X className="w-3.5 h-3.5" />
             </button>
           )}
+        </div>
+
+        {/* Drag Hint on Hover (Top Left) */}
+        <div className="absolute top-2.5 left-2.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10">
+          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-black/80 backdrop-blur-md text-white/95 shadow-md border border-white/15 flex items-center space-x-1">
+            <span>⋮⋮ Drag to chat</span>
+          </span>
         </div>
 
         {/* Always Visible Like indicator if song is liked */}
@@ -795,6 +841,15 @@ export function YouTubeSongCard({
             </span>
 
             <div className="flex items-center space-x-1.5 opacity-80 group-hover:opacity-100 transition">
+              <button
+                type="button"
+                onClick={handleShareClick}
+                className="text-[10px] text-neutral-600 dark:text-neutral-400 hover:text-sky-500 dark:hover:text-sky-400 font-bold px-1.5 py-0.5 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-800 transition cursor-pointer flex items-center space-x-1 border border-neutral-300 dark:border-neutral-700"
+                title="Share to Chat"
+              >
+                <Share2 className="w-3 h-3 text-sky-500" />
+                <span>Share</span>
+              </button>
               <button
                 type="button"
                 onClick={onAddToPlaylist}
@@ -2520,13 +2575,31 @@ export function MusicChannelView({
             {/* LEFT CARD: NOW PLAYING CARD (Exact Screenshot) */}
             <div className="lg:col-span-8 bg-white dark:bg-neutral-900/60 border border-neutral-200 dark:border-neutral-800/80 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-center gap-5 backdrop-blur-md shadow-xs dark:shadow-xl relative overflow-hidden">
               {/* Square Album Cover with Floating Heart Button */}
-              <div className="relative w-36 h-36 sm:w-44 sm:h-44 rounded-2xl overflow-hidden shadow-md dark:shadow-2xl bg-neutral-100 dark:bg-neutral-950 flex-shrink-0 group">
+              <div
+                draggable={true}
+                onDragStart={(e) => {
+                  e.dataTransfer.setData("application/x-kaelixo-track", JSON.stringify(activeDisplayTrack));
+                  const shareUrl = activeDisplayTrack.url || `https://www.youtube.com/watch?v=${activeDisplayTrack.id}`;
+                  e.dataTransfer.setData("text/plain", `🎶 **${cleanSongTitle(activeDisplayTrack.title)}** - ${cleanArtistName(activeDisplayTrack.artist)}\n${shareUrl}`);
+                  e.dataTransfer.setData("text/uri-list", shareUrl);
+                  e.dataTransfer.effectAllowed = "copy";
+                }}
+                className="relative w-36 h-36 sm:w-44 sm:h-44 rounded-2xl overflow-hidden shadow-md dark:shadow-2xl bg-neutral-100 dark:bg-neutral-950 flex-shrink-0 group cursor-grab active:cursor-grabbing"
+                title={`${cleanSongTitle(activeDisplayTrack.title)} - ${cleanArtistName(activeDisplayTrack.artist)} (Drag to chat)`}
+              >
                 <img
                   src={activeDisplayTrack.thumbnail}
                   alt={activeDisplayTrack.title}
                   className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/30 pointer-events-none" />
+
+                {/* Drag Hint on Hover */}
+                <div className="absolute bottom-2.5 left-2.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10">
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-black/80 backdrop-blur-md text-white/95 shadow-md border border-white/15 flex items-center space-x-1">
+                    <span>⋮⋮ Drag to chat</span>
+                  </span>
+                </div>
 
                 {/* Floating Heart Button */}
                 <button
@@ -2664,6 +2737,19 @@ export function MusicChannelView({
                   >
                     <FolderPlus className="w-4 h-4" />
                   </button>
+
+                  {/* Share to Chat button */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      stageTrackToChat(activeDisplayTrack);
+                      showToast("Song staged in chat composer! Switch to any chat to send.");
+                    }}
+                    className="p-2 text-neutral-500 hover:text-sky-500 dark:text-neutral-400 dark:hover:text-sky-400 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 transition cursor-pointer"
+                    title="Share current song to chat"
+                  >
+                    <Share2 className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
             </div>
@@ -2773,8 +2859,17 @@ export function MusicChannelView({
                 return (
                   <div
                     key={track.id}
+                    draggable={true}
+                    onDragStart={(e) => {
+                      e.dataTransfer.setData("application/x-kaelixo-track", JSON.stringify(track));
+                      const shareUrl = track.url || `https://www.youtube.com/watch?v=${track.id}`;
+                      e.dataTransfer.setData("text/plain", `🎶 **${cleanSongTitle(track.title)}** - ${cleanArtistName(track.artist)}\n${shareUrl}`);
+                      e.dataTransfer.setData("text/uri-list", shareUrl);
+                      e.dataTransfer.effectAllowed = "copy";
+                    }}
                     onClick={() => handlePlaySong(track, trendingTracks)}
-                    className="group flex flex-col space-y-2 cursor-pointer relative"
+                    className="group flex flex-col space-y-2 cursor-pointer cursor-grab active:cursor-grabbing relative"
+                    title={`${cleanSongTitle(track.title)} - ${cleanArtistName(track.artist)} (Drag to chat)`}
                   >
                     {/* Thumbnail Card with 16:9 / 16:10 aspect ratio */}
                     <div className="relative aspect-[16/10] w-full rounded-xl overflow-hidden bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800/80 transition duration-300 shadow-xs dark:shadow-md">
@@ -2785,18 +2880,37 @@ export function MusicChannelView({
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
 
-                      {/* Floating Add to Playlist Icon Button on Hover */}
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSongToAddToPlaylist(track);
-                        }}
-                        className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/70 hover:bg-black text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition shadow-md z-10 cursor-pointer"
-                        title="Add to playlist"
-                      >
-                        <FolderPlus className="w-3.5 h-3.5" />
-                      </button>
+                      {/* Top Action Overlay: Share + Playlist */}
+                      <div className="absolute top-2 right-2 flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition z-10">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            stageTrackToChat(track);
+                            showToast("Song staged in chat composer!");
+                          }}
+                          className="w-7 h-7 rounded-full bg-black/70 hover:bg-sky-600 text-white flex items-center justify-center transition shadow-md cursor-pointer"
+                          title="Share to chat"
+                        >
+                          <Share2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSongToAddToPlaylist(track);
+                          }}
+                          className="w-7 h-7 rounded-full bg-black/70 hover:bg-black text-white flex items-center justify-center transition shadow-md cursor-pointer"
+                          title="Add to playlist"
+                        >
+                          <FolderPlus className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+
+                      {/* Drag hint on hover */}
+                      <span className="absolute top-2 left-2 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-black/80 text-white/90 opacity-0 group-hover:opacity-100 transition pointer-events-none">
+                        ⋮⋮ Drag
+                      </span>
 
                       {/* Circular White Play Button */}
                       <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition duration-200">

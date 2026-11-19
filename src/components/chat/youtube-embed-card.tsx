@@ -1,7 +1,10 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Play, ExternalLink, X, Film } from "lucide-react";
+import { Play, Pause, ExternalLink, X, Film, Headphones, ListPlus, Radio, Check } from "lucide-react";
+import { useMusic } from "@/context/music-context";
+import { usePreferences } from "@/context/preferences-context";
+import { MusicTrack } from "@/types";
 
 export interface YouTubeVideoInfo {
   videoId: string;
@@ -68,6 +71,16 @@ export function YouTubeEmbedCard({
   const [meta, setMeta] = useState<YouTubeMeta | null>(() => metaCache.get(videoId) || null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [thumbError, setThumbError] = useState(false);
+  const [addedToast, setAddedToast] = useState(false);
+
+  const musicCtx = useMusic();
+  const { currentTheme } = usePreferences();
+  const themeAccent = currentTheme?.accentColor || "#84cc16";
+  const themeTextColor = "#ffffff";
+
+  const currentTrack = musicCtx?.currentTrack;
+  const isJamPlaying = Boolean(musicCtx?.isPlaying);
+  const isThisPlayingInJam = currentTrack?.id === videoId && isJamPlaying;
 
   useEffect(() => {
     if (metaCache.has(videoId)) {
@@ -99,6 +112,44 @@ export function YouTubeEmbedCard({
     !thumbError && meta?.thumbnailUrl
       ? meta.thumbnailUrl
       : `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
+
+  const handlePlayInJam = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!musicCtx) return;
+    if (isThisPlayingInJam) {
+      musicCtx.pause();
+      return;
+    }
+    const track: MusicTrack = {
+      id: videoId,
+      title,
+      artist: authorName,
+      thumbnail: thumbnailUrl,
+      duration: 210,
+      durationFormatted: "3:30",
+      url,
+      source: "youtube",
+    };
+    musicCtx.playTrack(track);
+  };
+
+  const handleAddToQueue = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!musicCtx) return;
+    const track: MusicTrack = {
+      id: videoId,
+      title,
+      artist: authorName,
+      thumbnail: thumbnailUrl,
+      duration: 210,
+      durationFormatted: "3:30",
+      url,
+      source: "youtube",
+    };
+    musicCtx.addToQueue(track);
+    setAddedToast(true);
+    setTimeout(() => setAddedToast(false), 2000);
+  };
 
   return (
     <div className="my-2.5 max-w-lg w-full rounded-xl border border-neutral-200/90 dark:border-neutral-800 bg-neutral-50/70 dark:bg-[#16191d] overflow-hidden shadow-xs hover:border-neutral-300 dark:hover:border-neutral-700 transition">
@@ -212,6 +263,67 @@ export function YouTubeEmbedCard({
                 <span>Play Live in Chat</span>
               </div>
             </div>
+          )}
+        </div>
+      </div>
+
+      {/* Quick Jam / Player Controls Bar */}
+      <div className="px-3.5 py-2.5 bg-neutral-100/70 dark:bg-neutral-900/60 border-t border-neutral-200/80 dark:border-neutral-800 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center space-x-2">
+          <button
+            type="button"
+            onClick={handlePlayInJam}
+            style={{
+              backgroundColor: isThisPlayingInJam ? "#10b981" : themeAccent,
+              color: themeTextColor,
+            }}
+            className="px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center space-x-1.5 shadow-xs hover:brightness-110 cursor-pointer"
+            title={isThisPlayingInJam ? "Pause Jam" : "Stream synchronously with your team in Kaelixo Jam"}
+          >
+            {isThisPlayingInJam ? (
+              <>
+                <Pause className="w-3.5 h-3.5 fill-current" />
+                <span>Pause Jam</span>
+              </>
+            ) : (
+              <>
+                <Headphones className="w-3.5 h-3.5" />
+                <span>Play in Jam</span>
+              </>
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={handleAddToQueue}
+            className="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-white dark:bg-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-700 text-neutral-800 dark:text-neutral-200 border border-neutral-300 dark:border-neutral-700 flex items-center space-x-1 transition cursor-pointer shadow-xs"
+            title="Add to Team Jam Queue"
+          >
+            {addedToast ? (
+              <>
+                <Check className="w-3.5 h-3.5 text-emerald-500" />
+                <span className="text-emerald-600 dark:text-emerald-400 font-bold">Queued</span>
+              </>
+            ) : (
+              <>
+                <ListPlus className="w-3.5 h-3.5" />
+                <span>+ Queue</span>
+              </>
+            )}
+          </button>
+        </div>
+
+        <div className="flex items-center space-x-1.5 text-[11px] text-neutral-500 dark:text-neutral-400 font-medium">
+          {isThisPlayingInJam ? (
+            <span className="flex items-center space-x-1 font-semibold text-emerald-600 dark:text-emerald-400">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+              <span>Playing in Team Jam</span>
+            </span>
+          ) : (
+            <span className="flex items-center space-x-1">
+              <Radio className="w-3 h-3 text-purple-500 animate-pulse" />
+              <span>Synced Audio Ready</span>
+            </span>
           )}
         </div>
       </div>

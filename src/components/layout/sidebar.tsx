@@ -587,6 +587,26 @@ export function Sidebar({
                         onSelectChannel(ch.id);
                         if (onCloseMobile) onCloseMobile();
                       }}
+                      onDragOver={(e) => {
+                        if (e.dataTransfer.types.includes("application/x-kaelixo-track")) {
+                          e.preventDefault();
+                          e.dataTransfer.dropEffect = "copy";
+                        }
+                      }}
+                      onDrop={(e) => {
+                        const rawTrack = e.dataTransfer.getData("application/x-kaelixo-track");
+                        if (rawTrack) {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          try {
+                            const track = JSON.parse(rawTrack);
+                            onSelectChannel(ch.id);
+                            setTimeout(() => {
+                              window.dispatchEvent(new CustomEvent("kaelixo:stage-music-track", { detail: track }));
+                            }, 150);
+                          } catch {}
+                        }
+                      }}
                       style={
                         isActive
                           ? {
@@ -656,6 +676,26 @@ export function Sidebar({
                           onClick={() => {
                             onSelectDirectMessage(member);
                             if (onCloseMobile) onCloseMobile();
+                          }}
+                          onDragOver={(e) => {
+                            if (e.dataTransfer.types.includes("application/x-kaelixo-track")) {
+                              e.preventDefault();
+                              e.dataTransfer.dropEffect = "copy";
+                            }
+                          }}
+                          onDrop={(e) => {
+                            const rawTrack = e.dataTransfer.getData("application/x-kaelixo-track");
+                            if (rawTrack) {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              try {
+                                const track = JSON.parse(rawTrack);
+                                onSelectDirectMessage(member);
+                                setTimeout(() => {
+                                  window.dispatchEvent(new CustomEvent("kaelixo:stage-music-track", { detail: track }));
+                                }, 150);
+                              } catch {}
+                            }
                           }}
                           style={
                             isDmActive

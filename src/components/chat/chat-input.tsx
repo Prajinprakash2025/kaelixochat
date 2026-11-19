@@ -36,8 +36,9 @@ import {
   AlertCircle,
   Clipboard,
   Camera,
+  Music,
 } from "lucide-react";
-import { Attachment, FileCategory } from "@/types";
+import { Attachment, FileCategory, MusicTrack } from "@/types";
 import {
   uploadAttachment,
   validateAttachment,
@@ -86,7 +87,9 @@ export function ChatInput({
 }: ChatInputProps) {
   const [content, setContent] = useState("");
   const [stagedFiles, setStagedFiles] = useState<StagedFile[]>([]);
+  const [stagedTrack, setStagedTrack] = useState<MusicTrack | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [isMusicDragging, setIsMusicDragging] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showFormatting, setShowFormatting] = useState(false);
   const [showHeadingMenu, setShowHeadingMenu] = useState(false);
@@ -100,6 +103,28 @@ export function ChatInput({
   const dragCounterRef = useRef<number>(0);
   const stagedFilesRef = useRef<StagedFile[]>([]);
   stagedFilesRef.current = stagedFiles;
+
+  // Listen for global music staging events (e.g. from Drag & Drop or Share to Chat)
+  useEffect(() => {
+    const handleStageTrack = (e: Event) => {
+      const customEvent = e as CustomEvent<MusicTrack>;
+      if (customEvent.detail) {
+        setStagedTrack(customEvent.detail);
+        setTimeout(() => {
+          if (textareaRef.current) {
+            textareaRef.current.focus();
+          } else if (mobileTextareaRef.current) {
+            mobileTextareaRef.current.focus();
+          }
+        }, 50);
+      }
+    };
+
+    window.addEventListener("kaelixo:stage-music-track", handleStageTrack);
+    return () => {
+      window.removeEventListener("kaelixo:stage-music-track", handleStageTrack);
+    };
+  }, []);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -299,6 +324,12 @@ export function ChatInput({
     e.preventDefault();
     e.stopPropagation();
     dragCounterRef.current += 1;
+    const isTrack = e.dataTransfer.types.includes("application/x-kaelixo-track");
+    if (isTrack) {
+      setIsMusicDragging(true);
+      setIsDragging(true);
+      return;
+    }
     if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
       setIsDragging(true);
     }
@@ -310,6 +341,7 @@ export function ChatInput({
     dragCounterRef.current -= 1;
     if (dragCounterRef.current === 0) {
       setIsDragging(false);
+      setIsMusicDragging(false);
     }
   };
 
@@ -317,6 +349,10 @@ export function ChatInput({
     e.preventDefault();
     e.stopPropagation();
     e.dataTransfer.dropEffect = "copy";
+    if (e.dataTransfer.types.includes("application/x-kaelixo-track")) {
+      setIsMusicDragging(true);
+      setIsDragging(true);
+    }
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -324,6 +360,28 @@ export function ChatInput({
     e.stopPropagation();
     dragCounterRef.current = 0;
     setIsDragging(false);
+    setIsMusicDragging(false);
+
+    // 1. Check for Kaelixo Track
+    const rawTrack = e.dataTransfer.getData("application/x-kaelixo-track");
+    if (rawTrack) {
+      try {
+        const track = JSON.parse(rawTrack) as MusicTrack;
+        setStagedTrack(track);
+        setTimeout(() => {
+          if (textareaRef.current) {
+            textareaRef.current.focus();
+          } else if (mobileTextareaRef.current) {
+            mobileTextareaRef.current.focus();
+          }
+        }, 50);
+        return;
+      } catch (err) {
+        console.warn("Failed to parse dragged track:", err);
+      }
+    }
+
+    // 2. Check for Files
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       handleFilesAdded(Array.from(e.dataTransfer.files));
     }
@@ -453,13 +511,24 @@ export function ChatInput({
     .map((f) => f.attachment!);
   const hasText = content.trim().length > 0;
   const hasAttachments = completedAttachments.length > 0;
-  const canSend = !isAnyUploading && (hasText || hasAttachments) && !disabled;
+  const hasTrack = Boolean(stagedTrack);
+  const canSend = !isAnyUploading && (hasText || hasAttachments || hasTrack) && !disabled;
 
   const handleSend = () => {
     if (!canSend) return;
 
+    let finalContent = content.trim();
+    if (stagedTrack) {
+      const shareUrl = stagedTrack.url || `https://www.youtube.com/watch?v=${stagedTrack.id}`;
+      if (!finalContent) {
+        finalContent = `🎶 Sharing song: **${stagedTrack.title}** by *${stagedTrack.artist}*\n${shareUrl}`;
+      } else {
+        finalContent = `${finalContent}\n\n🎶 **${stagedTrack.title}** — ${stagedTrack.artist}\n${shareUrl}`;
+      }
+    }
+
     onSendMessage(
-      content.trim(),
+      finalContent,
       completedAttachments.length > 0 ? completedAttachments : undefined
     );
 
@@ -469,6 +538,7 @@ export function ChatInput({
     });
 
     setContent("");
+    setStagedTrack(null);
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
     }
@@ -590,14 +660,34 @@ export function ChatInput({
 
       {/* Drag & Drop Overlay */}
       {isDragging && (
-        <div className="absolute inset-2 bg-indigo-500/10 dark:bg-indigo-500/20 border-2 border-dashed border-indigo-500 rounded-2xl flex flex-col items-center justify-center z-30 backdrop-blur-xs pointer-events-none transition-all">
-          <UploadCloud className="w-8 h-8 text-indigo-600 dark:text-indigo-400 animate-bounce mb-1" />
-          <p className="font-semibold text-sm text-indigo-700 dark:text-indigo-300">
-            Drop files here to upload to #{cleanName}
-          </p>
-          <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
-            Images, videos, PDFs, documents, or code (up to 25 MB)
-          </p>
+        <div
+          className={`absolute inset-2 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center z-30 backdrop-blur-xs pointer-events-none transition-all ${
+            isMusicDragging
+              ? "bg-purple-500/15 dark:bg-purple-500/25 border-purple-500"
+              : "bg-indigo-500/10 dark:bg-indigo-500/20 border-indigo-500"
+          }`}
+        >
+          {isMusicDragging ? (
+            <>
+              <Music className="w-9 h-9 text-purple-600 dark:text-purple-400 animate-bounce mb-1" />
+              <p className="font-bold text-sm text-purple-700 dark:text-purple-300">
+                Drop song to share in #{cleanName}
+              </p>
+              <p className="text-[11px] text-neutral-600 dark:text-neutral-400">
+                Team members will be able to play live in chat or jam synchronously
+              </p>
+            </>
+          ) : (
+            <>
+              <UploadCloud className="w-8 h-8 text-indigo-600 dark:text-indigo-400 animate-bounce mb-1" />
+              <p className="font-semibold text-sm text-indigo-700 dark:text-indigo-300">
+                Drop files here to upload to #{cleanName}
+              </p>
+              <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
+                Images, videos, PDFs, documents, or code (up to 25 MB)
+              </p>
+            </>
+          )}
         </div>
       )}
 
@@ -633,6 +723,36 @@ export function ChatInput({
                 <X className="w-4 h-4" />
               </button>
             </div>
+          </div>
+        )}
+
+        {/* Staged Music Track on mobile */}
+        {stagedTrack && (
+          <div className="flex items-center justify-between p-2 mx-1 rounded-xl bg-purple-500/10 dark:bg-purple-950/40 border border-purple-500/30 text-xs animate-in fade-in">
+            <div className="flex items-center space-x-2 min-w-0">
+              <div className="relative w-8 h-8 rounded-lg overflow-hidden bg-black flex-shrink-0 shadow-xs">
+                <img src={stagedTrack.thumbnail} alt={stagedTrack.title} className="w-full h-full object-cover" />
+                <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                  <Music className="w-3.5 h-3.5 text-white" />
+                </div>
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="font-bold text-xs text-neutral-900 dark:text-white truncate">
+                  {stagedTrack.title}
+                </p>
+                <p className="text-[10px] text-neutral-500 dark:text-neutral-400 truncate">
+                  {stagedTrack.artist} • {stagedTrack.durationFormatted || "3:30"}
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setStagedTrack(null)}
+              className="p-1 rounded-lg text-neutral-400 hover:text-rose-500 cursor-pointer"
+              title="Remove song"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
           </div>
         )}
 
@@ -1050,6 +1170,48 @@ export function ChatInput({
           disabled={disabled}
           className="w-full bg-transparent px-3 py-2 sm:py-2.5 text-sm text-neutral-900 dark:text-neutral-100 placeholder-neutral-400 focus:outline-none resize-none font-sans min-h-[40px] max-h-60 overflow-y-auto custom-scrollbar leading-relaxed"
         />
+
+        {/* Staged Music Track on desktop */}
+        {stagedTrack && (
+          <div className="flex items-center justify-between px-3.5 py-2 mx-3 my-1.5 rounded-xl bg-purple-500/10 dark:bg-purple-950/40 border border-purple-500/30 text-xs shadow-xs animate-in fade-in">
+            <div className="flex items-center space-x-3 min-w-0">
+              <div className="relative w-10 h-10 rounded-lg overflow-hidden bg-black flex-shrink-0 shadow-md">
+                <img src={stagedTrack.thumbnail} alt={stagedTrack.title} className="w-full h-full object-cover" />
+                <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                  <Music className="w-4 h-4 text-white" />
+                </div>
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center space-x-2">
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-purple-600 text-white shadow-xs">
+                    🎵 Song Attached
+                  </span>
+                  <span className="text-[11px] font-mono text-neutral-500 dark:text-neutral-400">
+                    {stagedTrack.durationFormatted || "3:30"}
+                  </span>
+                  <span className="text-neutral-400">•</span>
+                  <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold">
+                    Interactive Player Ready
+                  </span>
+                </div>
+                <p className="font-bold text-sm text-neutral-900 dark:text-white truncate mt-0.5">
+                  {stagedTrack.title}
+                </p>
+                <p className="text-xs text-neutral-600 dark:text-neutral-400 truncate">
+                  {stagedTrack.artist}
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setStagedTrack(null)}
+              className="p-1.5 rounded-lg text-neutral-400 hover:text-rose-500 hover:bg-neutral-200 dark:hover:bg-neutral-800 transition cursor-pointer"
+              title="Remove song"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
 
         {/* File Attachments Staging Area */}
         {stagedFiles.length > 0 && (
