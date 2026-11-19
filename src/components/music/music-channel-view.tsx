@@ -593,6 +593,207 @@ const NAV_TABS = [
   { id: "recent", label: "Recently Played", icon: Clock },
 ];
 
+// ================= YOUTUBE-STYLE 16:9 CARD COMPONENT (1:1 Parity) =================
+interface YouTubeSongCardProps {
+  track: MusicTrack;
+  isThisPlaying: boolean;
+  isLiked: boolean;
+  onPlay: () => void;
+  onToggleLike: (e: React.MouseEvent) => void;
+  onAddToPlaylist: (e: React.MouseEvent) => void;
+  onAddToQueue: (e: React.MouseEvent) => void;
+  onHide?: (e: React.MouseEvent) => void;
+}
+
+export function YouTubeSongCard({
+  track,
+  isThisPlaying,
+  isLiked,
+  onPlay,
+  onToggleLike,
+  onAddToPlaylist,
+  onAddToQueue,
+  onHide,
+}: YouTubeSongCardProps) {
+  const cleanTitle = cleanSongTitle(track.title);
+  const cleanArtist = cleanArtistName(track.artist);
+  const artistInitial = cleanArtist ? cleanArtist.charAt(0).toUpperCase() : "🎵";
+
+  return (
+    <div
+      onClick={onPlay}
+      className={`group cursor-pointer select-none flex flex-col transition-all duration-200 ${
+        isThisPlaying ? "scale-[1.01]" : ""
+      }`}
+    >
+      {/* 16:9 Thumbnail Container matching YouTube 1:1 */}
+      <div className="relative aspect-video w-full rounded-2xl overflow-hidden bg-neutral-900 shadow-md border border-neutral-800/80 group-hover:border-purple-500/50 group-hover:shadow-2xl transition-all duration-300">
+        <img
+          src={track.thumbnail}
+          alt={track.title}
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+          loading="lazy"
+          onError={(e) => {
+            (e.target as HTMLImageElement).src =
+              "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=600&q=80";
+          }}
+        />
+
+        {/* Gradient Shadow Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/30 pointer-events-none" />
+
+        {/* Center Play Button / Soundwave Overlay */}
+        <div
+          className={`absolute inset-0 flex items-center justify-center transition-all duration-200 ${
+            isThisPlaying
+              ? "bg-black/50 opacity-100"
+              : "bg-black/30 opacity-0 group-hover:opacity-100"
+          }`}
+        >
+          {isThisPlaying ? (
+            <div className="flex items-center space-x-1 bg-black/70 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-purple-500/50 shadow-xl">
+              <span className="w-1.5 h-4 bg-purple-400 rounded-full animate-bounce" />
+              <span className="w-1.5 h-6 bg-purple-400 rounded-full animate-[bounce_1s_infinite_200ms]" />
+              <span className="w-1.5 h-3 bg-purple-400 rounded-full animate-[bounce_1s_infinite_400ms]" />
+              <span className="w-1.5 h-5 bg-purple-400 rounded-full animate-[bounce_1s_infinite_100ms]" />
+              <span className="text-xs font-bold text-purple-300 ml-1.5">Playing</span>
+            </div>
+          ) : (
+            <div className="w-12 h-12 rounded-full bg-purple-600/90 hover:bg-purple-500 text-white flex items-center justify-center shadow-2xl group-hover:scale-110 transition-transform">
+              <Play className="w-5 h-5 fill-current ml-0.5" />
+            </div>
+          )}
+        </div>
+
+        {/* Floating Quick Action Overlay on Thumbnail (Top Right) */}
+        <div className="absolute top-2.5 right-2.5 flex items-center space-x-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10">
+          <button
+            type="button"
+            onClick={onToggleLike}
+            className={`w-7 h-7 rounded-full flex items-center justify-center backdrop-blur-md transition cursor-pointer shadow-md ${
+              isLiked
+                ? "bg-rose-600 text-white"
+                : "bg-black/70 hover:bg-black text-white/90 hover:text-white"
+            }`}
+            title={isLiked ? "Unlike" : "Like Song"}
+          >
+            <Heart className={`w-3.5 h-3.5 ${isLiked ? "fill-white text-white" : ""}`} />
+          </button>
+          <button
+            type="button"
+            onClick={onAddToPlaylist}
+            className="w-7 h-7 rounded-full bg-black/70 hover:bg-purple-600 text-white/90 hover:text-white flex items-center justify-center backdrop-blur-md transition cursor-pointer shadow-md"
+            title="Add to Playlist"
+          >
+            <FolderPlus className="w-3.5 h-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={onAddToQueue}
+            className="w-7 h-7 rounded-full bg-black/70 hover:bg-purple-600 text-white/90 hover:text-white flex items-center justify-center backdrop-blur-md transition cursor-pointer shadow-md"
+            title="Add to Queue"
+          >
+            <ListPlus className="w-3.5 h-3.5" />
+          </button>
+          {onHide && (
+            <button
+              type="button"
+              onClick={onHide}
+              className="w-7 h-7 rounded-full bg-black/70 hover:bg-rose-600 text-white/90 hover:text-white flex items-center justify-center backdrop-blur-md transition cursor-pointer shadow-md"
+              title="Hide"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+
+        {/* Always Visible Like indicator if song is liked */}
+        {isLiked && (
+          <div className="absolute top-2.5 left-2.5 w-6 h-6 rounded-full bg-rose-600/90 backdrop-blur-md flex items-center justify-center text-white shadow-md group-hover:hidden">
+            <Heart className="w-3 h-3 fill-white" />
+          </div>
+        )}
+
+        {/* YouTube-style Duration Badge on Bottom Right */}
+        <div className="absolute bottom-2.5 right-2.5 bg-black/85 backdrop-blur-xs text-white text-[11px] font-mono font-semibold px-2 py-0.5 rounded-md shadow-md border border-white/10 flex items-center space-x-1">
+          <span>{track.durationFormatted || "3:30"}</span>
+        </div>
+      </div>
+
+      {/* Info Section below Thumbnail (YouTube 1:1 Parity) */}
+      <div className="flex items-start space-x-3 pt-3 px-0.5">
+        {/* Channel / Artist Avatar Circle */}
+        <div className="relative w-9 h-9 rounded-full bg-gradient-to-br from-purple-700 via-indigo-600 to-pink-600 flex items-center justify-center text-white font-extrabold text-xs shadow-md flex-shrink-0 mt-0.5 border border-purple-500/30 group-hover:ring-2 group-hover:ring-purple-500/50 transition">
+          {isThisPlaying ? (
+            <Disc3 className="w-5 h-5 text-purple-200 animate-spin duration-3000" />
+          ) : (
+            <span>{artistInitial}</span>
+          )}
+        </div>
+
+        {/* Title, Artist, and Meta */}
+        <div className="min-w-0 flex-1">
+          <h4
+            className={`text-sm font-bold line-clamp-2 leading-snug transition-colors duration-150 ${
+              isThisPlaying ? "text-purple-400 font-extrabold" : "text-white group-hover:text-purple-300"
+            }`}
+            title={track.title}
+          >
+            {cleanTitle}
+          </h4>
+
+          {/* Artist Name with Verified Checkmark */}
+          <div className="flex items-center space-x-1.5 mt-1 text-xs text-neutral-400 group-hover:text-neutral-300 transition">
+            <span className="truncate font-medium">{cleanArtist}</span>
+            <span
+              className="w-3.5 h-3.5 rounded-full bg-neutral-800 text-neutral-400 text-[9px] flex items-center justify-center flex-shrink-0 font-bold"
+              title="Verified Artist"
+            >
+              ✓
+            </span>
+          </div>
+
+          {/* Metadata & Quick Action Pills */}
+          <div className="flex items-center justify-between mt-2 pt-1 border-t border-neutral-800/40 text-[11px]">
+            <span className="text-neutral-500 font-mono">
+              {track.durationFormatted || "3:30"} • Live Jam
+            </span>
+
+            <div className="flex items-center space-x-1.5 opacity-80 group-hover:opacity-100 transition">
+              <button
+                type="button"
+                onClick={onAddToPlaylist}
+                className="text-[10px] text-purple-400 hover:text-white font-bold px-2 py-0.5 rounded-md hover:bg-purple-900/40 transition cursor-pointer flex items-center space-x-1 border border-purple-500/30"
+                title="Add to Playlist"
+              >
+                <FolderPlus className="w-3 h-3" />
+                <span>+ Playlist</span>
+              </button>
+              <button
+                type="button"
+                onClick={onAddToQueue}
+                className="text-[10px] text-neutral-400 hover:text-white font-bold px-1.5 py-0.5 rounded-md hover:bg-neutral-800 transition cursor-pointer flex items-center space-x-0.5 border border-neutral-700"
+                title="Add to Queue"
+              >
+                <ListPlus className="w-3 h-3" />
+                <span>Queue</span>
+              </button>
+              <button
+                type="button"
+                onClick={onToggleLike}
+                className="p-1 text-neutral-400 hover:text-rose-400 transition"
+                title={isLiked ? "Unlike" : "Like Song"}
+              >
+                <Heart className={`w-3.5 h-3.5 ${isLiked ? "fill-rose-500 text-rose-500" : ""}`} />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function MusicChannelView({
   currentUser,
   messages,
@@ -1194,106 +1395,31 @@ export function MusicChannelView({
         </div>
       </div>
 
-      {/* Grid of Songs */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+      {/* Grid of Songs (YouTube 1:1 Parity) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-6">
         {catalogTracks.map((t, idx) => {
           const isThisPlaying = currentTrack?.id === t.id && isPlaying;
-          const isLiked = !!likedMap[t.id];
-
           return (
-            <div
+            <YouTubeSongCard
               key={`${t.id}-${idx}`}
-              onClick={() => handlePlaySong(t)}
-              className={`group p-2.5 rounded-xl border transition cursor-pointer flex flex-col justify-between ${
-                isThisPlaying
-                  ? "bg-purple-950/40 border-purple-500/60 shadow-lg shadow-purple-950/40"
-                  : "bg-neutral-900/70 hover:bg-neutral-800/80 border-neutral-800/80 hover:border-neutral-700"
-              }`}
-            >
-              <div className="relative aspect-video rounded-lg overflow-hidden bg-neutral-950 mb-2">
-                <img
-                  src={t.thumbnail}
-                  alt={t.title}
-                  className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
-                />
-                <div
-                  className={`absolute inset-0 flex items-center justify-center transition ${
-                    isThisPlaying ? "bg-black/50" : "bg-black/30 opacity-0 group-hover:opacity-100"
-                  }`}
-                >
-                  {isThisPlaying ? (
-                    <div className="flex items-center space-x-0.5">
-                      <span className="w-1 h-3.5 bg-purple-400 rounded-full animate-bounce" />
-                      <span className="w-1 h-5 bg-purple-400 rounded-full animate-[bounce_1s_infinite_200ms]" />
-                      <span className="w-1 h-3 bg-purple-400 rounded-full animate-[bounce_1s_infinite_400ms]" />
-                    </div>
-                  ) : (
-                    <div className="w-7 h-7 rounded-full bg-purple-600 flex items-center justify-center shadow-md">
-                      <Play className="w-3.5 h-3.5 fill-white text-white ml-0.5" />
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div>
-                <p
-                  className={`text-xs font-bold truncate ${
-                    isThisPlaying ? "text-purple-400" : "text-white"
-                  }`}
-                  title={t.title}
-                >
-                  {cleanSongTitle(t.title)}
-                </p>
-                <p className="text-[11px] text-neutral-400 truncate mt-0.5" title={t.artist}>
-                  {cleanArtistName(t.artist)}
-                </p>
-
-                <div className="flex items-center justify-between mt-2 pt-1 border-t border-neutral-800/50">
-                  <span className="text-[10px] text-neutral-500 font-mono">
-                    {t.durationFormatted || "3:30"}
-                  </span>
-                  <div className="flex items-center space-x-1">
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSongToAddToPlaylist(t);
-                      }}
-                      className="text-[10px] text-purple-400 hover:text-white font-bold px-1.5 py-0.5 rounded hover:bg-purple-900/40 transition cursor-pointer flex items-center space-x-0.5 border border-purple-500/30"
-                      title="Add to Playlist"
-                    >
-                      <FolderPlus className="w-3 h-3" />
-                      <span>Playlist</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        addToQueue(t);
-                        showToast("Added to queue");
-                      }}
-                      className="p-1 text-neutral-400 hover:text-white rounded hover:bg-neutral-800 transition"
-                      title="Add to Queue"
-                    >
-                      <ListPlus className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleLike(t);
-                      }}
-                      className="p-1 text-neutral-400 hover:text-rose-400 rounded hover:bg-neutral-800 transition"
-                      title={isLiked ? "Unlike" : "Like"}
-                    >
-                      <Heart
-                        className={`w-3.5 h-3.5 ${isLiked ? "fill-rose-500 text-rose-500" : ""}`}
-                      />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
+              track={t}
+              isThisPlaying={isThisPlaying}
+              isLiked={!!likedMap[t.id]}
+              onPlay={() => handlePlaySong(t)}
+              onToggleLike={(e) => {
+                e.stopPropagation();
+                toggleLike(t);
+              }}
+              onAddToPlaylist={(e) => {
+                e.stopPropagation();
+                setSongToAddToPlaylist(t);
+              }}
+              onAddToQueue={(e) => {
+                e.stopPropagation();
+                addToQueue(t);
+                showToast("Added to queue");
+              }}
+            />
           );
         })}
       </div>
@@ -1688,89 +1814,30 @@ export function MusicChannelView({
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-6">
           {likedTracks.map((t, idx) => {
             const isThisPlaying = currentTrack?.id === t.id && isPlaying;
             return (
-              <div
+              <YouTubeSongCard
                 key={`${t.id}-${idx}`}
-                onClick={() => handlePlaySong(t)}
-                className={`group p-2.5 rounded-xl border transition cursor-pointer flex flex-col justify-between ${
-                  isThisPlaying
-                    ? "bg-purple-950/40 border-purple-500/60 shadow-lg shadow-purple-950/40"
-                    : "bg-neutral-900/70 hover:bg-neutral-800/80 border-neutral-800/80 hover:border-neutral-700"
-                }`}
-              >
-                <div className="relative aspect-video rounded-lg overflow-hidden bg-neutral-950 mb-2">
-                  <img
-                    src={t.thumbnail}
-                    alt={t.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
-                  />
-                  <div
-                    className={`absolute inset-0 flex items-center justify-center transition ${
-                      isThisPlaying ? "bg-black/50" : "bg-black/30 opacity-0 group-hover:opacity-100"
-                    }`}
-                  >
-                    {isThisPlaying ? (
-                      <div className="flex items-center space-x-0.5">
-                        <span className="w-1 h-3.5 bg-purple-400 rounded-full animate-bounce" />
-                        <span className="w-1 h-5 bg-purple-400 rounded-full animate-[bounce_1s_infinite_200ms]" />
-                        <span className="w-1 h-3 bg-purple-400 rounded-full animate-[bounce_1s_infinite_400ms]" />
-                      </div>
-                    ) : (
-                      <div className="w-7 h-7 rounded-full bg-purple-600 flex items-center justify-center shadow-md">
-                        <Play className="w-3.5 h-3.5 fill-white text-white ml-0.5" />
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div>
-                  <p
-                    className={`text-xs font-bold truncate ${
-                      isThisPlaying ? "text-purple-400" : "text-white"
-                    }`}
-                    title={t.title}
-                  >
-                    {cleanSongTitle(t.title)}
-                  </p>
-                  <p className="text-[11px] text-neutral-400 truncate mt-0.5" title={t.artist}>
-                    {cleanArtistName(t.artist)}
-                  </p>
-
-                  <div className="flex items-center justify-between mt-2 pt-1 border-t border-neutral-800/50">
-                    <span className="text-[10px] text-neutral-500 font-mono">
-                      {t.durationFormatted || "3:30"}
-                    </span>
-                    <div className="flex items-center space-x-1">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSongToAddToPlaylist(t);
-                        }}
-                        className="text-[10px] text-purple-400 hover:text-white font-bold px-1.5 py-0.5 rounded hover:bg-purple-900/40 transition cursor-pointer flex items-center space-x-0.5 border border-purple-500/30"
-                        title="Add to Playlist"
-                      >
-                        <FolderPlus className="w-3 h-3" />
-                        <span>Playlist</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleLike(t);
-                        }}
-                        className="p-1 text-rose-500 hover:text-neutral-400 rounded hover:bg-neutral-800 transition"
-                        title="Remove from Liked"
-                      >
-                        <Heart className="w-3.5 h-3.5 fill-rose-500" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
+                track={t}
+                isThisPlaying={isThisPlaying}
+                isLiked={true}
+                onPlay={() => handlePlaySong(t)}
+                onToggleLike={(e) => {
+                  e.stopPropagation();
+                  toggleLike(t);
+                }}
+                onAddToPlaylist={(e) => {
+                  e.stopPropagation();
+                  setSongToAddToPlaylist(t);
+                }}
+                onAddToQueue={(e) => {
+                  e.stopPropagation();
+                  addToQueue(t);
+                  showToast("Added to queue");
+                }}
+              />
             );
           })}
         </div>
@@ -1845,103 +1912,30 @@ export function MusicChannelView({
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-6">
           {recentTracks.map((t, idx) => {
             const isThisPlaying = currentTrack?.id === t.id && isPlaying;
-            const isLiked = !!likedMap[t.id];
             return (
-              <div
+              <YouTubeSongCard
                 key={`${t.id}-${idx}`}
-                onClick={() => handlePlaySong(t)}
-                className={`group p-2.5 rounded-xl border transition cursor-pointer flex flex-col justify-between ${
-                  isThisPlaying
-                    ? "bg-purple-950/40 border-purple-500/60 shadow-lg shadow-purple-950/40"
-                    : "bg-neutral-900/70 hover:bg-neutral-800/80 border-neutral-800/80 hover:border-neutral-700"
-                }`}
-              >
-                <div className="relative aspect-video rounded-lg overflow-hidden bg-neutral-950 mb-2">
-                  <img
-                    src={t.thumbnail}
-                    alt={t.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
-                  />
-                  <div
-                    className={`absolute inset-0 flex items-center justify-center transition ${
-                      isThisPlaying ? "bg-black/50" : "bg-black/30 opacity-0 group-hover:opacity-100"
-                    }`}
-                  >
-                    {isThisPlaying ? (
-                      <div className="flex items-center space-x-0.5">
-                        <span className="w-1 h-3.5 bg-purple-400 rounded-full animate-bounce" />
-                        <span className="w-1 h-5 bg-purple-400 rounded-full animate-[bounce_1s_infinite_200ms]" />
-                        <span className="w-1 h-3 bg-purple-400 rounded-full animate-[bounce_1s_infinite_400ms]" />
-                      </div>
-                    ) : (
-                      <div className="w-7 h-7 rounded-full bg-purple-600 flex items-center justify-center shadow-md">
-                        <Play className="w-3.5 h-3.5 fill-white text-white ml-0.5" />
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div>
-                  <p
-                    className={`text-xs font-bold truncate ${
-                      isThisPlaying ? "text-purple-400" : "text-white"
-                    }`}
-                    title={t.title}
-                  >
-                    {cleanSongTitle(t.title)}
-                  </p>
-                  <p className="text-[11px] text-neutral-400 truncate mt-0.5" title={t.artist}>
-                    {cleanArtistName(t.artist)}
-                  </p>
-
-                  <div className="flex items-center justify-between mt-2 pt-1 border-t border-neutral-800/50">
-                    <span className="text-[10px] text-neutral-500 font-mono">
-                      {t.durationFormatted || "3:30"}
-                    </span>
-                    <div className="flex items-center space-x-1">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSongToAddToPlaylist(t);
-                        }}
-                        className="text-[10px] text-purple-400 hover:text-white font-bold px-1.5 py-0.5 rounded hover:bg-purple-900/40 transition cursor-pointer flex items-center space-x-0.5 border border-purple-500/30"
-                        title="Add to Playlist"
-                      >
-                        <FolderPlus className="w-3 h-3" />
-                        <span>Playlist</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          addToQueue(t);
-                          showToast("Added to queue");
-                        }}
-                        className="p-1 text-neutral-400 hover:text-white rounded hover:bg-neutral-800 transition"
-                        title="Add to Queue"
-                      >
-                        <ListPlus className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleLike(t);
-                        }}
-                        className="p-1 text-neutral-400 hover:text-rose-400 rounded hover:bg-neutral-800 transition"
-                      >
-                        <Heart
-                          className={`w-3.5 h-3.5 ${isLiked ? "fill-rose-500 text-rose-500" : ""}`}
-                        />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
+                track={t}
+                isThisPlaying={isThisPlaying}
+                isLiked={!!likedMap[t.id]}
+                onPlay={() => handlePlaySong(t)}
+                onToggleLike={(e) => {
+                  e.stopPropagation();
+                  toggleLike(t);
+                }}
+                onAddToPlaylist={(e) => {
+                  e.stopPropagation();
+                  setSongToAddToPlaylist(t);
+                }}
+                onAddToQueue={(e) => {
+                  e.stopPropagation();
+                  addToQueue(t);
+                  showToast("Added to queue");
+                }}
+              />
             );
           })}
         </div>
@@ -2926,6 +2920,7 @@ export function MusicChannelView({
             )}
 
             {/* Scrollable Horizontal Pill Bar */}
+            {/* Scrollable Horizontal Pill Bar matching YouTube 1:1 */}
             <div className="flex items-center space-x-2 overflow-x-auto pb-2 scrollbar-none">
               {filteredCategories.map((cat) => {
                 const isActive = activeCategory === cat.id;
@@ -2934,10 +2929,10 @@ export function MusicChannelView({
                     key={cat.id}
                     type="button"
                     onClick={() => setActiveCategory(cat.id)}
-                    className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-2 flex-shrink-0 cursor-pointer shadow-xs border ${
+                    className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all duration-150 flex items-center space-x-1.5 flex-shrink-0 cursor-pointer shadow-xs border ${
                       isActive
-                        ? "bg-purple-600 text-white border-purple-500 shadow-purple-900/40 scale-102"
-                        : "bg-neutral-900 text-neutral-400 hover:text-white border-neutral-800 hover:border-neutral-700"
+                        ? "bg-white text-neutral-950 border-white font-bold shadow-md scale-102"
+                        : "bg-neutral-800/90 hover:bg-neutral-700 text-neutral-200 hover:text-white border-neutral-700/60"
                     }`}
                   >
                     <span>{cat.icon}</span>
@@ -2947,136 +2942,51 @@ export function MusicChannelView({
               })}
             </div>
 
-            {/* ENDLESS RECOMMENDATIONS GRID (Loads dynamically with infinite scrolling!) */}
-            <div className="space-y-3 pt-2">
+            {/* ENDLESS RECOMMENDATIONS GRID (YouTube 1:1 Parity) */}
+            <div className="space-y-4 pt-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-extrabold text-neutral-300 uppercase tracking-wider flex items-center space-x-1.5">
+                  <span className="w-2 h-2 rounded-full bg-purple-500 animate-pulse" />
                   <span>{allCategories.find((c) => c.id === activeCategory)?.name || activeCategory}</span>
                   <span className="text-neutral-500 font-normal">• Endless Stream (Page {page})</span>
                 </span>
-                <span className="text-[11px] text-purple-400 font-semibold bg-purple-500/10 px-2 py-0.5 rounded-full">
+                <span className="text-[11px] text-purple-400 font-semibold bg-purple-500/10 px-2.5 py-0.5 rounded-full border border-purple-500/20">
                   ⚡ Auto-Loading on Scroll
                 </span>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+              {/* YouTube-style 16:9 4-column Card Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-6">
                 {catalogTracks
                   .filter((t) => !hiddenTrackIds.includes(t.id))
                   .map((t, idx) => {
                     const isThisPlaying = currentTrack?.id === t.id && isPlaying;
                     return (
-                      <div
+                      <YouTubeSongCard
                         key={`${t.id}-${idx}`}
-                        onClick={() => handlePlaySong(t)}
-                        className={`group p-3 rounded-xl bg-neutral-900/60 border transition-all duration-200 flex items-center space-x-3 cursor-pointer select-none relative ${
-                          isThisPlaying
-                            ? "border-purple-500 ring-2 ring-purple-500/30 shadow-lg bg-purple-950/20"
-                            : "border-neutral-800/80 hover:border-purple-500/60 hover:shadow-md hover:-translate-y-0.5"
-                        }`}
-                      >
-                        {/* Artwork */}
-                        <div className="relative w-14 h-14 rounded-xl overflow-hidden flex-shrink-0 shadow-sm bg-neutral-950">
-                          <img
-                            src={t.thumbnail}
-                            alt={t.title}
-                            className="w-full h-full object-cover group-hover:scale-110 transition duration-300"
-                          />
-                          <div
-                            className={`absolute inset-0 flex items-center justify-center transition ${
-                              isThisPlaying
-                                ? "bg-black/50"
-                                : "bg-black/30 opacity-0 group-hover:opacity-100"
-                            }`}
-                          >
-                            {isThisPlaying ? (
-                              <div className="flex items-center space-x-0.5">
-                                <span className="w-1 h-3.5 bg-purple-400 rounded-full animate-bounce" />
-                                <span className="w-1 h-5 bg-purple-400 rounded-full animate-[bounce_1s_infinite_200ms]" />
-                                <span className="w-1 h-3 bg-purple-400 rounded-full animate-[bounce_1s_infinite_400ms]" />
-                              </div>
-                            ) : (
-                              <div className="w-7 h-7 rounded-full bg-purple-600 flex items-center justify-center shadow-md">
-                                <Play className="w-3.5 h-3.5 fill-white text-white ml-0.5" />
-                              </div>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Track Info & Actions */}
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-start justify-between">
-                            <p
-                              className={`text-xs font-bold truncate pr-1 ${
-                                isThisPlaying ? "text-purple-400" : "text-white"
-                              }`}
-                              title={t.title}
-                            >
-                              {cleanSongTitle(t.title)}
-                            </p>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                hideTrack(t.id);
-                                showToast(`Hidden song from recommendations`);
-                              }}
-                              className="p-1 -mr-1 -mt-1 text-neutral-500 hover:text-rose-400 opacity-0 group-hover:opacity-100 rounded transition cursor-pointer"
-                              title="Hide from suggestions"
-                            >
-                              <X className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                          <p className="text-[11px] text-neutral-400 truncate mt-0.5" title={t.artist}>
-                            {cleanArtistName(t.artist)}
-                          </p>
-
-                          <div className="flex items-center justify-between mt-2">
-                            <span className="text-[10px] text-neutral-500 font-mono">
-                              {t.durationFormatted || "3:30"}
-                            </span>
-                            <div className="flex items-center space-x-1.5">
-                              {/* + Add to Playlist Button on Every Song Card */}
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSongToAddToPlaylist(t);
-                                }}
-                                className="text-[10px] text-purple-400 hover:text-white font-bold px-1.5 py-0.5 rounded hover:bg-purple-900/40 transition cursor-pointer flex items-center space-x-0.5 border border-purple-500/30"
-                                title="Add to Playlist"
-                              >
-                                <FolderPlus className="w-3 h-3" />
-                                <span>Playlist</span>
-                              </button>
-
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  addToQueue(t);
-                                  showToast(`Added to queue`);
-                                }}
-                                className="text-[10px] text-neutral-300 hover:text-white font-bold px-1.5 py-0.5 rounded hover:bg-neutral-800 transition cursor-pointer"
-                                title="Add to Queue"
-                              >
-                                + Queue
-                              </button>
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  toggleLike(t);
-                                }}
-                                className="p-1 text-neutral-400 hover:text-rose-400"
-                              >
-                                <Heart
-                                  className={`w-3.5 h-3.5 ${likedMap[t.id] ? "fill-rose-500 text-rose-500" : ""}`}
-                                />
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
+                        track={t}
+                        isThisPlaying={isThisPlaying}
+                        isLiked={!!likedMap[t.id]}
+                        onPlay={() => handlePlaySong(t)}
+                        onToggleLike={(e) => {
+                          e.stopPropagation();
+                          toggleLike(t);
+                        }}
+                        onAddToPlaylist={(e) => {
+                          e.stopPropagation();
+                          setSongToAddToPlaylist(t);
+                        }}
+                        onAddToQueue={(e) => {
+                          e.stopPropagation();
+                          addToQueue(t);
+                          showToast(`Added to queue`);
+                        }}
+                        onHide={(e) => {
+                          e.stopPropagation();
+                          hideTrack(t.id);
+                          showToast(`Hidden song from recommendations`);
+                        }}
+                      />
                     );
                   })}
               </div>
