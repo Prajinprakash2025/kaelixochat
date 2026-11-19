@@ -44,9 +44,10 @@ import {
   Trash2,
   ArrowLeft,
 } from "lucide-react";
-import { MusicTrack, WorkspaceMember, Message } from "@/types";
+import { MusicTrack, WorkspaceMember, Message, Channel } from "@/types";
 import { SyncedMusicPlayer } from "./synced-music-player";
 import { MusicReelsView } from "./music-reels-view";
+import { ShareSongModal } from "./share-song-modal";
 import { useMusic } from "@/context/music-context";
 import { usePreferences } from "@/context/preferences-context";
 
@@ -73,10 +74,87 @@ export function stageTrackToChat(track: MusicTrack) {
   }
 }
 
+// Helper to create a sleek compact 32px drag preview chip instead of dragging the massive full-size card
+export function createCompactDragGhost(e: React.DragEvent, track: MusicTrack) {
+  if (typeof document === "undefined") return;
+
+  const ghost = document.createElement("div");
+  ghost.style.position = "fixed";
+  ghost.style.top = "-9999px";
+  ghost.style.left = "-9999px";
+  ghost.style.display = "flex";
+  ghost.style.alignItems = "center";
+  ghost.style.gap = "8px";
+  ghost.style.width = "220px";
+  ghost.style.maxWidth = "240px";
+  ghost.style.padding = "5px 8px";
+  ghost.style.background = "#18181b";
+  ghost.style.border = "1.5px solid #10b981";
+  ghost.style.borderRadius = "12px";
+  ghost.style.boxShadow = "0 10px 25px -3px rgba(0, 0, 0, 0.7), 0 4px 6px -2px rgba(0, 0, 0, 0.5)";
+  ghost.style.color = "#ffffff";
+  ghost.style.zIndex = "999999";
+  ghost.style.pointerEvents = "none";
+  ghost.style.fontFamily = "system-ui, -apple-system, sans-serif";
+
+  const img = document.createElement("img");
+  img.src =
+    track.thumbnail ||
+    "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=120&q=80";
+  img.style.width = "30px";
+  img.style.height = "30px";
+  img.style.borderRadius = "6px";
+  img.style.objectFit = "cover";
+  img.style.flexShrink = "0";
+  ghost.appendChild(img);
+
+  const textWrap = document.createElement("div");
+  textWrap.style.flex = "1";
+  textWrap.style.minWidth = "0";
+  textWrap.style.overflow = "hidden";
+
+  const titleEl = document.createElement("div");
+  titleEl.innerText = cleanSongTitle(track.title);
+  titleEl.style.fontSize = "11px";
+  titleEl.style.fontWeight = "700";
+  titleEl.style.color = "#ffffff";
+  titleEl.style.whiteSpace = "nowrap";
+  titleEl.style.overflow = "hidden";
+  titleEl.style.textOverflow = "ellipsis";
+  titleEl.style.lineHeight = "1.2";
+  textWrap.appendChild(titleEl);
+
+  const subEl = document.createElement("div");
+  subEl.innerText = "🎵 Drop to Share";
+  subEl.style.fontSize = "9px";
+  subEl.style.fontWeight = "600";
+  subEl.style.color = "#34d399";
+  subEl.style.whiteSpace = "nowrap";
+  subEl.style.overflow = "hidden";
+  subEl.style.textOverflow = "ellipsis";
+  textWrap.appendChild(subEl);
+
+  ghost.appendChild(textWrap);
+  document.body.appendChild(ghost);
+
+  e.dataTransfer.setDragImage(ghost, 20, 20);
+
+  setTimeout(() => {
+    if (ghost.parentNode) {
+      ghost.parentNode.removeChild(ghost);
+    }
+  }, 0);
+}
+
 interface MusicChannelViewProps {
   currentUser: WorkspaceMember;
   messages: Message[];
   onSendMessage: (content: string) => void;
+  channels?: Channel[];
+  members?: WorkspaceMember[];
+  onSelectChannel?: (channelId: string) => void;
+  onSelectDirectMessage?: (member: WorkspaceMember) => void;
+  onSendMessageToTarget?: (targetChannelId: string, content: string) => Promise<void> | void;
 }
 
 export interface Playlist {
@@ -656,6 +734,7 @@ export function YouTubeSongCard({
     e.dataTransfer.setData("text/plain", `🎶 **${cleanTitle}** - ${cleanArtist}\n${shareUrl}`);
     e.dataTransfer.setData("text/uri-list", shareUrl);
     e.dataTransfer.effectAllowed = "copy";
+    createCompactDragGhost(e, track);
   };
 
   const handleShareClick = (e: React.MouseEvent) => {
@@ -663,7 +742,11 @@ export function YouTubeSongCard({
     if (onShareToChat) {
       onShareToChat(e);
     } else {
-      stageTrackToChat(track);
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("kaelixo:open-share-song-modal", { detail: track })
+        );
+      }
     }
   };
 
@@ -893,11 +976,31 @@ export function MusicChannelView({
   currentUser,
   messages,
   onSendMessage,
+  channels = [],
+  members = [],
+  onSelectChannel,
+  onSelectDirectMessage,
+  onSendMessageToTarget,
 }: MusicChannelViewProps) {
   const { currentTheme, resolvedMode } = usePreferences();
   const isDark = resolvedMode === "dark";
   const themeAccent = currentTheme?.accentColor || "#84cc16";
   const themeTextColor = getContrastTextColor(themeAccent);
+
+  // Forward / Share Song Modal State (WhatsApp / Slack Parity)
+  const [shareModalTrack, setShareModalTrack] = useState<MusicTrack | null>(null);
+
+  useEffect(() => {
+    const handleOpenShare = (e: CustomEvent<MusicTrack>) => {
+      if (e.detail) {
+        setShareModalTrack(e.detail);
+      }
+    };
+    window.addEventListener("kaelixo:open-share-song-modal", handleOpenShare as EventListener);
+    return () => {
+      window.removeEventListener("kaelixo:open-share-song-modal", handleOpenShare as EventListener);
+    };
+  }, []);
 
   const {
     currentTrack,
@@ -1530,6 +1633,7 @@ export function MusicChannelView({
                 addToQueue(t);
                 showToast("Added to queue");
               }}
+              onShareToChat={() => setShareModalTrack(t)}
             />
           );
         })}
@@ -2002,6 +2106,7 @@ export function MusicChannelView({
                   addToQueue(t);
                   showToast("Added to queue");
                 }}
+                onShareToChat={() => setShareModalTrack(t)}
               />
             );
           })}
@@ -2112,6 +2217,7 @@ export function MusicChannelView({
                   addToQueue(t);
                   showToast("Added to queue");
                 }}
+                onShareToChat={() => setShareModalTrack(t)}
               />
             );
           })}
@@ -2583,6 +2689,7 @@ export function MusicChannelView({
                   e.dataTransfer.setData("text/plain", `🎶 **${cleanSongTitle(activeDisplayTrack.title)}** - ${cleanArtistName(activeDisplayTrack.artist)}\n${shareUrl}`);
                   e.dataTransfer.setData("text/uri-list", shareUrl);
                   e.dataTransfer.effectAllowed = "copy";
+                  createCompactDragGhost(e, activeDisplayTrack);
                 }}
                 className="relative w-36 h-36 sm:w-44 sm:h-44 rounded-2xl overflow-hidden shadow-md dark:shadow-2xl bg-neutral-100 dark:bg-neutral-950 flex-shrink-0 group cursor-grab active:cursor-grabbing"
                 title={`${cleanSongTitle(activeDisplayTrack.title)} - ${cleanArtistName(activeDisplayTrack.artist)} (Drag to chat)`}
@@ -2741,12 +2848,9 @@ export function MusicChannelView({
                   {/* Share to Chat button */}
                   <button
                     type="button"
-                    onClick={() => {
-                      stageTrackToChat(activeDisplayTrack);
-                      showToast("Song staged in chat composer! Switch to any chat to send.");
-                    }}
+                    onClick={() => setShareModalTrack(activeDisplayTrack)}
                     className="p-2 text-neutral-500 hover:text-sky-500 dark:text-neutral-400 dark:hover:text-sky-400 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 transition cursor-pointer"
-                    title="Share current song to chat"
+                    title="Forward song to chat or colleague"
                   >
                     <Share2 className="w-4 h-4" />
                   </button>
@@ -2866,6 +2970,7 @@ export function MusicChannelView({
                       e.dataTransfer.setData("text/plain", `🎶 **${cleanSongTitle(track.title)}** - ${cleanArtistName(track.artist)}\n${shareUrl}`);
                       e.dataTransfer.setData("text/uri-list", shareUrl);
                       e.dataTransfer.effectAllowed = "copy";
+                      createCompactDragGhost(e, track);
                     }}
                     onClick={() => handlePlaySong(track, trendingTracks)}
                     className="group flex flex-col space-y-2 cursor-pointer cursor-grab active:cursor-grabbing relative"
@@ -2886,11 +2991,10 @@ export function MusicChannelView({
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
-                            stageTrackToChat(track);
-                            showToast("Song staged in chat composer!");
+                            setShareModalTrack(track);
                           }}
                           className="w-7 h-7 rounded-full bg-black/70 hover:bg-sky-600 text-white flex items-center justify-center transition shadow-md cursor-pointer"
-                          title="Share to chat"
+                          title="Forward song to chat or colleague"
                         >
                           <Share2 className="w-3.5 h-3.5" />
                         </button>
@@ -3323,6 +3427,7 @@ export function MusicChannelView({
                           hideTrack(t.id);
                           showToast(`Hidden song from recommendations`);
                         }}
+                        onShareToChat={() => setShareModalTrack(t)}
                       />
                     );
                   })}
@@ -3652,6 +3757,25 @@ export function MusicChannelView({
           </div>
         </div>
       )}
+
+      {/* Share / Forward Song Modal (WhatsApp / Slack Parity as requested by user) */}
+      <ShareSongModal
+        isOpen={Boolean(shareModalTrack)}
+        onClose={() => setShareModalTrack(null)}
+        track={shareModalTrack}
+        currentUser={currentUser}
+        channels={channels}
+        members={members}
+        onSendToTarget={async (targetId, content) => {
+          if (onSendMessageToTarget) {
+            await onSendMessageToTarget(targetId, content);
+          } else {
+            onSendMessage(content);
+          }
+        }}
+        onSelectChannel={onSelectChannel}
+        onSelectDirectMessage={onSelectDirectMessage}
+      />
     </div>
   );
 }

@@ -106,6 +106,24 @@ export function ChatInput({
 
   // Listen for global music staging events (e.g. from Drag & Drop or Share to Chat)
   useEffect(() => {
+    // Check initial staged track from window or sessionStorage
+    if (typeof window !== "undefined") {
+      const windowTrack = (window as any).__stagedMusicTrack;
+      if (windowTrack) {
+        setStagedTrack(windowTrack);
+        (window as any).__stagedMusicTrack = null;
+        sessionStorage.removeItem("kaelixo-staged-music-track");
+      } else {
+        const stored = sessionStorage.getItem("kaelixo-staged-music-track");
+        if (stored) {
+          try {
+            setStagedTrack(JSON.parse(stored));
+            sessionStorage.removeItem("kaelixo-staged-music-track");
+          } catch {}
+        }
+      }
+    }
+
     const handleStageTrack = (e: Event) => {
       const customEvent = e as CustomEvent<MusicTrack>;
       if (customEvent.detail) {
@@ -124,7 +142,7 @@ export function ChatInput({
     return () => {
       window.removeEventListener("kaelixo:stage-music-track", handleStageTrack);
     };
-  }, []);
+  }, [channelId]);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);

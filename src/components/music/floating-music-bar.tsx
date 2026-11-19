@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Play,
   Pause,
@@ -9,6 +9,10 @@ import {
   Maximize2,
   Volume2,
   VolumeX,
+  GripVertical,
+  Minus,
+  ChevronUp,
+  X,
   Radio,
   Users,
 } from "lucide-react";
@@ -31,22 +35,222 @@ export function FloatingMusicBar() {
     syncDriftSeconds,
   } = useMusic();
 
-  if (!currentTrack) return null;
+  const [position, setPosition] = useState<{ x: number; y: number } | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(false);
+  const [isDismissed, setIsDismissed] = useState(false);
+
+  const barRef = useRef<HTMLDivElement>(null);
+  const dragStartRef = useRef<{ mouseX: number; mouseY: number; startX: number; startY: number }>({
+    mouseX: 0,
+    mouseY: 0,
+    startX: 0,
+    startY: 0,
+  });
+
+  // Load saved position or default safely above chat composer (bottom: 120px, right: 24px)
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const saved = sessionStorage.getItem("kaelixo-floating-music-pos");
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (typeof parsed.x === "number" && typeof parsed.y === "number") {
+            // Validate still on screen
+            const validX = Math.min(Math.max(10, parsed.x), window.innerWidth - 100);
+            const validY = Math.min(Math.max(10, parsed.y), window.innerHeight - 60);
+            setPosition({ x: validX, y: validY });
+            return;
+          }
+        } catch {}
+      }
+      // Default position: floating well above bottom chat composer (bottom: 120px)
+      const defaultX = Math.max(16, window.innerWidth - 380);
+      const defaultY = Math.max(60, window.innerHeight - 150);
+      setPosition({ x: defaultX, y: defaultY });
+    }
+  }, []);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    setIsDragging(true);
+
+    const currentX = position?.x ?? (window.innerWidth - 380);
+    const currentY = position?.y ?? (window.innerHeight - 150);
+
+    dragStartRef.current = {
+      mouseX: e.clientX,
+      mouseY: e.clientY,
+      startX: currentX,
+      startY: currentY,
+    };
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      const deltaX = moveEvent.clientX - dragStartRef.current.mouseX;
+      const deltaY = moveEvent.clientY - dragStartRef.current.mouseY;
+
+      const barWidth = barRef.current?.offsetWidth || 340;
+      const barHeight = barRef.current?.offsetHeight || 60;
+
+      const newX = Math.min(
+        Math.max(10, dragStartRef.current.startX + deltaX),
+        window.innerWidth - barWidth - 10
+      );
+      const newY = Math.min(
+        Math.max(10, dragStartRef.current.startY + deltaY),
+        window.innerHeight - barHeight - 10
+      );
+
+      const nextPos = { x: newX, y: newY };
+      setPosition(nextPos);
+      sessionStorage.setItem("kaelixo-floating-music-pos", JSON.stringify(nextPos));
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+  };
+
+  // Touch drag support for mobile / tablets
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length !== 1) return;
+    const touch = e.touches[0];
+    setIsDragging(true);
+
+    const currentX = position?.x ?? (window.innerWidth - 380);
+    const currentY = position?.y ?? (window.innerHeight - 150);
+
+    dragStartRef.current = {
+      mouseX: touch.clientX,
+      mouseY: touch.clientY,
+      startX: currentX,
+      startY: currentY,
+    };
+
+    const handleTouchMove = (moveEvent: TouchEvent) => {
+      if (moveEvent.touches.length !== 1) return;
+      const moveTouch = moveEvent.touches[0];
+      const deltaX = moveTouch.clientX - dragStartRef.current.mouseX;
+      const deltaY = moveTouch.clientY - dragStartRef.current.mouseY;
+
+      const barWidth = barRef.current?.offsetWidth || 320;
+      const barHeight = barRef.current?.offsetHeight || 60;
+
+      const newX = Math.min(
+        Math.max(10, dragStartRef.current.startX + deltaX),
+        window.innerWidth - barWidth - 10
+      );
+      const newY = Math.min(
+        Math.max(10, dragStartRef.current.startY + deltaY),
+        window.innerHeight - barHeight - 10
+      );
+
+      const nextPos = { x: newX, y: newY };
+      setPosition(nextPos);
+    };
+
+    const handleTouchEnd = () => {
+      setIsDragging(false);
+      window.removeEventListener("touchmove", handleTouchMove);
+      window.removeEventListener("touchend", handleTouchEnd);
+    };
+
+    window.addEventListener("touchmove", handleTouchMove, { passive: false });
+    window.addEventListener("touchend", handleTouchEnd);
+  };
+
+  if (!currentTrack || isDismissed) return null;
 
   const handleOpenPlayer = () => {
     unlockMobileAudio();
     setIsPlayerOpen(true);
   };
 
+  // Minimized Compact Pill Mode (takes minimal screen space and completely frees up chat input)
+  if (isMinimized) {
+    return (
+      <div
+        ref={barRef}
+        style={{
+          left: position ? `${position.x}px` : undefined,
+          top: position ? `${position.y}px` : undefined,
+        }}
+        className={`fixed z-50 flex items-center space-x-2 p-1.5 pr-2.5 rounded-full bg-neutral-900/95 text-white border border-neutral-700 shadow-2xl backdrop-blur-xl select-none transition-shadow ${
+          isDragging ? "shadow-emerald-500/30 ring-2 ring-emerald-500 cursor-grabbing" : ""
+        } ${!position ? "bottom-28 right-6" : ""}`}
+      >
+        <div
+          onMouseDown={handleMouseDown}
+          onTouchStart={handleTouchStart}
+          className="cursor-grab active:cursor-grabbing p-1 text-neutral-400 hover:text-white"
+          title="Drag to move mini bar"
+        >
+          <GripVertical className="w-3.5 h-3.5" />
+        </div>
+        <img
+          src={currentTrack.thumbnail}
+          alt={currentTrack.title}
+          className={`w-7 h-7 rounded-full object-cover ${isPlaying ? "animate-spin duration-3000" : ""}`}
+        />
+        <span className="text-xs font-bold max-w-[120px] truncate">{currentTrack.title}</span>
+        <button
+          type="button"
+          onClick={() => {
+            unlockMobileAudio();
+            togglePlay();
+          }}
+          className="p-1 rounded-full bg-emerald-500 text-black hover:bg-emerald-400 transition cursor-pointer"
+          title={isPlaying ? "Pause" : "Play"}
+        >
+          {isPlaying ? <Pause className="w-3 h-3 fill-current" /> : <Play className="w-3 h-3 fill-current ml-0.5" />}
+        </button>
+        <button
+          type="button"
+          onClick={() => setIsMinimized(false)}
+          className="p-1 text-neutral-400 hover:text-white rounded-md transition cursor-pointer"
+          title="Expand music bar"
+        >
+          <ChevronUp className="w-3.5 h-3.5" />
+        </button>
+      </div>
+    );
+  }
+
+  // Full Floating Audio Bar (Draggable Anywhere)
   return (
     <aside
+      ref={barRef}
       aria-label="Floating audio player"
-      className="fixed bottom-20 right-3 left-3 sm:left-auto md:bottom-6 md:right-6 z-40 flex items-center p-2.5 rounded-2xl bg-neutral-900/95 text-white border border-neutral-700/80 shadow-2xl backdrop-blur-xl max-w-[350px] sm:max-w-md w-full transition-all duration-300 animate-in slide-in-from-bottom-5 select-none"
+      style={{
+        left: position ? `${position.x}px` : undefined,
+        top: position ? `${position.y}px` : undefined,
+      }}
+      className={`fixed z-40 flex items-center p-2 rounded-2xl bg-neutral-900/95 text-white border border-neutral-700/80 shadow-2xl backdrop-blur-xl max-w-[360px] sm:max-w-md w-full select-none ${
+        isDragging
+          ? "ring-2 ring-emerald-400 shadow-emerald-500/30 cursor-grabbing"
+          : "transition-shadow"
+      } ${!position ? "bottom-28 right-6" : ""}`}
     >
+      {/* Drag Grip Handle */}
+      <div
+        onMouseDown={handleMouseDown}
+        onTouchStart={handleTouchStart}
+        className="cursor-grab active:cursor-grabbing p-1.5 text-neutral-400 hover:text-white transition flex items-center justify-center rounded-lg hover:bg-neutral-800"
+        title="Click and drag anywhere to move this music bar"
+      >
+        <GripVertical className="w-4 h-4" />
+      </div>
+
       {/* Mini Album Art with Vinyl Hole */}
       <div
         onClick={handleOpenPlayer}
-        className="relative w-12 h-12 rounded-xl overflow-hidden shadow-md flex-shrink-0 cursor-pointer group"
+        className="relative w-11 h-11 rounded-xl overflow-hidden shadow-md flex-shrink-0 cursor-pointer group ml-0.5"
       >
         <img
           src={currentTrack.thumbnail}
@@ -67,7 +271,7 @@ export function FloatingMusicBar() {
       {/* Track Info */}
       <div
         onClick={handleOpenPlayer}
-        className="min-w-0 flex-1 px-3 cursor-pointer select-none"
+        className="min-w-0 flex-1 px-2.5 cursor-pointer select-none"
       >
         <div className="flex items-center space-x-1.5 mb-0.5">
           <span
@@ -88,7 +292,7 @@ export function FloatingMusicBar() {
               }}
               className="text-[10px] font-bold text-amber-400 uppercase tracking-wider bg-amber-950/60 px-1.5 py-0.5 rounded border border-amber-500/40 animate-pulse"
             >
-              🔊 Tap to Unmute Phone
+              🔊 Unmute
             </span>
           ) : (
             <button
@@ -104,7 +308,7 @@ export function FloatingMusicBar() {
                 {syncDriftSeconds > 1.2
                   ? `⚡ Tap to Sync (${syncDriftSeconds.toFixed(1)}s)`
                   : listeners.length > 1
-                  ? `⚡ Synced (${listeners.length} devices)`
+                  ? `⚡ Synced (${listeners.length})`
                   : "⚡ Live Synced"}
               </span>
             </button>
@@ -119,17 +323,17 @@ export function FloatingMusicBar() {
       </div>
 
       {/* Action Controls */}
-      <div className="flex items-center space-x-0.5 sm:space-x-1 flex-shrink-0">
+      <div className="flex items-center space-x-0.5 flex-shrink-0">
         <button
           type="button"
           onClick={() => {
             unlockMobileAudio();
             playPrevious();
           }}
-          className="p-1.5 text-neutral-400 hover:text-white rounded-lg hover:bg-neutral-800 transition cursor-pointer"
+          className="p-1 text-neutral-400 hover:text-white rounded-lg hover:bg-neutral-800 transition cursor-pointer"
           title="Previous Track"
         >
-          <SkipBack className="w-4 h-4" />
+          <SkipBack className="w-3.5 h-3.5" />
         </button>
 
         <button
@@ -138,7 +342,7 @@ export function FloatingMusicBar() {
             unlockMobileAudio();
             togglePlay();
           }}
-          className={`w-8 h-8 rounded-full flex items-center justify-center transition active:scale-95 cursor-pointer shadow-md ${
+          className={`w-7 h-7 rounded-full flex items-center justify-center transition active:scale-95 cursor-pointer shadow-md ${
             isPlaying
               ? "bg-emerald-500 hover:bg-emerald-400 text-neutral-950"
               : "bg-white hover:bg-neutral-200 text-neutral-950"
@@ -146,9 +350,9 @@ export function FloatingMusicBar() {
           title={isPlaying ? "Pause for All Devices" : "Play for All Devices"}
         >
           {isPlaying ? (
-            <Pause className="w-4 h-4 fill-current" />
+            <Pause className="w-3.5 h-3.5 fill-current" />
           ) : (
-            <Play className="w-4 h-4 fill-current ml-0.5" />
+            <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
           )}
         </button>
 
@@ -158,10 +362,10 @@ export function FloatingMusicBar() {
             unlockMobileAudio();
             playNext();
           }}
-          className="p-1.5 text-neutral-400 hover:text-white rounded-lg hover:bg-neutral-800 transition cursor-pointer"
+          className="p-1 text-neutral-400 hover:text-white rounded-lg hover:bg-neutral-800 transition cursor-pointer"
           title="Next Track"
         >
-          <SkipForward className="w-4 h-4" />
+          <SkipForward className="w-3.5 h-3.5" />
         </button>
 
         {/* Volume / Unmute button for Phone Speaker */}
@@ -172,27 +376,38 @@ export function FloatingMusicBar() {
             unlockMobileAudio();
             toggleMute();
           }}
-          className={`p-1.5 rounded-lg transition cursor-pointer ${
+          className={`p-1 rounded-lg transition cursor-pointer ${
             isMuted
               ? "text-amber-400 bg-amber-400/20 ring-1 ring-amber-400/50 animate-pulse"
               : "text-neutral-400 hover:text-white hover:bg-neutral-800"
           }`}
-          title={isMuted ? "Unmute Speaker (Tap to Hear)" : "Mute Audio"}
+          title={isMuted ? "Unmute Speaker" : "Mute Audio"}
         >
           {isMuted ? (
-            <VolumeX className="w-4 h-4 text-amber-400" />
+            <VolumeX className="w-3.5 h-3.5 text-amber-400" />
           ) : (
-            <Volume2 className="w-4 h-4" />
+            <Volume2 className="w-3.5 h-3.5" />
           )}
         </button>
 
+        {/* Minimize Button */}
         <button
           type="button"
-          onClick={handleOpenPlayer}
-          className="p-1.5 text-neutral-400 hover:text-white rounded-lg hover:bg-neutral-800 transition cursor-pointer"
-          title="Expand Player"
+          onClick={() => setIsMinimized(true)}
+          className="p-1 text-neutral-400 hover:text-white rounded-lg hover:bg-neutral-800 transition cursor-pointer"
+          title="Minimize player to small pill"
         >
-          <Maximize2 className="w-4 h-4" />
+          <Minus className="w-3.5 h-3.5" />
+        </button>
+
+        {/* Close/Dismiss Button */}
+        <button
+          type="button"
+          onClick={() => setIsDismissed(true)}
+          className="p-1 text-neutral-400 hover:text-white rounded-lg hover:bg-neutral-800 transition cursor-pointer"
+          title="Hide player (access via headphones icon in top bar)"
+        >
+          <X className="w-3.5 h-3.5" />
         </button>
       </div>
     </aside>

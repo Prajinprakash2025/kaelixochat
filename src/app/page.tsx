@@ -2283,6 +2283,71 @@ export default function KaelixoApp() {
     }
   };
 
+  // Send message directly to a specific target channel or direct message recipient (e.g. from Share Song Modal)
+  const handleSendMessageToTarget = async (targetId: string, content: string) => {
+    let resolvedChannelId = targetId;
+
+    const targetMember = membersWithPresence.find((m) => m.id === targetId);
+    if (targetMember) {
+      try {
+        resolvedChannelId = await getOrCreateDmChannel(
+          currentUser.id,
+          targetMember.id,
+          targetMember.name,
+          targetMember.avatar
+        );
+      } catch (err) {
+        console.warn("Failed to get DM channel for share:", err);
+      }
+    } else {
+      const matched = channels.find((c) => c.id === targetId || c.name === targetId);
+      if (matched) {
+        resolvedChannelId = matched.id;
+      }
+    }
+
+    const now = new Date();
+    const timeString = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    const messageUuid =
+      typeof crypto !== "undefined" && crypto.randomUUID
+        ? crypto.randomUUID()
+        : `msg-${Date.now()}`;
+
+    const newMessage: Message = {
+      id: messageUuid,
+      channelId: resolvedChannelId,
+      sender: currentUser,
+      senderId: currentUser.id,
+      senderName: currentUser.name,
+      content,
+      attachments: [],
+      createdAt: timeString,
+      rawTimestamp: new Date().toISOString(),
+      reactions: createReactionsArray([]),
+    };
+
+    setMessagesByChannel((prev) => {
+      const next = { ...prev };
+      next[resolvedChannelId] = mergeMessageIntoList(prev[resolvedChannelId] || [], newMessage);
+      return next;
+    });
+
+    try {
+      await supabase.from("messages").insert({
+        id: messageUuid,
+        channel_id: resolvedChannelId,
+        content: content || "",
+        sender_name: currentUser.name,
+        sender_avatar: currentUser.avatar,
+        sender_role: currentUser.role,
+        sender_department: currentUser.department,
+        attachments: [],
+      });
+    } catch (err) {
+      console.warn("Target send message error:", err);
+    }
+  };
+
   // Reactions (Feature 11)
   const handleAddReaction = async (messageId: string, emoji: string) => {
     let willRemove = false;
@@ -3565,6 +3630,11 @@ export default function KaelixoApp() {
             currentUser={currentUser}
             messages={mainFeedMessages}
             onSendMessage={handleSendMessage}
+            channels={channels}
+            members={membersWithPresence}
+            onSelectChannel={handleSelectRegularChannel}
+            onSelectDirectMessage={handleSelectDirectMessage}
+            onSendMessageToTarget={handleSendMessageToTarget}
           />
         ) : (
           <>

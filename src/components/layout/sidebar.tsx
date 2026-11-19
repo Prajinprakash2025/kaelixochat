@@ -98,6 +98,8 @@ export function Sidebar({
   const [showOrgDropdown, setShowOrgDropdown] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
   const [activeRailTab, setActiveRailTab] = useState<"home" | "dms" | "activity" | "files" | "games">("home");
+  const [dragOverChannelId, setDragOverChannelId] = useState<string | null>(null);
+  const [dragOverMemberId, setDragOverMemberId] = useState<string | null>(null);
 
   const handleCopyInvite = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -580,6 +582,7 @@ export function Sidebar({
               <div className="space-y-0.5">
                 {filteredChannels.map((ch) => {
                   const isActive = activeChannelId === ch.id;
+                  const isDragOver = dragOverChannelId === ch.id;
                   return (
                     <button
                       key={ch.id}
@@ -591,19 +594,28 @@ export function Sidebar({
                         if (e.dataTransfer.types.includes("application/x-kaelixo-track")) {
                           e.preventDefault();
                           e.dataTransfer.dropEffect = "copy";
+                          if (dragOverChannelId !== ch.id) setDragOverChannelId(ch.id);
                         }
                       }}
+                      onDragLeave={() => {
+                        if (dragOverChannelId === ch.id) setDragOverChannelId(null);
+                      }}
                       onDrop={(e) => {
+                        setDragOverChannelId(null);
                         const rawTrack = e.dataTransfer.getData("application/x-kaelixo-track");
                         if (rawTrack) {
                           e.preventDefault();
                           e.stopPropagation();
                           try {
                             const track = JSON.parse(rawTrack);
+                            if (typeof window !== "undefined") {
+                              (window as any).__stagedMusicTrack = track;
+                              sessionStorage.setItem("kaelixo-staged-music-track", JSON.stringify(track));
+                            }
                             onSelectChannel(ch.id);
                             setTimeout(() => {
                               window.dispatchEvent(new CustomEvent("kaelixo:stage-music-track", { detail: track }));
-                            }, 150);
+                            }, 80);
                           } catch {}
                         }
                       }}
@@ -618,7 +630,9 @@ export function Sidebar({
                             }
                       }
                       className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-sm font-medium transition cursor-pointer ${
-                        isActive
+                        isDragOver
+                          ? "ring-2 ring-emerald-400 bg-emerald-500/25 scale-[1.03] shadow-lg shadow-emerald-500/30 font-bold"
+                          : isActive
                           ? "shadow-xs font-semibold"
                           : "hover:bg-black/5 dark:hover:bg-white/10"
                       }`}
@@ -669,6 +683,7 @@ export function Sidebar({
                       const dmChannelId = `dm-${[currentUser.id, member.id].sort().join("-")}`;
                       const isDmActive = activeChannelId === dmChannelId;
                       const isOnline = Boolean(member.online || member.status === "online");
+                      const isDragOver = dragOverMemberId === member.id;
 
                       return (
                         <button
@@ -681,19 +696,28 @@ export function Sidebar({
                             if (e.dataTransfer.types.includes("application/x-kaelixo-track")) {
                               e.preventDefault();
                               e.dataTransfer.dropEffect = "copy";
+                              if (dragOverMemberId !== member.id) setDragOverMemberId(member.id);
                             }
                           }}
+                          onDragLeave={() => {
+                            if (dragOverMemberId === member.id) setDragOverMemberId(null);
+                          }}
                           onDrop={(e) => {
+                            setDragOverMemberId(null);
                             const rawTrack = e.dataTransfer.getData("application/x-kaelixo-track");
                             if (rawTrack) {
                               e.preventDefault();
                               e.stopPropagation();
                               try {
                                 const track = JSON.parse(rawTrack);
+                                if (typeof window !== "undefined") {
+                                  (window as any).__stagedMusicTrack = track;
+                                  sessionStorage.setItem("kaelixo-staged-music-track", JSON.stringify(track));
+                                }
                                 onSelectDirectMessage(member);
                                 setTimeout(() => {
                                   window.dispatchEvent(new CustomEvent("kaelixo:stage-music-track", { detail: track }));
-                                }, 150);
+                                }, 80);
                               } catch {}
                             }
                           }}
@@ -708,7 +732,9 @@ export function Sidebar({
                                 }
                           }
                           className={`w-full group flex items-center justify-between px-2.5 py-1.5 rounded-xl text-sm transition text-left cursor-pointer ${
-                            isDmActive
+                            isDragOver
+                              ? "ring-2 ring-emerald-400 bg-emerald-500/25 scale-[1.03] shadow-lg shadow-emerald-500/30 font-bold"
+                              : isDmActive
                               ? "font-semibold shadow-xs"
                               : "hover:bg-black/5 dark:hover:bg-white/10"
                           }`}

@@ -18,6 +18,7 @@ import {
   Share2,
 } from "lucide-react";
 import { useMusic } from "@/context/music-context";
+import { createCompactDragGhost } from "./music-channel-view";
 
 interface SyncedMusicPlayerProps {
   onClose?: () => void;
@@ -193,6 +194,7 @@ export function SyncedMusicPlayer({
             e.dataTransfer.setData("text/plain", `🎶 **${currentTrack.title}** - ${currentTrack.artist}\n${shareUrl}`);
             e.dataTransfer.setData("text/uri-list", shareUrl);
             e.dataTransfer.effectAllowed = "copy";
+            createCompactDragGhost(e, currentTrack);
           }}
           className="relative group flex-shrink-0 cursor-grab active:cursor-grabbing"
           title={currentTrack ? `${currentTrack.title} - ${currentTrack.artist} (Drag to chat)` : undefined}
@@ -299,15 +301,18 @@ export function SyncedMusicPlayer({
                 onClick={() => {
                   if (typeof window !== "undefined") {
                     window.dispatchEvent(
+                      new CustomEvent("kaelixo:open-share-song-modal", { detail: currentTrack })
+                    );
+                    window.dispatchEvent(
                       new CustomEvent("kaelixo:stage-music-track", { detail: currentTrack })
                     );
                   }
                 }}
                 className="ml-2 px-2.5 py-1 rounded-lg bg-neutral-800/90 hover:bg-sky-600/30 text-neutral-300 hover:text-sky-300 border border-neutral-700/60 hover:border-sky-500/40 text-[11px] font-bold flex items-center space-x-1 transition cursor-pointer"
-                title="Share track into Chat composer"
+                title="Forward track to chat or colleague"
               >
                 <Share2 className="w-3 h-3 text-sky-400" />
-                <span className="hidden sm:inline">Share to Chat</span>
+                <span className="hidden sm:inline">Forward Song</span>
               </button>
             )}
           </div>
