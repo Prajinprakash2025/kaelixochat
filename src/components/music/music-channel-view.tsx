@@ -48,6 +48,21 @@ import { MusicTrack, WorkspaceMember, Message } from "@/types";
 import { SyncedMusicPlayer } from "./synced-music-player";
 import { MusicReelsView } from "./music-reels-view";
 import { useMusic } from "@/context/music-context";
+import { usePreferences } from "@/context/preferences-context";
+
+// Helper to determine optimal text color (dark vs white) for high contrast on any theme accent color
+export function getContrastTextColor(hexColor?: string): string {
+  if (!hexColor) return "#ffffff";
+  const hex = hexColor.replace("#", "");
+  if (hex.length === 6) {
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+    const yiq = (r * 299 + g * 587 + b * 114) / 1000;
+    return yiq >= 150 ? "#0f172a" : "#ffffff";
+  }
+  return "#ffffff";
+}
 
 interface MusicChannelViewProps {
   currentUser: WorkspaceMember;
@@ -615,6 +630,10 @@ export function YouTubeSongCard({
   onAddToQueue,
   onHide,
 }: YouTubeSongCardProps) {
+  const { currentTheme } = usePreferences();
+  const accent = currentTheme?.accentColor || "#84cc16";
+  const contrastText = getContrastTextColor(accent);
+
   const cleanTitle = cleanSongTitle(track.title);
   const cleanArtist = cleanArtistName(track.artist);
   const artistInitial = cleanArtist ? cleanArtist.charAt(0).toUpperCase() : "🎵";
@@ -627,7 +646,10 @@ export function YouTubeSongCard({
       }`}
     >
       {/* 16:9 Thumbnail Container matching YouTube 1:1 */}
-      <div className="relative aspect-video w-full rounded-2xl overflow-hidden bg-neutral-900 shadow-md border border-neutral-800/80 group-hover:border-purple-500/50 group-hover:shadow-2xl transition-all duration-300">
+      <div
+        className="relative aspect-video w-full rounded-2xl overflow-hidden bg-neutral-900 shadow-md border border-neutral-800/80 transition-all duration-300"
+        style={isThisPlaying ? { borderColor: `${accent}80` } : undefined}
+      >
         <img
           src={track.thumbnail}
           alt={track.title}
@@ -651,15 +673,21 @@ export function YouTubeSongCard({
           }`}
         >
           {isThisPlaying ? (
-            <div className="flex items-center space-x-1 bg-black/70 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-purple-500/50 shadow-xl">
-              <span className="w-1.5 h-4 bg-purple-400 rounded-full animate-bounce" />
-              <span className="w-1.5 h-6 bg-purple-400 rounded-full animate-[bounce_1s_infinite_200ms]" />
-              <span className="w-1.5 h-3 bg-purple-400 rounded-full animate-[bounce_1s_infinite_400ms]" />
-              <span className="w-1.5 h-5 bg-purple-400 rounded-full animate-[bounce_1s_infinite_100ms]" />
-              <span className="text-xs font-bold text-purple-300 ml-1.5">Playing</span>
+            <div
+              className="flex items-center space-x-1 bg-black/80 backdrop-blur-md px-3.5 py-1.5 rounded-full border shadow-xl"
+              style={{ borderColor: `${accent}80` }}
+            >
+              <span className="w-1.5 h-4 rounded-full animate-bounce" style={{ backgroundColor: accent }} />
+              <span className="w-1.5 h-6 rounded-full animate-[bounce_1s_infinite_200ms]" style={{ backgroundColor: accent }} />
+              <span className="w-1.5 h-3 rounded-full animate-[bounce_1s_infinite_400ms]" style={{ backgroundColor: accent }} />
+              <span className="w-1.5 h-5 rounded-full animate-[bounce_1s_infinite_100ms]" style={{ backgroundColor: accent }} />
+              <span className="text-xs font-bold ml-1.5" style={{ color: accent }}>Playing</span>
             </div>
           ) : (
-            <div className="w-12 h-12 rounded-full bg-purple-600/90 hover:bg-purple-500 text-white flex items-center justify-center shadow-2xl group-hover:scale-110 transition-transform">
+            <div
+              className="w-12 h-12 rounded-full flex items-center justify-center shadow-2xl group-hover:scale-110 transition-transform cursor-pointer"
+              style={{ backgroundColor: accent, color: contrastText }}
+            >
               <Play className="w-5 h-5 fill-current ml-0.5" />
             </div>
           )}
@@ -682,7 +710,7 @@ export function YouTubeSongCard({
           <button
             type="button"
             onClick={onAddToPlaylist}
-            className="w-7 h-7 rounded-full bg-black/70 hover:bg-purple-600 text-white/90 hover:text-white flex items-center justify-center backdrop-blur-md transition cursor-pointer shadow-md"
+            className="w-7 h-7 rounded-full bg-black/70 hover:brightness-125 text-white/90 hover:text-white flex items-center justify-center backdrop-blur-md transition cursor-pointer shadow-md"
             title="Add to Playlist"
           >
             <FolderPlus className="w-3.5 h-3.5" />
@@ -690,7 +718,7 @@ export function YouTubeSongCard({
           <button
             type="button"
             onClick={onAddToQueue}
-            className="w-7 h-7 rounded-full bg-black/70 hover:bg-purple-600 text-white/90 hover:text-white flex items-center justify-center backdrop-blur-md transition cursor-pointer shadow-md"
+            className="w-7 h-7 rounded-full bg-black/70 hover:brightness-125 text-white/90 hover:text-white flex items-center justify-center backdrop-blur-md transition cursor-pointer shadow-md"
             title="Add to Queue"
           >
             <ListPlus className="w-3.5 h-3.5" />
@@ -723,9 +751,16 @@ export function YouTubeSongCard({
       {/* Info Section below Thumbnail (YouTube 1:1 Parity) */}
       <div className="flex items-start space-x-3 pt-3 px-0.5">
         {/* Channel / Artist Avatar Circle */}
-        <div className="relative w-9 h-9 rounded-full bg-gradient-to-br from-purple-700 via-indigo-600 to-pink-600 flex items-center justify-center text-white font-extrabold text-xs shadow-md flex-shrink-0 mt-0.5 border border-purple-500/30 group-hover:ring-2 group-hover:ring-purple-500/50 transition">
+        <div
+          className="relative w-9 h-9 rounded-full flex items-center justify-center font-extrabold text-xs shadow-md flex-shrink-0 mt-0.5 border transition"
+          style={{
+            background: `linear-gradient(135deg, ${accent}dd, ${accent}66)`,
+            color: contrastText,
+            borderColor: `${accent}40`,
+          }}
+        >
           {isThisPlaying ? (
-            <Disc3 className="w-5 h-5 text-purple-200 animate-spin duration-3000" />
+            <Disc3 className="w-5 h-5 animate-spin duration-3000" style={{ color: contrastText }} />
           ) : (
             <span>{artistInitial}</span>
           )}
@@ -734,9 +769,8 @@ export function YouTubeSongCard({
         {/* Title, Artist, and Meta */}
         <div className="min-w-0 flex-1">
           <h4
-            className={`text-sm font-bold line-clamp-2 leading-snug transition-colors duration-150 ${
-              isThisPlaying ? "text-purple-400 font-extrabold" : "text-white group-hover:text-purple-300"
-            }`}
+            className="text-sm font-bold line-clamp-2 leading-snug transition-colors duration-150 text-white"
+            style={isThisPlaying ? { color: accent, fontWeight: 800 } : undefined}
             title={track.title}
           >
             {cleanTitle}
@@ -763,7 +797,12 @@ export function YouTubeSongCard({
               <button
                 type="button"
                 onClick={onAddToPlaylist}
-                className="text-[10px] text-purple-400 hover:text-white font-bold px-2 py-0.5 rounded-md hover:bg-purple-900/40 transition cursor-pointer flex items-center space-x-1 border border-purple-500/30"
+                style={{
+                  color: accent,
+                  borderColor: `${accent}50`,
+                  backgroundColor: `${accent}18`,
+                }}
+                className="text-[10px] font-bold px-2 py-0.5 rounded-md hover:brightness-125 transition cursor-pointer flex items-center space-x-1 border"
                 title="Add to Playlist"
               >
                 <FolderPlus className="w-3 h-3" />
@@ -799,6 +838,10 @@ export function MusicChannelView({
   messages,
   onSendMessage,
 }: MusicChannelViewProps) {
+  const { currentTheme } = usePreferences();
+  const themeAccent = currentTheme?.accentColor || "#84cc16";
+  const themeTextColor = getContrastTextColor(themeAccent);
+
   const {
     currentTrack,
     isPlaying,
@@ -1347,11 +1390,17 @@ export function MusicChannelView({
             >
               <ArrowLeft className="w-4 h-4" />
             </button>
-            <div className="w-8 h-8 rounded-xl bg-purple-600/20 text-purple-400 flex items-center justify-center">
+            <div
+              className="w-8 h-8 rounded-xl flex items-center justify-center"
+              style={{ backgroundColor: `${themeAccent}20`, color: themeAccent }}
+            >
               <Music className="w-4 h-4" />
             </div>
             <h2 className="text-xl sm:text-2xl font-black text-white">All Songs Catalog</h2>
-            <span className="text-xs font-bold text-purple-400 bg-purple-500/10 px-2.5 py-0.5 rounded-full border border-purple-500/20">
+            <span
+              className="text-xs font-bold px-2.5 py-0.5 rounded-full border"
+              style={{ color: themeAccent, backgroundColor: `${themeAccent}15`, borderColor: `${themeAccent}30` }}
+            >
               {catalogTracks.length} tracks
             </span>
           </div>
@@ -1365,7 +1414,12 @@ export function MusicChannelView({
           <button
             type="button"
             onClick={() => handlePlayAllInView(catalogTracks)}
-            className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white text-xs font-bold shadow-md shadow-purple-900/30 flex items-center space-x-1.5 transition cursor-pointer"
+            style={{
+              backgroundColor: themeAccent,
+              color: themeTextColor,
+              boxShadow: `0 4px 14px ${themeAccent}40`,
+            }}
+            className="px-3.5 py-2 rounded-xl text-xs font-bold flex items-center space-x-1.5 transition cursor-pointer hover:brightness-110"
           >
             <Play className="w-3.5 h-3.5 fill-current" />
             <span>Play All</span>
@@ -1427,8 +1481,11 @@ export function MusicChannelView({
       {/* Endless Sentinel */}
       <div ref={observerTargetRef} className="pt-6 pb-12 flex items-center justify-center">
         {isLoading && (
-          <div className="flex items-center space-x-2 text-xs font-semibold text-purple-400 py-3 animate-pulse">
-            <Loader2 className="w-4 h-4 animate-spin" />
+          <div
+            className="flex items-center space-x-2 text-xs font-semibold py-3 animate-pulse"
+            style={{ color: themeAccent }}
+          >
+            <Loader2 className="w-4 h-4 animate-spin" style={{ color: themeAccent }} />
             <span>Loading more songs endlessly from YouTube...</span>
           </div>
         )}
@@ -1450,11 +1507,17 @@ export function MusicChannelView({
             >
               <ArrowLeft className="w-4 h-4" />
             </button>
-            <div className="w-8 h-8 rounded-xl bg-purple-600/20 text-purple-400 flex items-center justify-center">
+            <div
+              className="w-8 h-8 rounded-xl flex items-center justify-center"
+              style={{ backgroundColor: `${themeAccent}20`, color: themeAccent }}
+            >
               <Library className="w-4 h-4" />
             </div>
             <h2 className="text-xl sm:text-2xl font-black text-white">Your Playlists & Mixes</h2>
-            <span className="text-xs font-bold text-purple-400 bg-purple-500/10 px-2.5 py-0.5 rounded-full border border-purple-500/20">
+            <span
+              className="text-xs font-bold px-2.5 py-0.5 rounded-full border"
+              style={{ color: themeAccent, backgroundColor: `${themeAccent}15`, borderColor: `${themeAccent}30` }}
+            >
               {playlists.length} playlists
             </span>
           </div>
@@ -1466,7 +1529,12 @@ export function MusicChannelView({
         <button
           type="button"
           onClick={() => setIsCreatePlaylistOpen(true)}
-          className="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white text-xs font-bold shadow-md shadow-purple-900/30 flex items-center space-x-1.5 transition cursor-pointer self-start sm:self-auto"
+          style={{
+            backgroundColor: themeAccent,
+            color: themeTextColor,
+            boxShadow: `0 4px 14px ${themeAccent}40`,
+          }}
+          className="px-4 py-2 rounded-xl text-xs font-bold flex items-center space-x-1.5 transition cursor-pointer self-start sm:self-auto hover:brightness-110"
         >
           <Plus className="w-4 h-4" />
           <span>Create Playlist</span>
@@ -1859,11 +1927,17 @@ export function MusicChannelView({
             >
               <ArrowLeft className="w-4 h-4" />
             </button>
-            <div className="w-8 h-8 rounded-xl bg-purple-600/20 text-purple-400 flex items-center justify-center">
+            <div
+              className="w-8 h-8 rounded-xl flex items-center justify-center"
+              style={{ backgroundColor: `${themeAccent}20`, color: themeAccent }}
+            >
               <Clock className="w-4 h-4" />
             </div>
             <h2 className="text-xl sm:text-2xl font-black text-white">Recently Played</h2>
-            <span className="text-xs font-bold text-purple-400 bg-purple-500/10 px-2.5 py-0.5 rounded-full border border-purple-500/20">
+            <span
+              className="text-xs font-bold px-2.5 py-0.5 rounded-full border"
+              style={{ color: themeAccent, backgroundColor: `${themeAccent}15`, borderColor: `${themeAccent}30` }}
+            >
               {recentTracks.length} tracks
             </span>
           </div>
@@ -1877,7 +1951,12 @@ export function MusicChannelView({
             <button
               type="button"
               onClick={() => handlePlayAllInView(recentTracks)}
-              className="px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold shadow-md shadow-purple-900/30 flex items-center space-x-1.5 transition cursor-pointer"
+              style={{
+                backgroundColor: themeAccent,
+                color: themeTextColor,
+                boxShadow: `0 4px 14px ${themeAccent}40`,
+              }}
+              className="px-3.5 py-2 rounded-xl text-xs font-bold flex items-center space-x-1.5 transition cursor-pointer hover:brightness-110"
             >
               <Play className="w-3.5 h-3.5 fill-current" />
               <span>Play All</span>
@@ -1906,7 +1985,8 @@ export function MusicChannelView({
           <button
             type="button"
             onClick={() => setActiveTab("home")}
-            className="mt-2 px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold transition shadow-xs"
+            style={{ backgroundColor: themeAccent, color: themeTextColor }}
+            className="mt-2 px-4 py-2 rounded-xl text-xs font-bold transition shadow-xs hover:brightness-110"
           >
             Start Listening
           </button>
@@ -2062,10 +2142,23 @@ export function MusicChannelView({
 
       {/* 2. HERO KAELIXO MUSIC HEADER WITH SOUNDWAVE GRAPHIC (Exact Screenshot) */}
       <div className="px-4 sm:px-6 pt-4 pb-2">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-purple-950/30 via-neutral-900/60 to-purple-900/20 border border-purple-500/20 rounded-2xl p-5 relative overflow-hidden backdrop-blur-md shadow-xl">
+        <div
+          className="flex flex-col md:flex-row md:items-center justify-between gap-4 border rounded-2xl p-5 relative overflow-hidden backdrop-blur-md shadow-xl"
+          style={{
+            borderColor: `${themeAccent}30`,
+            background: `linear-gradient(90deg, ${themeAccent}18, rgba(23,23,23,0.6), ${themeAccent}10)`,
+          }}
+        >
           {/* Left Title & Subtitle */}
           <div className="flex items-center space-x-4 relative z-10">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-600 via-fuchsia-600 to-pink-600 flex items-center justify-center text-white shadow-lg shadow-purple-900/50 flex-shrink-0">
+            <div
+              className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg flex-shrink-0"
+              style={{
+                backgroundColor: themeAccent,
+                color: themeTextColor,
+                boxShadow: `0 8px 24px ${themeAccent}40`,
+              }}
+            >
               <Headphones className="w-6 h-6" />
             </div>
             <div>
@@ -2084,15 +2177,23 @@ export function MusicChannelView({
               {[40, 70, 45, 90, 60, 30, 85, 100, 50, 75, 40, 65, 80, 55, 95, 35].map((h, i) => (
                 <span
                   key={i}
-                  className="w-1 bg-gradient-to-t from-purple-500 to-pink-400 rounded-full animate-pulse"
+                  className="w-1 rounded-full animate-pulse"
                   style={{
+                    backgroundColor: themeAccent,
                     height: `${h}%`,
                     animationDelay: `${i * 80}ms`,
                   }}
                 />
               ))}
             </div>
-            <div className="w-10 h-10 rounded-full bg-purple-500/20 border border-purple-500/40 flex items-center justify-center text-purple-300">
+            <div
+              className="w-10 h-10 rounded-full border flex items-center justify-center"
+              style={{
+                backgroundColor: `${themeAccent}20`,
+                borderColor: `${themeAccent}50`,
+                color: themeAccent,
+              }}
+            >
               <Disc3 className="w-6 h-6 animate-spin duration-3000" />
             </div>
           </div>
@@ -2119,9 +2220,19 @@ export function MusicChannelView({
                   fetchCategoryTracks("trending", 1, false);
                 }
               }}
+              style={
+                isActive
+                  ? {
+                      backgroundColor: themeAccent,
+                      color: themeTextColor,
+                      borderColor: themeAccent,
+                      boxShadow: `0 4px 14px ${themeAccent}40`,
+                    }
+                  : undefined
+              }
               className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-2 flex-shrink-0 cursor-pointer shadow-xs border ${
                 isActive
-                  ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white border-transparent shadow-purple-900/40 scale-102"
+                  ? "scale-102"
                   : "bg-neutral-900/90 hover:bg-neutral-800 text-neutral-400 hover:text-white border-neutral-800"
               }`}
             >
@@ -2171,7 +2282,10 @@ export function MusicChannelView({
             </div>
 
             <div className="flex-1 text-center sm:text-left space-y-2">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded-full">
+              <span
+                className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
+                style={{ color: themeAccent, backgroundColor: `${themeAccent}15` }}
+              >
                 Playlist
               </span>
               <h2 className="text-2xl font-black text-white">{selectedPlaylist.name}</h2>
@@ -2193,7 +2307,12 @@ export function MusicChannelView({
                       showToast("Playlist is empty. Add songs first!");
                     }
                   }}
-                  className="px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-md shadow-purple-900/40 cursor-pointer"
+                  style={{
+                    backgroundColor: themeAccent,
+                    color: themeTextColor,
+                    boxShadow: `0 4px 14px ${themeAccent}40`,
+                  }}
+                  className="px-4 py-2 text-white rounded-xl text-xs font-bold transition flex items-center space-x-1.5 cursor-pointer hover:brightness-110"
                 >
                   <Play className="w-3.5 h-3.5 fill-current" />
                   <span>Play All</span>
@@ -2215,9 +2334,14 @@ export function MusicChannelView({
                     setSelectedPlaylistId(null);
                     showToast(`Browse songs below and click "+ Playlist" to add to "${selectedPlaylist.name}"!`);
                   }}
-                  className="px-3.5 py-2 bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/40 text-purple-300 hover:text-white rounded-xl text-xs font-bold transition flex items-center space-x-1.5 cursor-pointer"
+                  style={{
+                    color: themeAccent,
+                    borderColor: `${themeAccent}50`,
+                    backgroundColor: `${themeAccent}15`,
+                  }}
+                  className="px-3.5 py-2 border rounded-xl text-xs font-bold transition flex items-center space-x-1.5 cursor-pointer hover:brightness-125"
                 >
-                  <FolderPlus className="w-3.5 h-3.5 text-purple-400" />
+                  <FolderPlus className="w-3.5 h-3.5" />
                   <span>+ Add Songs to Playlist</span>
                 </button>
 
@@ -2263,12 +2387,18 @@ export function MusicChannelView({
                           />
                           {isThisPlaying && (
                             <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                              <span className="w-2 h-2 rounded-full bg-purple-400 animate-ping" />
+                              <span
+                                className="w-2 h-2 rounded-full animate-ping"
+                                style={{ backgroundColor: themeAccent }}
+                              />
                             </div>
                           )}
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className={`text-xs font-bold truncate ${isThisPlaying ? "text-purple-400" : "text-white"}`}>
+                          <p
+                            className="text-xs font-bold truncate text-white"
+                            style={isThisPlaying ? { color: themeAccent } : undefined}
+                          >
                             {cleanSongTitle(track.title)}
                           </p>
                           <p className="text-[10px] text-neutral-400 truncate">
@@ -2393,8 +2523,8 @@ export function MusicChannelView({
                       className="flex-1 h-1.5 bg-neutral-800 hover:h-2 rounded-full overflow-hidden cursor-pointer relative transition-all duration-150"
                     >
                       <div
-                        className="h-full bg-gradient-to-r from-purple-500 via-fuchsia-500 to-pink-500 rounded-full transition-all duration-300"
-                        style={{ width: `${progressPercent}%` }}
+                        className="h-full rounded-full transition-all duration-300"
+                        style={{ width: `${progressPercent}%`, backgroundColor: themeAccent }}
                       />
                     </div>
                     <button
@@ -2408,7 +2538,7 @@ export function MusicChannelView({
                   </div>
                 </div>
 
-                {/* Playback Controls (Shuffle, Prev, Big Purple Play/Pause, Next, Repeat + ADD TO PLAYLIST) */}
+                {/* Playback Controls (Shuffle, Prev, Big Theme Play/Pause, Next, Repeat + ADD TO PLAYLIST) */}
                 <div className="flex items-center justify-center space-x-3 sm:space-x-4 pt-1">
                   {/* Shuffle */}
                   <button
@@ -2430,11 +2560,16 @@ export function MusicChannelView({
                     <SkipBack className="w-5 h-5" />
                   </button>
 
-                  {/* BIG PURPLE PLAY / PAUSE BUTTON (Exact Screenshot) */}
+                  {/* BIG THEME PLAY / PAUSE BUTTON */}
                   <button
                     type="button"
                     onClick={() => handlePlaySong(activeDisplayTrack)}
-                    className="w-12 h-12 rounded-full bg-gradient-to-tr from-purple-600 via-fuchsia-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white flex items-center justify-center shadow-lg shadow-purple-900/50 transition transform hover:scale-108 active:scale-95 cursor-pointer"
+                    style={{
+                      backgroundColor: themeAccent,
+                      color: themeTextColor,
+                      boxShadow: `0 6px 20px ${themeAccent}50`,
+                    }}
+                    className="w-12 h-12 rounded-full flex items-center justify-center transition transform hover:scale-108 active:scale-95 cursor-pointer"
                     title={isPlaying ? "Pause" : "Play"}
                   >
                     {isPlaying ? (
@@ -2471,7 +2606,12 @@ export function MusicChannelView({
                   <button
                     type="button"
                     onClick={() => setSongToAddToPlaylist(activeDisplayTrack)}
-                    className="p-2 text-purple-400 hover:text-white rounded-full hover:bg-purple-900/40 border border-purple-500/30 transition cursor-pointer"
+                    style={{
+                      color: themeAccent,
+                      borderColor: `${themeAccent}50`,
+                      backgroundColor: `${themeAccent}18`,
+                    }}
+                    className="p-2 rounded-full transition cursor-pointer hover:brightness-125 border"
                     title="Add current song to a playlist"
                   >
                     <FolderPlus className="w-4 h-4" />
@@ -2493,11 +2633,12 @@ export function MusicChannelView({
                   <button
                     type="button"
                     onClick={() => setIsCreatePlaylistOpen(true)}
-                    className="p-3 bg-neutral-800/70 hover:bg-purple-900/30 border border-neutral-700/60 hover:border-purple-500/60 rounded-xl text-left transition cursor-pointer group shadow-xs"
+                    style={{ borderColor: `${themeAccent}40` }}
+                    className="p-3 bg-neutral-800/70 hover:brightness-125 border rounded-xl text-left transition cursor-pointer group shadow-xs"
                   >
-                    <div className="flex items-center space-x-2 text-xs font-bold text-white group-hover:text-purple-300">
-                      <Plus className="w-4 h-4 text-purple-400" />
-                      <span>Create Playlist</span>
+                    <div className="flex items-center space-x-2 text-xs font-bold text-white">
+                      <Plus className="w-4 h-4" style={{ color: themeAccent }} />
+                      <span style={{ color: themeAccent }}>Create Playlist</span>
                     </div>
                     <p className="text-[10px] text-neutral-400 mt-1">Make custom mix</p>
                   </button>
@@ -2549,7 +2690,10 @@ export function MusicChannelView({
                   <Radio className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
                   <span>Ad-Free Synchronized Jam</span>
                 </span>
-                <span className="text-[10px] font-bold text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded-full">
+                <span
+                  className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                  style={{ color: themeAccent, backgroundColor: `${themeAccent}20` }}
+                >
                   100% Synced
                 </span>
               </div>
@@ -2566,7 +2710,8 @@ export function MusicChannelView({
               <button
                 type="button"
                 onClick={() => setActiveTab("songs")}
-                className="text-xs font-bold text-purple-400 hover:text-purple-300 flex items-center space-x-1 cursor-pointer"
+                style={{ color: themeAccent }}
+                className="text-xs font-bold flex items-center space-x-1 cursor-pointer hover:brightness-125"
               >
                 <span>View All</span>
                 <span>→</span>
@@ -2641,13 +2786,14 @@ export function MusicChannelView({
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
-                <Library className="w-4 h-4 text-purple-400" />
+                <Library className="w-4 h-4" style={{ color: themeAccent }} />
                 <h3 className="text-sm font-bold text-white tracking-wide">Your Playlists</h3>
               </div>
               <button
                 type="button"
                 onClick={() => setActiveTab("playlists")}
-                className="text-xs font-bold text-purple-400 hover:text-purple-300 flex items-center space-x-1 cursor-pointer"
+                style={{ color: themeAccent }}
+                className="text-xs font-bold flex items-center space-x-1 cursor-pointer hover:brightness-125"
               >
                 <span>View All</span>
                 <span>→</span>
@@ -2660,7 +2806,7 @@ export function MusicChannelView({
                 <div
                   key={pl.id}
                   onClick={() => setSelectedPlaylistId(pl.id)}
-                  className="group p-3 rounded-xl bg-neutral-900/60 hover:bg-neutral-800/80 border border-neutral-800/80 hover:border-purple-500/60 transition cursor-pointer flex flex-col justify-between shadow-md relative"
+                  className="group p-3 rounded-xl bg-neutral-900/60 hover:bg-neutral-800/80 border border-neutral-800/80 transition cursor-pointer flex flex-col justify-between shadow-md relative hover:brightness-105"
                 >
                   <div className="relative w-full aspect-square rounded-lg overflow-hidden bg-neutral-950 flex items-center justify-center mb-2 shadow-inner">
                     {pl.thumbnail ? (
@@ -2688,7 +2834,7 @@ export function MusicChannelView({
                   </div>
 
                   <div>
-                    <p className="text-xs font-bold text-white truncate group-hover:text-purple-300 transition">
+                    <p className="text-xs font-bold text-white truncate transition">
                       {pl.name}
                     </p>
                     <p className="text-[10px] text-neutral-400 mt-0.5">
@@ -2701,9 +2847,16 @@ export function MusicChannelView({
               {/* + New Playlist Action Card */}
               <div
                 onClick={() => setIsCreatePlaylistOpen(true)}
-                className="p-3 rounded-xl border border-dashed border-neutral-700 hover:border-purple-500 bg-neutral-900/30 hover:bg-purple-950/20 transition cursor-pointer flex flex-col items-center justify-center text-center group min-h-[140px]"
+                className="p-3 rounded-xl border border-dashed hover:brightness-125 transition cursor-pointer flex flex-col items-center justify-center text-center group min-h-[140px]"
+                style={{
+                  borderColor: `${themeAccent}60`,
+                  backgroundColor: `${themeAccent}08`,
+                }}
               >
-                <div className="w-10 h-10 rounded-full bg-neutral-800 group-hover:bg-purple-600 text-neutral-400 group-hover:text-white flex items-center justify-center transition mb-2 shadow-sm">
+                <div
+                  className="w-10 h-10 rounded-full flex items-center justify-center transition mb-2 shadow-sm"
+                  style={{ backgroundColor: `${themeAccent}25`, color: themeAccent }}
+                >
                   <Plus className="w-5 h-5" />
                 </div>
                 <span className="text-xs font-bold text-neutral-300 group-hover:text-white">
@@ -2815,11 +2968,14 @@ export function MusicChannelView({
             {/* Header with Title and Fresh Mix */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
               <div className="flex items-center space-x-2">
-                <Sparkles className="w-4 h-4 text-purple-400" />
+                <Sparkles className="w-4 h-4" style={{ color: themeAccent }} />
                 <h3 className="text-sm font-bold text-white uppercase tracking-wider">
                   Music Radios & Categories
                 </h3>
-                <span className="text-xs px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-400 font-bold">
+                <span
+                  className="text-xs px-2 py-0.5 rounded-full font-bold border"
+                  style={{ color: themeAccent, backgroundColor: `${themeAccent}15`, borderColor: `${themeAccent}30` }}
+                >
                   {allCategories.length} Mixes
                 </span>
               </div>
@@ -2832,7 +2988,12 @@ export function MusicChannelView({
                     fetchCategoryTracks(activeCategory, 1, false);
                     showToast("🎲 Mixed fresh songs!");
                   }}
-                  className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-purple-600/10 hover:bg-purple-600/20 text-purple-400 border border-purple-500/30 flex items-center space-x-1.5 transition cursor-pointer"
+                  style={{
+                    color: themeAccent,
+                    backgroundColor: `${themeAccent}15`,
+                    borderColor: `${themeAccent}30`,
+                  }}
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold border flex items-center space-x-1.5 transition cursor-pointer hover:brightness-125"
                 >
                   <Shuffle className="w-3.5 h-3.5" />
                   <span>Fresh Mix</span>
@@ -2851,10 +3012,10 @@ export function MusicChannelView({
 
             {/* Inline Add Custom Category / Filter Form */}
             {isAddingCategory && (
-              <div className="p-3 bg-neutral-900 border border-purple-500/40 rounded-xl shadow-lg space-y-2 animate-in slide-in-from-top-2">
+              <div className="p-3 bg-neutral-900 border border-neutral-700 rounded-xl shadow-lg space-y-2 animate-in slide-in-from-top-2">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-neutral-200 flex items-center space-x-1.5">
-                    <Tag className="w-3.5 h-3.5 text-purple-400" />
+                    <Tag className="w-3.5 h-3.5" style={{ color: themeAccent }} />
                     <span>Add Singer, Language, or Place</span>
                   </span>
                   <button
@@ -2872,7 +3033,7 @@ export function MusicChannelView({
                     value={newCategoryName}
                     onChange={(e) => setNewCategoryName(e.target.value)}
                     placeholder="e.g. Coldplay, Sid Sriram, Taylor Swift, Kerala Indie..."
-                    className="flex-1 px-3 py-1.5 text-xs bg-neutral-800 border border-neutral-700 rounded-lg text-white placeholder:text-neutral-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                    className="flex-1 px-3 py-1.5 text-xs bg-neutral-800 border border-neutral-700 rounded-lg text-white placeholder:text-neutral-500 focus:outline-none focus:ring-1"
                     onKeyDown={(e) => {
                       if (e.key === "Enter" && newCategoryName.trim()) {
                         const clean = newCategoryName.trim();
@@ -2911,7 +3072,8 @@ export function MusicChannelView({
                       setNewCategoryName("");
                       showToast(`Added filter "${clean}"!`);
                     }}
-                    className="px-3.5 py-1.5 bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold rounded-lg transition"
+                    style={{ backgroundColor: themeAccent, color: themeTextColor }}
+                    className="px-3.5 py-1.5 text-xs font-bold rounded-lg transition hover:brightness-110"
                   >
                     Save
                   </button>
@@ -2919,7 +3081,6 @@ export function MusicChannelView({
               </div>
             )}
 
-            {/* Scrollable Horizontal Pill Bar */}
             {/* Scrollable Horizontal Pill Bar matching YouTube 1:1 */}
             <div className="flex items-center space-x-2 overflow-x-auto pb-2 scrollbar-none">
               {filteredCategories.map((cat) => {
@@ -2929,9 +3090,18 @@ export function MusicChannelView({
                     key={cat.id}
                     type="button"
                     onClick={() => setActiveCategory(cat.id)}
+                    style={
+                      isActive
+                        ? {
+                            backgroundColor: themeAccent,
+                            color: themeTextColor,
+                            borderColor: themeAccent,
+                          }
+                        : undefined
+                    }
                     className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all duration-150 flex items-center space-x-1.5 flex-shrink-0 cursor-pointer shadow-xs border ${
                       isActive
-                        ? "bg-white text-neutral-950 border-white font-bold shadow-md scale-102"
+                        ? "font-bold shadow-md scale-102"
                         : "bg-neutral-800/90 hover:bg-neutral-700 text-neutral-200 hover:text-white border-neutral-700/60"
                     }`}
                   >
@@ -2946,11 +3116,14 @@ export function MusicChannelView({
             <div className="space-y-4 pt-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-extrabold text-neutral-300 uppercase tracking-wider flex items-center space-x-1.5">
-                  <span className="w-2 h-2 rounded-full bg-purple-500 animate-pulse" />
+                  <span className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: themeAccent }} />
                   <span>{allCategories.find((c) => c.id === activeCategory)?.name || activeCategory}</span>
                   <span className="text-neutral-500 font-normal">• Endless Stream (Page {page})</span>
                 </span>
-                <span className="text-[11px] text-purple-400 font-semibold bg-purple-500/10 px-2.5 py-0.5 rounded-full border border-purple-500/20">
+                <span
+                  className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full border"
+                  style={{ color: themeAccent, backgroundColor: `${themeAccent}15`, borderColor: `${themeAccent}30` }}
+                >
                   ⚡ Auto-Loading on Scroll
                 </span>
               </div>
@@ -2994,8 +3167,11 @@ export function MusicChannelView({
               {/* Infinite Scroll Auto-Load Sentinel */}
               <div ref={observerTargetRef} className="pt-6 pb-12 flex items-center justify-center">
                 {isLoading && (
-                  <div className="flex items-center space-x-2 text-xs font-semibold text-purple-400 py-3 animate-pulse">
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                  <div
+                    className="flex items-center space-x-2 text-xs font-semibold py-3 animate-pulse"
+                    style={{ color: themeAccent }}
+                  >
+                    <Loader2 className="w-4 h-4 animate-spin" style={{ color: themeAccent }} />
                     <span>Loading more songs endlessly from YouTube...</span>
                   </div>
                 )}
@@ -3015,7 +3191,7 @@ export function MusicChannelView({
             {/* Header */}
             <div className="flex items-center justify-between border-b border-neutral-800 pb-3">
               <div className="flex items-center space-x-2">
-                <FolderPlus className="w-5 h-5 text-purple-400" />
+                <FolderPlus className="w-5 h-5" style={{ color: themeAccent }} />
                 <h3 className="text-sm font-bold text-white">Add Song to Playlist</h3>
               </div>
               <button
@@ -3054,7 +3230,7 @@ export function MusicChannelView({
                   <div
                     key={pl.id}
                     onClick={() => handleToggleSongInPlaylist(pl.id, songToAddToPlaylist)}
-                    className="p-2.5 rounded-xl bg-neutral-800/40 hover:bg-neutral-800 border border-neutral-700/50 hover:border-purple-500/50 flex items-center justify-between transition cursor-pointer"
+                    className="p-2.5 rounded-xl bg-neutral-800/40 hover:bg-neutral-800 border border-neutral-700/50 flex items-center justify-between transition cursor-pointer"
                   >
                     <div className="flex items-center space-x-2.5 min-w-0">
                       <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center bg-neutral-900 text-lg flex-shrink-0">
@@ -3072,10 +3248,15 @@ export function MusicChannelView({
 
                     <button
                       type="button"
+                      style={
+                        isInPlaylist
+                          ? undefined
+                          : { backgroundColor: themeAccent, color: themeTextColor }
+                      }
                       className={`px-3 py-1 rounded-lg text-xs font-bold transition flex items-center space-x-1 ${
                         isInPlaylist
                           ? "bg-emerald-600/20 text-emerald-400 border border-emerald-500/40"
-                          : "bg-purple-600 hover:bg-purple-500 text-white"
+                          : "hover:brightness-110"
                       }`}
                     >
                       {isInPlaylist ? (
@@ -3102,7 +3283,8 @@ export function MusicChannelView({
                 onClick={() => {
                   setIsCreatePlaylistOpen(true);
                 }}
-                className="text-xs font-bold text-purple-400 hover:text-purple-300 flex items-center space-x-1 cursor-pointer"
+                style={{ color: themeAccent }}
+                className="text-xs font-bold flex items-center space-x-1 cursor-pointer hover:brightness-125"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>Create New Playlist</span>
@@ -3129,7 +3311,7 @@ export function MusicChannelView({
           >
             <div className="flex items-center justify-between border-b border-neutral-800 pb-3">
               <div className="flex items-center space-x-2">
-                <FolderPlus className="w-5 h-5 text-purple-400" />
+                <FolderPlus className="w-5 h-5" style={{ color: themeAccent }} />
                 <h3 className="text-sm font-bold text-white">Create New Playlist</h3>
               </div>
               <button
@@ -3151,7 +3333,7 @@ export function MusicChannelView({
                   value={newPlaylistName}
                   onChange={(e) => setNewPlaylistName(e.target.value)}
                   placeholder="e.g. Late Night Vibes, Gym Energy..."
-                  className="w-full px-3 py-2 bg-neutral-800 border border-neutral-700 rounded-xl text-xs text-white placeholder:text-neutral-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                  className="w-full px-3 py-2 bg-neutral-800 border border-neutral-700 rounded-xl text-xs text-white placeholder:text-neutral-500 focus:outline-none focus:ring-1"
                   autoFocus
                 />
               </div>
@@ -3165,7 +3347,7 @@ export function MusicChannelView({
                   value={newPlaylistDesc}
                   onChange={(e) => setNewPlaylistDesc(e.target.value)}
                   placeholder="e.g. Best tracks for study & coding sessions"
-                  className="w-full px-3 py-2 bg-neutral-800 border border-neutral-700 rounded-xl text-xs text-white placeholder:text-neutral-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                  className="w-full px-3 py-2 bg-neutral-800 border border-neutral-700 rounded-xl text-xs text-white placeholder:text-neutral-500 focus:outline-none focus:ring-1"
                 />
               </div>
 
@@ -3179,9 +3361,14 @@ export function MusicChannelView({
                       key={emoji}
                       type="button"
                       onClick={() => setNewPlaylistIcon(emoji)}
+                      style={
+                        newPlaylistIcon === emoji
+                          ? { backgroundColor: themeAccent, borderColor: themeAccent, color: themeTextColor }
+                          : undefined
+                      }
                       className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm transition cursor-pointer border ${
                         newPlaylistIcon === emoji
-                          ? "bg-purple-600 border-purple-500 scale-110"
+                          ? "scale-110"
                           : "bg-neutral-800 border-neutral-700 hover:bg-neutral-700"
                       }`}
                     >
@@ -3228,7 +3415,12 @@ export function MusicChannelView({
                 type="button"
                 onClick={handleCreatePlaylist}
                 disabled={!newPlaylistName.trim()}
-                className="px-4 py-1.5 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 disabled:opacity-50 text-white text-xs font-bold transition shadow-md"
+                style={{
+                  backgroundColor: themeAccent,
+                  color: themeTextColor,
+                  boxShadow: `0 4px 14px ${themeAccent}40`,
+                }}
+                className="px-4 py-1.5 rounded-xl disabled:opacity-50 text-xs font-bold transition shadow-md hover:brightness-110"
               >
                 Create Playlist
               </button>
