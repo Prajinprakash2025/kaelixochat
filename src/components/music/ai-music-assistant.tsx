@@ -818,7 +818,7 @@ export function AiMusicAssistant({
             value={textInput}
             onChange={(e) => setTextInput(e.target.value)}
             placeholder="Type 'volume 80', 'next', 'play lofi'..."
-            className="flex-1 px-3 py-2 bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 rounded-xl text-xs text-neutral-900 dark:text-white placeholder:text-neutral-400 focus:outline-hidden focus:ring-2 focus:ring-purple-500"
+            className="flex-1 px-3 py-2 bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 rounded-xl text-base sm:text-xs text-neutral-900 dark:text-white placeholder:text-neutral-400 focus:outline-hidden focus:ring-2 focus:ring-purple-500"
           />
 
           <button
@@ -858,7 +858,7 @@ export function AiAssistantTriggerButton({
       style={{
         boxShadow: "0 4px 20px rgba(168, 85, 247, 0.4)",
       }}
-      className={`fixed bottom-6 right-6 z-40 p-1 rounded-full bg-gradient-to-tr from-purple-600 via-pink-500 to-emerald-400 transition-all duration-300 transform hover:scale-108 active:scale-95 cursor-pointer group shadow-xl ${
+      className={`fixed bottom-20 right-4 sm:bottom-6 sm:right-6 z-40 p-1 rounded-full bg-gradient-to-tr from-purple-600 via-pink-500 to-emerald-400 transition-all duration-300 transform hover:scale-108 active:scale-95 cursor-pointer group shadow-xl ${
         isOpen ? "scale-0 opacity-0 pointer-events-none" : "scale-100 opacity-100"
       }`}
       title="Open AI Music Assistant [Ctrl+Shift+A]"

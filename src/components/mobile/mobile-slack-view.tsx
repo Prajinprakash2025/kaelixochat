@@ -193,6 +193,20 @@ export function MobileSlackView({
         <div className="flex items-center space-x-3">
           {activeTab === "home" && (
             <>
+              {/* AI Voice DJ Assistant Trigger */}
+              <button
+                type="button"
+                onClick={() => {
+                  if (typeof window !== "undefined") {
+                    window.dispatchEvent(new CustomEvent("kaelixo-open-ai-dj"));
+                  }
+                }}
+                className="p-1.5 rounded-full hover:bg-white/10 text-purple-400 transition cursor-pointer"
+                title="AI Voice DJ Assistant"
+              >
+                <Sparkles className="w-5 h-5 animate-spin-slow" />
+              </button>
+
               {onOpenMusic && (
                 <button
                   type="button"
