@@ -43,11 +43,15 @@ import {
   MoreVertical,
   Trash2,
   ArrowLeft,
+  Pencil,
+  Camera,
+  Image as ImageIcon,
 } from "lucide-react";
 import { MusicTrack, WorkspaceMember, Message, Channel } from "@/types";
 import { SyncedMusicPlayer } from "./synced-music-player";
 import { MusicReelsView } from "./music-reels-view";
 import { ShareSongModal } from "./share-song-modal";
+import { EditPlaylistModal } from "./edit-playlist-modal";
 import { useMusic } from "@/context/music-context";
 import { usePreferences } from "@/context/preferences-context";
 
@@ -1057,6 +1061,9 @@ export function MusicChannelView({
   const [newPlaylistIcon, setNewPlaylistIcon] = useState<string>("🎵");
   const [newPlaylistColor, setNewPlaylistColor] = useState<string>("from-purple-600 to-pink-600");
 
+  // Modal: Edit existing playlist details & cover
+  const [playlistToEdit, setPlaylistToEdit] = useState<Playlist | null>(null);
+
   // Modal 3: Import from YouTube
   const [isImportModalOpen, setIsImportModalOpen] = useState<boolean>(false);
   const [importUrl, setImportUrl] = useState<string>("");
@@ -1392,6 +1399,22 @@ export function MusicChannelView({
     if (songToAddToPlaylist) {
       setSongToAddToPlaylist(null);
     }
+  };
+
+  // Update Custom Playlist Details (Name, Image, Icon, Gradient, Description)
+  const handleUpdatePlaylist = (updated: Playlist) => {
+    setPlaylists((prev) => {
+      const nextList = prev.map((p) => (p.id === updated.id ? updated : p));
+      if (typeof window !== "undefined") {
+        try {
+          const customOnly = nextList.filter((p) => p.isCustom);
+          localStorage.setItem("kaelixo_custom_playlists", JSON.stringify(customOnly));
+        } catch {}
+      }
+      return nextList;
+    });
+    showToast(`✨ Updated playlist "${updated.name}"!`);
+    setPlaylistToEdit(null);
   };
 
   // Delete Custom Playlist
@@ -1734,6 +1757,21 @@ export function MusicChannelView({
                     <Play className="w-4 h-4 fill-current ml-0.5" />
                   </div>
                 </div>
+
+                {/* Edit hover button */}
+                {pl.isCustom && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setPlaylistToEdit(pl);
+                    }}
+                    className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/75 hover:bg-black text-white/90 hover:text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition shadow-md z-10 cursor-pointer"
+                    title="Edit playlist"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </div>
 
               <div>
@@ -2471,22 +2509,33 @@ export function MusicChannelView({
 
           {/* Playlist Header Banner */}
           <div className="flex flex-col sm:flex-row items-center gap-5 bg-white dark:bg-neutral-900/70 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-5 shadow-xs dark:shadow-xl">
-            <div className="relative w-36 h-36 rounded-2xl overflow-hidden bg-neutral-100 dark:bg-neutral-950 flex items-center justify-center flex-shrink-0 shadow-md">
+            {/* Square Cover with Click/Hover to Edit */}
+            <div
+              onClick={() => setPlaylistToEdit(selectedPlaylist)}
+              className="relative w-36 h-36 rounded-2xl overflow-hidden bg-neutral-100 dark:bg-neutral-950 flex items-center justify-center flex-shrink-0 shadow-md group cursor-pointer border border-neutral-300 dark:border-neutral-700 hover:brightness-105 transition"
+              title="Click to edit playlist cover image & details"
+            >
               {selectedPlaylist.thumbnail ? (
                 <img
                   src={selectedPlaylist.thumbnail}
                   alt={selectedPlaylist.name}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
                 />
               ) : (
                 <div
                   className={`w-full h-full bg-gradient-to-br ${
                     selectedPlaylist.gradient || "from-purple-600 to-pink-600"
-                  } flex items-center justify-center text-4xl`}
+                  } flex items-center justify-center text-4xl group-hover:scale-105 transition duration-500`}
                 >
                   {selectedPlaylist.icon || "🎵"}
                 </div>
               )}
+
+              {/* Hover Edit Overlay */}
+              <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white space-y-1">
+                <Camera className="w-6 h-6 text-white drop-shadow-md" />
+                <span className="text-[11px] font-bold">Edit Cover</span>
+              </div>
             </div>
 
             <div className="flex-1 text-center sm:text-left space-y-2">
@@ -2496,7 +2545,19 @@ export function MusicChannelView({
               >
                 Playlist
               </span>
-              <h2 className="text-2xl font-black text-neutral-900 dark:text-white">{selectedPlaylist.name}</h2>
+              <div className="flex items-center justify-center sm:justify-start space-x-2">
+                <h2 className="text-2xl font-black text-neutral-900 dark:text-white truncate">
+                  {selectedPlaylist.name}
+                </h2>
+                <button
+                  type="button"
+                  onClick={() => setPlaylistToEdit(selectedPlaylist)}
+                  className="p-1.5 text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition cursor-pointer"
+                  title="Edit playlist name & description"
+                >
+                  <Pencil className="w-4 h-4" />
+                </button>
+              </div>
               <p className="text-xs text-neutral-600 dark:text-neutral-400">{selectedPlaylist.description || "Custom Team Mix"}</p>
               <div className="flex items-center justify-center sm:justify-start space-x-3 pt-1 text-xs text-neutral-600 dark:text-neutral-300">
                 <span>{selectedPlaylistTracks.length} songs</span>
@@ -2533,6 +2594,16 @@ export function MusicChannelView({
                 >
                   <Shuffle className="w-3.5 h-3.5" />
                   <span>Shuffle</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setPlaylistToEdit(selectedPlaylist)}
+                  className="px-3.5 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-800 dark:bg-neutral-800 dark:hover:bg-neutral-700 dark:text-white rounded-xl text-xs font-bold border border-neutral-300 dark:border-neutral-700 transition flex items-center space-x-1.5 cursor-pointer"
+                  title="Edit playlist name, cover photo & description"
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                  <span>Edit Playlist</span>
                 </button>
 
                 <button
@@ -3097,6 +3168,21 @@ export function MusicChannelView({
                         <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
                       </div>
                     </div>
+
+                    {/* Edit button on hover */}
+                    {pl.isCustom && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setPlaylistToEdit(pl);
+                        }}
+                        className="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/75 hover:bg-black text-white/90 hover:text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition shadow-md z-10 cursor-pointer"
+                        title="Edit playlist"
+                      >
+                        <Pencil className="w-3 h-3" />
+                      </button>
+                    )}
                   </div>
 
                   <div>
@@ -3775,6 +3861,16 @@ export function MusicChannelView({
         }}
         onSelectChannel={onSelectChannel}
         onSelectDirectMessage={onSelectDirectMessage}
+      />
+
+      {/* Edit Playlist Details & Cover Modal */}
+      <EditPlaylistModal
+        isOpen={Boolean(playlistToEdit)}
+        onClose={() => setPlaylistToEdit(null)}
+        playlist={playlistToEdit}
+        onSave={handleUpdatePlaylist}
+        themeAccent={themeAccent}
+        themeTextColor={themeTextColor}
       />
     </div>
   );
