@@ -21,6 +21,8 @@ import {
   ChevronDown,
   Bot,
   Zap,
+  SlidersHorizontal,
+  PlayCircle,
 } from "lucide-react";
 import { useMusic } from "@/context/music-context";
 import { MusicTrack } from "@/types";
@@ -78,6 +80,11 @@ export function AiMusicAssistant({
     },
   ]);
 
+  const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const [selectedVoiceName, setSelectedVoiceName] = useState<string>("");
+  const [voicePersonality, setVoicePersonality] = useState<"natural_female" | "cool_dj" | "desi_indian" | "custom">("natural_female");
+  const [isVoiceSettingsOpen, setIsVoiceSettingsOpen] = useState<boolean>(false);
+
   const recognitionRef = useRef<any>(null);
   const chatBottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -87,21 +94,136 @@ export function AiMusicAssistant({
     chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, liveTranscript]);
 
-  // Voice Speech Synthesis (TTS)
-  const speakText = (text: string) => {
+  // Load and prioritize natural neural human voices
+  useEffect(() => {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+
+    const loadVoices = () => {
+      const all = window.speechSynthesis.getVoices();
+      if (!all || all.length === 0) return;
+
+      setAvailableVoices(all);
+
+      const savedVoice = localStorage.getItem("kaelixo_ai_voice_name");
+      const savedPersonality = localStorage.getItem("kaelixo_ai_voice_personality") as any;
+      if (savedPersonality) setVoicePersonality(savedPersonality);
+
+      if (savedVoice && all.some((v) => v.name === savedVoice)) {
+        setSelectedVoiceName(savedVoice);
+      } else {
+        // Auto-select the BEST natural human voice (prioritize Edge Natural, Google, Apple Siri)
+        const bestVoice =
+          all.find((v) => /natural.*jenny|jenny.*natural/i.test(v.name)) ||
+          all.find((v) => /natural.*aria|aria.*natural/i.test(v.name)) ||
+          all.find((v) => /google\s+us\s+english/i.test(v.name)) ||
+          all.find((v) => /samantha|siri/i.test(v.name)) ||
+          all.find((v) => /natural|online|neural/i.test(v.name) && v.lang.startsWith("en")) ||
+          all.find((v) => v.lang.startsWith("en")) ||
+          all[0];
+
+        if (bestVoice) {
+          setSelectedVoiceName(bestVoice.name);
+        }
+      }
+    };
+
+    loadVoices();
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+  }, []);
+
+  // Voice Speech Synthesis (TTS) with Human-Grade Neural Voices
+  const speakText = (text: string, overrideVoice?: string, overridePersonality?: string) => {
     if (!ttsEnabled || typeof window === "undefined" || !("speechSynthesis" in window)) return;
     try {
       window.speechSynthesis.cancel();
       // Clean text of emojis & punctuation for smooth speech
       const cleaned = text.replace(/[\u{1F300}-\u{1F9FF}]/gu, "").replace(/[^\w\s.,!?'"-]/g, "");
       const utterance = new SpeechSynthesisUtterance(cleaned);
-      utterance.rate = 1.05;
-      utterance.pitch = 1.0;
-      utterance.volume = 0.95;
+
+      const all = window.speechSynthesis.getVoices();
+      const targetName = overrideVoice || selectedVoiceName;
+      let targetVoice = all.find((v) => v.name === targetName);
+
+      if (!targetVoice) {
+        targetVoice =
+          all.find((v) => /natural|online|google|neural|samantha/i.test(v.name) && v.lang.startsWith("en")) ||
+          all.find((v) => v.lang.startsWith("en"));
+      }
+
+      if (targetVoice) {
+        utterance.voice = targetVoice;
+      }
+
+      const activePersonality = overridePersonality || voicePersonality;
+      if (activePersonality === "cool_dj") {
+        utterance.rate = 0.98;
+        utterance.pitch = 0.90; // Deep relaxed DJ bass
+      } else if (activePersonality === "desi_indian") {
+        utterance.rate = 1.0;
+        utterance.pitch = 1.02;
+      } else {
+        // Natural female / warm
+        utterance.rate = 1.0;
+        utterance.pitch = 1.05;
+      }
+      utterance.volume = 1.0;
+
       window.speechSynthesis.speak(utterance);
     } catch (e) {
       console.warn("Speech synthesis error:", e);
     }
+  };
+
+  const selectVoicePersonality = (personality: "natural_female" | "cool_dj" | "desi_indian") => {
+    setVoicePersonality(personality);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("kaelixo_ai_voice_personality", personality);
+    }
+
+    const all = availableVoices;
+    let target: SpeechSynthesisVoice | undefined;
+
+    if (personality === "natural_female") {
+      target =
+        all.find((v) => /natural.*jenny|jenny.*natural|natural.*aria|aria.*natural/i.test(v.name)) ||
+        all.find((v) => /google\s+us\s+english|samantha|zira/i.test(v.name)) ||
+        all.find((v) => /female/i.test(v.name) && v.lang.startsWith("en"));
+    } else if (personality === "cool_dj") {
+      target =
+        all.find((v) => /natural.*guy|guy.*natural|natural.*ryan|ryan.*natural/i.test(v.name)) ||
+        all.find((v) => /google\s+uk\s+english\s+male|daniel|david/i.test(v.name)) ||
+        all.find((v) => /male/i.test(v.name) && v.lang.startsWith("en"));
+    } else if (personality === "desi_indian") {
+      target =
+        all.find((v) => /natural.*neerja|neerja.*natural|natural.*prabhat/i.test(v.name)) ||
+        all.find((v) => /india|en-in/i.test(v.lang) || /india|heera|ravi/i.test(v.name));
+    }
+
+    if (target) {
+      setSelectedVoiceName(target.name);
+      if (typeof window !== "undefined") {
+        localStorage.setItem("kaelixo_ai_voice_name", target.name);
+      }
+      speakText(
+        personality === "natural_female"
+          ? "Hi! I'm your smooth natural AI DJ. How does this sound?"
+          : personality === "cool_dj"
+          ? "Yo! This is your cool DJ voice. Ready for the music!"
+          : "Namaste! This is your Indian English AI voice. All set!",
+        target.name,
+        personality
+      );
+    }
+  };
+
+  const handleSelectSpecificVoice = (voiceName: string) => {
+    setSelectedVoiceName(voiceName);
+    setVoicePersonality("custom");
+    if (typeof window !== "undefined") {
+      localStorage.setItem("kaelixo_ai_voice_name", voiceName);
+      localStorage.setItem("kaelixo_ai_voice_personality", "custom");
+    }
+    speakText("Testing this voice sound for Kaelixo AI DJ.", voiceName, "custom");
   };
 
   // Initialize Speech Recognition
@@ -633,6 +755,20 @@ export function AiMusicAssistant({
           </div>
 
           <div className="flex items-center space-x-1">
+            {/* Change AI Voice Button */}
+            <button
+              type="button"
+              onClick={() => setIsVoiceSettingsOpen(!isVoiceSettingsOpen)}
+              className={`p-2 rounded-xl transition cursor-pointer ${
+                isVoiceSettingsOpen
+                  ? "bg-purple-600 text-white shadow-xs"
+                  : "text-purple-500 hover:text-purple-400 hover:bg-purple-500/10"
+              }`}
+              title="Change AI Voice Sound & Tone"
+            >
+              <SlidersHorizontal className="w-4 h-4" />
+            </button>
+
             {/* Toggle Audio Voice Responses (TTS) */}
             <button
               type="button"
@@ -658,6 +794,93 @@ export function AiMusicAssistant({
             </button>
           </div>
         </div>
+
+        {/* Voice Customization Settings Drawer */}
+        {isVoiceSettingsOpen && (
+          <div className="p-3.5 bg-neutral-100 dark:bg-neutral-800/90 border-b border-neutral-200 dark:border-neutral-700 space-y-2.5 animate-in slide-in-from-top-2 duration-150">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold text-neutral-700 dark:text-neutral-300 flex items-center space-x-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-purple-500" />
+                <span>AI Voice Personality</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => speakText("Hey Prajin! I am your Kaelixo AI DJ. Testing my voice sound for you!")}
+                className="text-[10px] font-bold text-purple-600 dark:text-purple-400 hover:underline flex items-center space-x-1 cursor-pointer"
+              >
+                <PlayCircle className="w-3 h-3" />
+                <span>Test Voice Sample</span>
+              </button>
+            </div>
+
+            {/* 3 Quick Personality Presets */}
+            <div className="grid grid-cols-3 gap-1.5">
+              <button
+                type="button"
+                onClick={() => selectVoicePersonality("natural_female")}
+                className={`p-2 rounded-xl border text-center transition cursor-pointer ${
+                  voicePersonality === "natural_female"
+                    ? "border-purple-500 bg-purple-500/20 text-purple-600 dark:text-purple-300 font-bold shadow-xs"
+                    : "border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800"
+                }`}
+              >
+                <span className="text-base block">🌸</span>
+                <span className="text-[10px] font-extrabold block leading-tight mt-0.5">Smooth</span>
+                <span className="text-[9px] text-neutral-400 block">Natural Female</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => selectVoicePersonality("cool_dj")}
+                className={`p-2 rounded-xl border text-center transition cursor-pointer ${
+                  voicePersonality === "cool_dj"
+                    ? "border-purple-500 bg-purple-500/20 text-purple-600 dark:text-purple-300 font-bold shadow-xs"
+                    : "border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800"
+                }`}
+              >
+                <span className="text-base block">🎧</span>
+                <span className="text-[10px] font-extrabold block leading-tight mt-0.5">Cool DJ</span>
+                <span className="text-[9px] text-neutral-400 block">Deep Radio Bass</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => selectVoicePersonality("desi_indian")}
+                className={`p-2 rounded-xl border text-center transition cursor-pointer ${
+                  voicePersonality === "desi_indian"
+                    ? "border-purple-500 bg-purple-500/20 text-purple-600 dark:text-purple-300 font-bold shadow-xs"
+                    : "border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800"
+                }`}
+              >
+                <span className="text-base block">🇮🇳</span>
+                <span className="text-[10px] font-extrabold block leading-tight mt-0.5">Desi</span>
+                <span className="text-[9px] text-neutral-400 block">Indian English</span>
+              </button>
+            </div>
+
+            {/* Dropdown for All Installed Voices */}
+            {availableVoices.length > 0 && (
+              <div>
+                <label className="text-[10px] font-bold text-neutral-500 dark:text-neutral-400 block mb-1">
+                  Device Voices ({availableVoices.filter((v) => v.lang.startsWith("en")).length} English):
+                </label>
+                <select
+                  value={selectedVoiceName}
+                  onChange={(e) => handleSelectSpecificVoice(e.target.value)}
+                  className="w-full px-2 py-1.5 bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 rounded-lg text-[11px] text-neutral-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-purple-500"
+                >
+                  {availableVoices
+                    .filter((v) => v.lang.startsWith("en") || v.default)
+                    .map((v) => (
+                      <option key={v.name} value={v.name}>
+                        {v.name} {/natural|online/i.test(v.name) ? "✨ (High Quality)" : ""}
+                      </option>
+                    ))}
+                </select>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Central Visualizer & Listening Orb */}
         <div className="p-4 bg-gradient-to-b from-purple-500/10 via-transparent to-transparent flex flex-col items-center justify-center border-b border-neutral-100 dark:border-neutral-800/60">
