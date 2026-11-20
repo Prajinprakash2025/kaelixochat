@@ -42,7 +42,7 @@ interface SidebarProps {
   activeOrg: Organization;
   onSelectOrg: (org: Organization) => void;
   onOpenNewCompanyModal: () => void;
-  onOpenEditCompanyModal?: () => void;
+  onOpenEditCompanyModal?: (org?: Organization) => void;
   departments: Department[];
   selectedDepartment: DepartmentCode;
   onSelectDepartment: (dept: DepartmentCode) => void;
@@ -454,7 +454,7 @@ export function Sidebar({
                 {/* Edit Company Settings Button */}
                 {onOpenEditCompanyModal && (
                   <button
-                    onClick={onOpenEditCompanyModal}
+                    onClick={() => onOpenEditCompanyModal()}
                     className="p-1.5 rounded-xl text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 transition cursor-pointer"
                     title="Edit Company Name & Logo (Manager)"
                   >
@@ -480,24 +480,44 @@ export function Sidebar({
                   Workspaces
                 </div>
                 {organizations.map((org) => (
-                  <button
+                  <div
                     key={org.id}
                     onClick={() => {
                       onSelectOrg(org);
                       setShowOrgDropdown(false);
                     }}
-                    className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-semibold transition cursor-pointer ${
+                    className={`group w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-semibold transition cursor-pointer ${
                       org.id === activeOrg.id
                         ? "bg-indigo-600 text-white"
                         : "text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-neutral-900 dark:hover:text-white"
                     }`}
                   >
-                    <div className="flex items-center space-x-2 truncate">
+                    <div className="flex items-center space-x-2 truncate min-w-0">
                       <Building2 className="w-3.5 h-3.5 flex-shrink-0" />
                       <span className="truncate">{org.name}</span>
                     </div>
-                    {org.id === activeOrg.id && <Check className="w-3.5 h-3.5" />}
-                  </button>
+                    <div className="flex items-center space-x-1 flex-shrink-0">
+                      {onOpenEditCompanyModal && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setShowOrgDropdown(false);
+                            onOpenEditCompanyModal(org);
+                          }}
+                          className={`p-1 rounded-md transition opacity-0 group-hover:opacity-100 ${
+                            org.id === activeOrg.id
+                              ? "hover:bg-white/20 text-white"
+                              : "hover:bg-black/10 dark:hover:bg-white/10 text-neutral-400 hover:text-neutral-900 dark:hover:text-white"
+                          }`}
+                          title={`Settings & delete for ${org.name}`}
+                        >
+                          <Settings className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                      {org.id === activeOrg.id && <Check className="w-3.5 h-3.5" />}
+                    </div>
+                  </div>
                 ))}
 
                 <div className="pt-1.5 border-t border-neutral-200 dark:border-neutral-800 space-y-0.5">
@@ -524,12 +544,24 @@ export function Sidebar({
                     <button
                       onClick={() => {
                         setShowOrgDropdown(false);
-                        onOpenEditCompanyModal();
+                        onOpenEditCompanyModal(activeOrg);
                       }}
                       className="w-full flex items-center space-x-2 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition cursor-pointer"
                     >
                       <Building2 className="w-3.5 h-3.5 text-indigo-500" />
-                      <span>Edit Company & Logo</span>
+                      <span>Workspace Settings & Delete</span>
+                    </button>
+                  )}
+                  {onOpenMemberDirectory && (
+                    <button
+                      onClick={() => {
+                        setShowOrgDropdown(false);
+                        onOpenMemberDirectory();
+                      }}
+                      className="w-full flex items-center space-x-2 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition cursor-pointer"
+                    >
+                      <Users className="w-3.5 h-3.5 text-neutral-500" />
+                      <span>Manage Workspaces & Directory</span>
                     </button>
                   )}
                   {onOpenPreferences && (
@@ -555,7 +587,7 @@ export function Sidebar({
                     className="w-full flex items-center space-x-2 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition cursor-pointer"
                   >
                     <Plus className="w-3.5 h-3.5" />
-                    <span>+ Create New Company</span>
+                    <span>+ Create New Workspace</span>
                   </button>
                 </div>
               </div>

@@ -47,6 +47,8 @@ interface MobileSlackViewProps {
   organizations: Organization[];
   activeOrg: Organization;
   onSelectOrg: (org: Organization) => void;
+  onOpenNewCompanyModal?: () => void;
+  onOpenEditCompanyModal?: (org?: Organization) => void;
   channels: Channel[];
   activeChannelId: string;
   onSelectChannel: (channelId: string) => void;
@@ -75,6 +77,8 @@ export function MobileSlackView({
   organizations,
   activeOrg,
   onSelectOrg,
+  onOpenNewCompanyModal,
+  onOpenEditCompanyModal,
   channels,
   activeChannelId,
   onSelectChannel,
@@ -279,12 +283,28 @@ export function MobileSlackView({
                     </div>
                     <div>
                       <p className="font-semibold text-sm">{org.name}</p>
-                      <p className="text-xs text-neutral-400">{org.slug}.kaelixo.com</p>
+                      <p className="text-xs text-neutral-400">{org.slug || org.id}.kaelixo.com</p>
                     </div>
                   </div>
-                  {org.id === activeOrg.id && (
-                    <Check className="w-4 h-4 text-emerald-400" />
-                  )}
+                  <div className="flex items-center space-x-2">
+                    {onOpenEditCompanyModal && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowOrgDropdown(false);
+                          onOpenEditCompanyModal(org);
+                        }}
+                        className="p-1 rounded-md text-neutral-400 hover:text-white hover:bg-neutral-700/60 transition"
+                        title={`Edit ${org.name}`}
+                      >
+                        <Settings className="w-4 h-4" />
+                      </button>
+                    )}
+                    {org.id === activeOrg.id && (
+                      <Check className="w-4 h-4 text-emerald-400" />
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -298,6 +318,17 @@ export function MobileSlackView({
               >
                 + Invite Teammates
               </button>
+              {onOpenNewCompanyModal && (
+                <button
+                  onClick={() => {
+                    setShowOrgDropdown(false);
+                    onOpenNewCompanyModal();
+                  }}
+                  className="text-xs text-emerald-400 hover:text-emerald-300 font-medium py-1"
+                >
+                  + New Workspace
+                </button>
+              )}
             </div>
           </div>
         </div>

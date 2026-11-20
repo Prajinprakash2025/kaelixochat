@@ -17,6 +17,8 @@ import {
   Link as LinkIcon,
   Check,
   AlertTriangle,
+  Settings,
+  Plus,
 } from "lucide-react";
 import { WorkspaceMember, Department, Organization } from "@/types";
 import {
@@ -33,11 +35,17 @@ export interface MemberDirectoryModalProps {
   currentUser: WorkspaceMember;
   departments: Department[];
   activeOrg: Organization;
+  organizations?: Organization[];
+  onSelectOrg?: (org: Organization) => void;
+  onOpenNewCompanyModal?: () => void;
+  onOpenEditCompanyModal?: (org?: Organization) => void;
+  onDeleteCompany?: (orgId: string) => Promise<void> | void;
   onSelectMemberForDm: (member: WorkspaceMember) => void;
   onOpenProfileDrawer?: (member: WorkspaceMember) => void;
   onOpenAddMemberModal: () => void;
   onRemoveMember: (memberId: string) => void;
   onToggleDeactivateMember?: (memberId: string, active: boolean) => void;
+  initialTab?: "people" | "departments" | "invitations" | "workspaces";
 }
 
 export function MemberDirectoryModal({
@@ -47,17 +55,24 @@ export function MemberDirectoryModal({
   currentUser,
   departments,
   activeOrg,
+  organizations = [],
+  onSelectOrg,
+  onOpenNewCompanyModal,
+  onOpenEditCompanyModal,
+  onDeleteCompany,
   onSelectMemberForDm,
   onOpenProfileDrawer,
   onOpenAddMemberModal,
   onRemoveMember,
   onToggleDeactivateMember,
+  initialTab = "people",
 }: MemberDirectoryModalProps) {
-  const [activeTab, setActiveTab] = useState<"people" | "departments" | "invitations">("people");
+  const [activeTab, setActiveTab] = useState<"people" | "departments" | "invitations" | "workspaces">(initialTab);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDept, setSelectedDept] = useState<string>("all");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [memberPendingRemoval, setMemberPendingRemoval] = useState<WorkspaceMember | null>(null);
+  const [orgPendingDeletion, setOrgPendingDeletion] = useState<Organization | null>(null);
   const [copiedLink, setCopiedLink] = useState(false);
 
   // Filter members based on search and department
@@ -143,7 +158,7 @@ export function MemberDirectoryModal({
           </div>
 
           <div className="flex items-center space-x-2.5">
-            {userCanAdd && (
+            {activeTab === "people" && userCanAdd && (
               <button
                 onClick={onOpenAddMemberModal}
                 className="flex items-center space-x-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-sm transition cursor-pointer"
@@ -151,6 +166,20 @@ export function MemberDirectoryModal({
               >
                 <UserPlus className="w-3.5 h-3.5" />
                 <span>Add Member</span>
+              </button>
+            )}
+
+            {activeTab === "workspaces" && onOpenNewCompanyModal && (
+              <button
+                onClick={() => {
+                  onClose();
+                  onOpenNewCompanyModal();
+                }}
+                className="flex items-center space-x-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-sm transition cursor-pointer"
+                title="Create new workspace"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Create Workspace</span>
               </button>
             )}
 
@@ -168,7 +197,7 @@ export function MemberDirectoryModal({
         <div className="flex border-b border-neutral-200 dark:border-neutral-800 px-6 pt-3 bg-neutral-50/50 dark:bg-neutral-900/50">
           <button
             onClick={() => setActiveTab("people")}
-            className={`pb-3 px-3 text-xs font-semibold border-b-2 transition ${
+            className={`pb-3 px-3 text-xs font-semibold border-b-2 transition cursor-pointer ${
               activeTab === "people"
                 ? "border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400"
                 : "border-transparent text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
@@ -178,7 +207,7 @@ export function MemberDirectoryModal({
           </button>
           <button
             onClick={() => setActiveTab("departments")}
-            className={`pb-3 px-3 text-xs font-semibold border-b-2 transition ${
+            className={`pb-3 px-3 text-xs font-semibold border-b-2 transition cursor-pointer ${
               activeTab === "departments"
                 ? "border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400"
                 : "border-transparent text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
@@ -187,8 +216,18 @@ export function MemberDirectoryModal({
             Departments ({departments.filter((d) => d.code !== "all").length})
           </button>
           <button
+            onClick={() => setActiveTab("workspaces")}
+            className={`pb-3 px-3 text-xs font-semibold border-b-2 transition cursor-pointer ${
+              activeTab === "workspaces"
+                ? "border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400"
+                : "border-transparent text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
+            }`}
+          >
+            Workspaces ({organizations && organizations.length > 0 ? organizations.length : 1})
+          </button>
+          <button
             onClick={() => setActiveTab("invitations")}
-            className={`pb-3 px-3 text-xs font-semibold border-b-2 transition ${
+            className={`pb-3 px-3 text-xs font-semibold border-b-2 transition cursor-pointer ${
               activeTab === "invitations"
                 ? "border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400"
                 : "border-transparent text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
@@ -575,7 +614,130 @@ export function MemberDirectoryModal({
           </div>
         )}
 
-        {/* Tab 3: Workspace Invitations */}
+        {/* Tab 3: Workspaces Management */}
+        {activeTab === "workspaces" && (
+          <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-neutral-100 dark:border-neutral-800">
+              <div>
+                <h3 className="font-bold text-sm text-neutral-900 dark:text-neutral-100">
+                  Team Workspaces
+                </h3>
+                <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                  Switch between workspaces, customize branding, or add new team spaces.
+                </p>
+              </div>
+              {onOpenNewCompanyModal && (
+                <button
+                  onClick={() => {
+                    onClose();
+                    onOpenNewCompanyModal();
+                  }}
+                  className="px-3.5 py-1.5 rounded-xl text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition flex items-center space-x-1.5 self-start sm:self-auto cursor-pointer shadow-xs"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Create Workspace</span>
+                </button>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {(organizations && organizations.length > 0 ? organizations : [activeOrg]).map((org) => {
+                const isActive = org.id === activeOrg.id;
+                return (
+                  <div
+                    key={org.id}
+                    className={`p-5 rounded-2xl border transition ${
+                      isActive
+                        ? "border-emerald-500/50 bg-emerald-50/20 dark:bg-emerald-950/10 shadow-xs ring-1 ring-emerald-500/20"
+                        : "border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-800/40 hover:border-neutral-300 dark:hover:border-neutral-700"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-3 mb-3">
+                      <div className="flex items-center space-x-3 min-w-0">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-500 to-purple-600 text-white flex items-center justify-center font-bold text-sm shadow-xs flex-shrink-0 overflow-hidden">
+                          {org.logo_url ? (
+                            <img src={org.logo_url} alt={org.name} className="w-full h-full object-cover" />
+                          ) : (
+                            org.name.charAt(0).toUpperCase()
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <h4 className="font-bold text-sm text-neutral-900 dark:text-neutral-100 truncate">
+                            {org.name}
+                          </h4>
+                          <p className="text-xs text-neutral-400 font-mono truncate">
+                            kaelixo.com/{org.slug || org.id}
+                          </p>
+                        </div>
+                      </div>
+
+                      {isActive ? (
+                        <span className="inline-flex items-center space-x-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800/60 flex-shrink-0">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                          <span>Active</span>
+                        </span>
+                      ) : (
+                        <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-500 flex-shrink-0">
+                          {org.plan || "Standard"}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center justify-between pt-3 border-t border-neutral-100 dark:border-neutral-800 text-xs">
+                      <div className="text-[11px] text-neutral-400">
+                        {org.invite_code ? `Code: ${org.invite_code}` : "Invite ready"}
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        {!isActive && onSelectOrg && (
+                          <button
+                            onClick={() => {
+                              onSelectOrg(org);
+                              onClose();
+                            }}
+                            className="px-2.5 py-1 rounded-lg text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition cursor-pointer"
+                          >
+                            Switch
+                          </button>
+                        )}
+
+                        {onOpenEditCompanyModal && (
+                          <button
+                            onClick={() => {
+                              onClose();
+                              onOpenEditCompanyModal(org);
+                            }}
+                            className="p-1.5 rounded-lg text-neutral-500 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-700 transition cursor-pointer"
+                            title="Edit workspace & logo"
+                          >
+                            <Settings className="w-4 h-4" />
+                          </button>
+                        )}
+
+                        {onDeleteCompany && (
+                          <button
+                            onClick={() => setOrgPendingDeletion(org)}
+                            disabled={(organizations && organizations.length > 0 ? organizations.length : 1) <= 1}
+                            className="p-1.5 rounded-lg text-neutral-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                            title={
+                              (organizations && organizations.length > 0 ? organizations.length : 1) <= 1
+                                ? "Cannot delete the only workspace"
+                                : `Delete ${org.name}`
+                            }
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Tab 4: Workspace Invitations */}
         {activeTab === "invitations" && (
           <div className="flex-1 overflow-y-auto p-6 space-y-6 max-w-xl mx-auto custom-scrollbar">
             <div className="p-6 rounded-3xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-800/40 space-y-4">
@@ -621,6 +783,54 @@ export function MemberDirectoryModal({
                 <p className="text-[11px] text-neutral-400">
                   Invite Code: <span className="font-mono font-bold">{activeOrg.invite_code || "kaelixo-prod"}</span>
                 </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Workspace Deletion Confirmation Dialog Modal */}
+        {orgPendingDeletion && (
+          <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in duration-150">
+            <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-3xl w-full max-w-md p-6 shadow-2xl space-y-4">
+              <div className="flex items-center space-x-3 text-rose-600">
+                <div className="p-2.5 rounded-2xl bg-rose-50 dark:bg-rose-950/60">
+                  <AlertTriangle className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-base text-neutral-900 dark:text-neutral-100">
+                    Delete Workspace?
+                  </h3>
+                  <p className="text-xs text-neutral-500">
+                    This action cannot be undone.
+                  </p>
+                </div>
+              </div>
+
+              <p className="text-xs text-neutral-600 dark:text-neutral-300 leading-relaxed">
+                Are you sure you want to delete <strong className="text-neutral-900 dark:text-white">{orgPendingDeletion.name}</strong>? All channels, messages, departments, and workspace data will be permanently removed.
+              </p>
+
+              <div className="flex items-center justify-end space-x-3 pt-3 border-t border-neutral-200 dark:border-neutral-800">
+                <button
+                  type="button"
+                  onClick={() => setOrgPendingDeletion(null)}
+                  className="px-4 py-2 text-xs font-semibold text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-xl transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const toDeleteId = orgPendingDeletion.id;
+                    setOrgPendingDeletion(null);
+                    if (onDeleteCompany) {
+                      await onDeleteCompany(toDeleteId);
+                    }
+                  }}
+                  className="px-4 py-2 text-xs font-semibold text-white bg-rose-600 hover:bg-rose-700 rounded-xl shadow-md transition cursor-pointer"
+                >
+                  Yes, Delete Workspace
+                </button>
               </div>
             </div>
           </div>

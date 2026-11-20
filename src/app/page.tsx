@@ -369,6 +369,7 @@ export default function KaelixoApp() {
   const [channelToEdit, setChannelToEdit] = useState<Channel | null>(null);
   const [isNewCompanyModalOpen, setIsNewCompanyModalOpen] = useState(false);
   const [isEditCompanyModalOpen, setIsEditCompanyModalOpen] = useState(false);
+  const [companyToEdit, setCompanyToEdit] = useState<Organization | null>(null);
   const [isNewDepartmentModalOpen, setIsNewDepartmentModalOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
@@ -3125,6 +3126,44 @@ export default function KaelixoApp() {
     }
   };
 
+  // Delete Company (Workspace)
+  const handleDeleteCompany = async (orgId: string) => {
+    if (organizations.length <= 1) {
+      alert("Cannot delete the only remaining workspace.");
+      return;
+    }
+
+    const targetOrg = organizations.find((o) => o.id === orgId);
+    const remainingOrgs = organizations.filter((o) => o.id !== orgId);
+    setOrganizations(remainingOrgs);
+
+    if (activeOrg.id === orgId && remainingOrgs.length > 0) {
+      const nextActive = remainingOrgs[0];
+      setActiveOrg(nextActive);
+      try {
+        localStorage.setItem("kaelixo_org", JSON.stringify(nextActive));
+      } catch {}
+      if (typeof document !== "undefined") {
+        document.title = `${nextActive.name} — Enterprise Workspace`;
+      }
+    }
+
+    setActiveToast({
+      id: `org-delete-${Date.now()}`,
+      senderName: "Workspace Deleted",
+      content: `Workspace "${targetOrg?.name || "Workspace"}" has been deleted.`,
+      channelName: activeChannel.name,
+      channelId: activeChannelId,
+      messageId: "",
+    });
+
+    try {
+      await supabase.from("organizations").delete().eq("id", orgId);
+    } catch (err) {
+      console.error("Failed to delete organization in Supabase:", err);
+    }
+  };
+
   // Create Department
   const handleCreateDepartment = async (dept: {
     name: string;
@@ -3329,6 +3368,11 @@ export default function KaelixoApp() {
             organizations={organizations}
             activeOrg={activeOrg}
             onSelectOrg={setActiveOrg}
+            onOpenNewCompanyModal={() => setIsNewCompanyModalOpen(true)}
+            onOpenEditCompanyModal={(org) => {
+              setCompanyToEdit(org || null);
+              setIsEditCompanyModalOpen(true);
+            }}
             channels={channels}
             activeChannelId={activeChannelId}
             onSelectChannel={(chId) => {
@@ -3368,7 +3412,10 @@ export default function KaelixoApp() {
           activeOrg={activeOrg}
           onSelectOrg={setActiveOrg}
           onOpenNewCompanyModal={() => setIsNewCompanyModalOpen(true)}
-          onOpenEditCompanyModal={() => setIsEditCompanyModalOpen(true)}
+          onOpenEditCompanyModal={(org) => {
+            setCompanyToEdit(org || null);
+            setIsEditCompanyModalOpen(true);
+          }}
           departments={departments}
           selectedDepartment={selectedDepartment}
           onSelectDepartment={setSelectedDepartment}
@@ -4046,9 +4093,14 @@ export default function KaelixoApp() {
 
       <EditCompanyModal
         isOpen={isEditCompanyModalOpen}
-        onClose={() => setIsEditCompanyModalOpen(false)}
-        activeOrg={activeOrg}
+        onClose={() => {
+          setIsEditCompanyModalOpen(false);
+          setCompanyToEdit(null);
+        }}
+        activeOrg={companyToEdit || activeOrg}
+        organizations={organizations}
         onUpdateCompany={handleUpdateCompany}
+        onDeleteCompany={handleDeleteCompany}
       />
 
       <NewDepartmentModal
@@ -4095,6 +4147,14 @@ export default function KaelixoApp() {
         currentUser={currentUser}
         departments={departments}
         activeOrg={activeOrg}
+        organizations={organizations}
+        onSelectOrg={setActiveOrg}
+        onOpenNewCompanyModal={() => setIsNewCompanyModalOpen(true)}
+        onOpenEditCompanyModal={(org) => {
+          setCompanyToEdit(org || null);
+          setIsEditCompanyModalOpen(true);
+        }}
+        onDeleteCompany={handleDeleteCompany}
         onSelectMemberForDm={(member) => {
           handleSelectDirectMessage(member);
           setIsMemberDirectoryOpen(false);
