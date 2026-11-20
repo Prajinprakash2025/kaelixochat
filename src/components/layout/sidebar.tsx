@@ -32,6 +32,7 @@ import {
   Bot,
   Home as HomeIcon,
   Trash2,
+  Headphones,
 } from "lucide-react";
 import { DepartmentCode, Channel, WorkspaceMember, Department, Organization } from "@/types";
 import { canRemoveMember } from "@/utils/permissions";
@@ -97,9 +98,12 @@ export function Sidebar({
 }: SidebarProps) {
   const [showOrgDropdown, setShowOrgDropdown] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
-  const [activeRailTab, setActiveRailTab] = useState<"home" | "dms" | "activity" | "files" | "games">("home");
+  const [activeRailTab, setActiveRailTab] = useState<"home" | "dms" | "activity" | "files" | "games" | "music">("home");
   const [dragOverChannelId, setDragOverChannelId] = useState<string | null>(null);
   const [dragOverMemberId, setDragOverMemberId] = useState<string | null>(null);
+
+  const activeChannel = channels.find((ch) => ch.id === activeChannelId);
+  const isMusicActive = activeChannel?.name === "music";
 
   const handleCopyInvite = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -110,9 +114,10 @@ export function Sidebar({
     }
   };
 
-  // Filter channels based on selected department tab
+  // Filter channels based on selected department tab (Music has its own primary Activity Rail icon)
   const filteredChannels = channels.filter((ch) => {
     if (ch.isDm || ch.name.startsWith("dm:") || ch.name.includes(":")) return false;
+    if (ch.name === "music") return false;
     if (selectedDepartment === "all") return true;
     return ch.departmentCode === selectedDepartment || ch.departmentCode === "all";
   });
@@ -199,9 +204,17 @@ export function Sidebar({
             {/* Rail Navigation Icons */}
             <div className="flex flex-col items-center space-y-2 w-full pt-1">
               <button
-                onClick={() => setActiveRailTab("home")}
+                onClick={() => {
+                  setActiveRailTab("home");
+                  if (isMusicActive) {
+                    const generalCh =
+                      channels.find((c) => c.name === "general") ||
+                      channels.find((c) => c.name !== "music" && !c.isDm);
+                    if (generalCh) onSelectChannel(generalCh.id);
+                  }
+                }}
                 style={
-                  activeRailTab === "home"
+                  activeRailTab === "home" && !isMusicActive
                     ? {
                         backgroundColor: "var(--theme-sidebar-active-bg, rgba(255,255,255,0.22))",
                         color: "var(--theme-sidebar-active-text, #ffffff)",
@@ -209,7 +222,7 @@ export function Sidebar({
                     : { color: "var(--theme-header-text, #ffffff)" }
                 }
                 className={`flex flex-col items-center justify-center w-12 py-1.5 rounded-xl transition cursor-pointer ${
-                  activeRailTab === "home"
+                  activeRailTab === "home" && !isMusicActive
                     ? "font-bold shadow-xs"
                     : "opacity-80 hover:opacity-100 hover:bg-white/10 dark:hover:bg-white/10"
                 }`}
@@ -220,9 +233,17 @@ export function Sidebar({
               </button>
 
               <button
-                onClick={() => setActiveRailTab("dms")}
+                onClick={() => {
+                  setActiveRailTab("dms");
+                  if (isMusicActive) {
+                    const generalCh =
+                      channels.find((c) => c.name === "general") ||
+                      channels.find((c) => c.name !== "music" && !c.isDm);
+                    if (generalCh) onSelectChannel(generalCh.id);
+                  }
+                }}
                 style={
-                  activeRailTab === "dms"
+                  activeRailTab === "dms" && !isMusicActive
                     ? {
                         backgroundColor: "var(--theme-sidebar-active-bg, rgba(255,255,255,0.22))",
                         color: "var(--theme-sidebar-active-text, #ffffff)",
@@ -230,7 +251,7 @@ export function Sidebar({
                     : { color: "var(--theme-header-text, #ffffff)" }
                 }
                 className={`flex flex-col items-center justify-center w-12 py-1.5 rounded-xl transition cursor-pointer ${
-                  activeRailTab === "dms"
+                  activeRailTab === "dms" && !isMusicActive
                     ? "font-bold shadow-xs"
                     : "opacity-80 hover:opacity-100 hover:bg-white/10 dark:hover:bg-white/10"
                 }`}
@@ -310,6 +331,35 @@ export function Sidebar({
               >
                 <Gamepad2 className="w-4 h-4 text-emerald-400" />
                 <span className="text-[10px] mt-0.5 font-medium leading-none">Arcade</span>
+              </button>
+
+              {/* Dedicated Music Tab Icon on Activity Rail */}
+              <button
+                onClick={() => {
+                  setActiveRailTab("music");
+                  const musicCh = channels.find((c) => c.name === "music");
+                  if (musicCh) {
+                    onSelectChannel(musicCh.id);
+                  }
+                  if (onCloseMobile) onCloseMobile();
+                }}
+                style={
+                  activeRailTab === "music" || isMusicActive
+                    ? {
+                        backgroundColor: "var(--theme-sidebar-active-bg, rgba(255,255,255,0.22))",
+                        color: "var(--theme-sidebar-active-text, #ffffff)",
+                      }
+                    : { color: "var(--theme-header-text, #ffffff)" }
+                }
+                className={`flex flex-col items-center justify-center w-12 py-1.5 rounded-xl transition cursor-pointer relative ${
+                  activeRailTab === "music" || isMusicActive
+                    ? "font-bold shadow-xs"
+                    : "opacity-80 hover:opacity-100 hover:bg-white/10 dark:hover:bg-white/10"
+                }`}
+                title="Kaelixo Music & Live Jam"
+              >
+                <Headphones className="w-4 h-4 text-emerald-400" />
+                <span className="text-[10px] mt-0.5 font-medium leading-none">Music</span>
               </button>
             </div>
           </div>

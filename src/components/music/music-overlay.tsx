@@ -101,11 +101,13 @@ export function WorkspaceMusicOverlay({ activeChannelName }: WorkspaceMusicOverl
         onClose={() => setIsAiAssistantOpen(false)}
       />
 
-      {/* Floating AI DJ Trigger Button (Bottom-Right) */}
-      <AiAssistantTriggerButton
-        onClick={() => setIsAiAssistantOpen(true)}
-        isOpen={isAiAssistantOpen}
-      />
+      {/* Floating AI DJ Trigger Button: Only displayed when actively inside #music channel view so it NEVER overlaps or hides the chat send button in DMs or other channels */}
+      {activeChannelName === "music" && (
+        <AiAssistantTriggerButton
+          onClick={() => setIsAiAssistantOpen(true)}
+          isOpen={isAiAssistantOpen}
+        />
+      )}
     </>
   );
 }

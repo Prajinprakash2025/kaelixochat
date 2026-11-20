@@ -66,7 +66,8 @@ export function FloatingMusicBar() {
         } catch {}
       }
       // Default position: floating well above bottom chat composer (bottom: 120px)
-      const defaultX = Math.max(16, window.innerWidth - 380);
+      const barWidth = 350;
+      const defaultX = Math.max(16, window.innerWidth - barWidth - 24);
       const defaultY = Math.max(60, window.innerHeight - 150);
       setPosition({ x: defaultX, y: defaultY });
     }
@@ -77,7 +78,8 @@ export function FloatingMusicBar() {
     e.preventDefault();
     setIsDragging(true);
 
-    const currentX = position?.x ?? (window.innerWidth - 380);
+    const barWidth = 350;
+    const currentX = position?.x ?? Math.max(16, window.innerWidth - barWidth - 24);
     const currentY = position?.y ?? (window.innerHeight - 150);
 
     dragStartRef.current = {
@@ -91,12 +93,12 @@ export function FloatingMusicBar() {
       const deltaX = moveEvent.clientX - dragStartRef.current.mouseX;
       const deltaY = moveEvent.clientY - dragStartRef.current.mouseY;
 
-      const barWidth = barRef.current?.offsetWidth || 340;
+      const currentBarWidth = barRef.current?.offsetWidth || barWidth;
       const barHeight = barRef.current?.offsetHeight || 60;
 
       const newX = Math.min(
         Math.max(10, dragStartRef.current.startX + deltaX),
-        window.innerWidth - barWidth - 10
+        window.innerWidth - currentBarWidth - 16
       );
       const newY = Math.min(
         Math.max(10, dragStartRef.current.startY + deltaY),
@@ -124,7 +126,8 @@ export function FloatingMusicBar() {
     const touch = e.touches[0];
     setIsDragging(true);
 
-    const currentX = position?.x ?? (window.innerWidth - 380);
+    const barWidth = 350;
+    const currentX = position?.x ?? Math.max(16, window.innerWidth - barWidth - 24);
     const currentY = position?.y ?? (window.innerHeight - 150);
 
     dragStartRef.current = {
@@ -140,12 +143,12 @@ export function FloatingMusicBar() {
       const deltaX = moveTouch.clientX - dragStartRef.current.mouseX;
       const deltaY = moveTouch.clientY - dragStartRef.current.mouseY;
 
-      const barWidth = barRef.current?.offsetWidth || 320;
+      const currentBarWidth = barRef.current?.offsetWidth || barWidth;
       const barHeight = barRef.current?.offsetHeight || 60;
 
       const newX = Math.min(
         Math.max(10, dragStartRef.current.startX + deltaX),
-        window.innerWidth - barWidth - 10
+        window.innerWidth - currentBarWidth - 16
       );
       const newY = Math.min(
         Math.max(10, dragStartRef.current.startY + deltaY),
@@ -232,7 +235,7 @@ export function FloatingMusicBar() {
         left: position ? `${position.x}px` : undefined,
         top: position ? `${position.y}px` : undefined,
       }}
-      className={`fixed z-40 flex items-center p-2 rounded-2xl bg-neutral-900/95 text-white border border-neutral-700/80 shadow-2xl backdrop-blur-xl max-w-[360px] sm:max-w-md w-full select-none ${
+      className={`fixed z-40 flex items-center p-2 rounded-2xl bg-neutral-900/95 text-white border border-neutral-700/80 shadow-2xl backdrop-blur-xl w-[340px] sm:w-[350px] max-w-[calc(100vw-32px)] select-none ${
         isDragging
           ? "ring-2 ring-emerald-400 shadow-emerald-500/30 cursor-grabbing"
           : "transition-shadow"

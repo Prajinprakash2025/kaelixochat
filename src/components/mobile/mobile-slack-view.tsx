@@ -126,8 +126,8 @@ export function MobileSlackView({
     return null;
   };
 
-  // Filter channels (exclude DMs)
-  const regularChannels = channels.filter((c) => !c.isDm);
+  // Filter channels (exclude DMs and dedicated Music Jam)
+  const regularChannels = channels.filter((c) => !c.isDm && c.name !== "music");
 
   // Deduplicated members excluding current user
   const uniqueTeamMembers = React.useMemo(() => {

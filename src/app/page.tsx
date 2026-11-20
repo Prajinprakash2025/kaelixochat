@@ -3069,7 +3069,7 @@ export default function KaelixoApp() {
 
   return (
     <MusicProvider currentUser={currentUser}>
-      <div className="flex flex-col h-screen bg-white dark:bg-neutral-950 overflow-hidden font-sans antialiased text-neutral-900 dark:text-neutral-100">
+      <div className="flex flex-col h-screen w-full max-w-full bg-white dark:bg-neutral-950 overflow-hidden font-sans antialiased text-neutral-900 dark:text-neutral-100">
       {/* ============================================================== */}
       {/* SLACK TOP NAVIGATION BAR (Themed Header matching Slack UI)     */}
       {/* ============================================================== */}
@@ -3303,7 +3303,7 @@ export default function KaelixoApp() {
 
         {/* Main Chat Stage */}
         <main
-          className={`flex-1 flex flex-col h-full min-w-0 bg-white dark:bg-neutral-950 transition-all duration-300 ${
+          className={`flex-1 flex flex-col h-full min-w-0 max-w-full overflow-x-hidden bg-white dark:bg-neutral-950 transition-all duration-300 ${
             mobileViewMode === "tabs" ? "hidden md:flex" : "flex"
           } ${
             !isAuthenticated ? "filter blur-[2px] pointer-events-none select-none opacity-40" : ""

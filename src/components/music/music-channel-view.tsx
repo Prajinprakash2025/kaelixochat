@@ -2347,7 +2347,7 @@ export function MusicChannelView({
   }
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-[#f8f9fa] dark:bg-[#0d0d12] text-neutral-900 dark:text-white select-none overflow-y-auto scrollbar-thin relative pb-28">
+    <div className="flex-1 flex flex-col h-full w-full max-w-full bg-[#f8f9fa] dark:bg-[#0d0d12] text-neutral-900 dark:text-white select-none overflow-y-auto overflow-x-hidden scrollbar-thin relative pb-28">
       {/* Toast Notification */}
       {toastMessage && (
         <div className="fixed top-16 right-6 z-50 bg-white/95 dark:bg-neutral-900/95 backdrop-blur-md text-neutral-900 dark:text-white px-4 py-2.5 rounded-xl shadow-2xl border border-neutral-200 dark:border-neutral-700 flex items-center space-x-2 text-xs font-semibold animate-in slide-in-from-top-2">

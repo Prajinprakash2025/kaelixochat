@@ -37,11 +37,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased dark`}
+      className={`${geistSans.variable} ${geistMono.variable} h-full w-full max-w-full overflow-x-hidden antialiased dark`}
       data-theme="dark"
       suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col bg-white dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100">
+      <body className="min-h-full w-full max-w-full overflow-x-hidden flex flex-col bg-white dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100">
         <PreferencesProvider>{children}</PreferencesProvider>
       </body>
     </html>

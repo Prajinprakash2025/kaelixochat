@@ -1081,7 +1081,7 @@ export function AiAssistantTriggerButton({
       style={{
         boxShadow: "0 4px 20px rgba(168, 85, 247, 0.4)",
       }}
-      className={`fixed bottom-20 right-4 sm:bottom-6 sm:right-6 z-40 p-1 rounded-full bg-gradient-to-tr from-purple-600 via-pink-500 to-emerald-400 transition-all duration-300 transform hover:scale-108 active:scale-95 cursor-pointer group shadow-xl ${
+      className={`fixed bottom-24 right-4 sm:bottom-8 sm:right-8 z-40 p-1 rounded-full bg-gradient-to-tr from-purple-600 via-pink-500 to-emerald-400 transition-all duration-300 transform hover:scale-108 active:scale-95 cursor-pointer group shadow-xl ${
         isOpen ? "scale-0 opacity-0 pointer-events-none" : "scale-100 opacity-100"
       }`}
       title="Open AI Music Assistant [Ctrl+Shift+A]"
