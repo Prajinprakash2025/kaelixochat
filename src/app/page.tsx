@@ -6,6 +6,7 @@ import { DepartmentToolbar } from "@/components/chat/department-toolbar";
 import { MessageFeed } from "@/components/chat/message-feed";
 import { ChatInput } from "@/components/chat/chat-input";
 import { NewChannelModal } from "@/components/modals/new-channel-modal";
+import { EditChannelModal } from "@/components/modals/edit-channel-modal";
 import { NewCompanyModal } from "@/components/modals/new-company-modal";
 import { EditCompanyModal } from "@/components/modals/edit-company-modal";
 import { NewDepartmentModal } from "@/components/modals/new-department-modal";
@@ -364,6 +365,8 @@ export default function KaelixoApp() {
 
   // Modals state
   const [isNewChannelModalOpen, setIsNewChannelModalOpen] = useState(false);
+  const [isEditChannelModalOpen, setIsEditChannelModalOpen] = useState(false);
+  const [channelToEdit, setChannelToEdit] = useState<Channel | null>(null);
   const [isNewCompanyModalOpen, setIsNewCompanyModalOpen] = useState(false);
   const [isEditCompanyModalOpen, setIsEditCompanyModalOpen] = useState(false);
   const [isNewDepartmentModalOpen, setIsNewDepartmentModalOpen] = useState(false);
@@ -2938,6 +2941,97 @@ export default function KaelixoApp() {
     }
   };
 
+  // Open Edit Channel Modal
+  const handleOpenEditChannel = (channel?: Channel) => {
+    setChannelToEdit(channel || activeChannel);
+    setIsEditChannelModalOpen(true);
+  };
+
+  // Update / Edit Channel
+  const handleUpdateChannel = async (
+    channelId: string,
+    updates: {
+      name: string;
+      topic: string;
+      departmentCode: DepartmentCode;
+      isPrivate: boolean;
+    }
+  ) => {
+    setChannels((prev) =>
+      prev.map((c) => (c.id === channelId ? { ...c, ...updates } : c))
+    );
+
+    setActiveToast({
+      id: `chan-edit-${Date.now()}`,
+      senderName: "Channel Updated",
+      content: `Channel #${updates.name} details saved.`,
+      channelName: updates.name,
+      channelId,
+      messageId: "",
+    });
+
+    try {
+      await supabase
+        .from("channels")
+        .update({
+          name: updates.name,
+          topic: updates.topic,
+          is_private: updates.isPrivate,
+        })
+        .eq("id", channelId);
+    } catch {
+      // offline/fallback
+    }
+  };
+
+  // Delete Channel
+  const handleDeleteChannel = async (channelId: string) => {
+    const target = channels.find((c) => c.id === channelId);
+    const targetName = target?.name || "channel";
+
+    if (targetName === "general") {
+      alert("The #general channel cannot be deleted.");
+      return;
+    }
+
+    const fallbackChannel =
+      channels.find((c) => c.name === "general") ||
+      channels.find((c) => c.id !== channelId && !c.isDm) ||
+      channels[0];
+
+    // Remove from local channels state
+    setChannels((prev) => prev.filter((c) => c.id !== channelId));
+    setMessagesByChannel((prev) => {
+      const copy = { ...prev };
+      delete copy[channelId];
+      return copy;
+    });
+
+    // If currently viewing deleted channel, switch to fallback
+    if (activeChannelId === channelId && fallbackChannel) {
+      setActiveChannelId(fallbackChannel.id);
+      setActiveDmRecipient(null);
+    }
+
+    setActiveToast({
+      id: `chan-del-${Date.now()}`,
+      senderName: "Channel Deleted",
+      content: `Channel #${targetName} and its messages have been deleted.`,
+      channelName: targetName,
+      channelId,
+      messageId: "",
+    });
+
+    setIsEditChannelModalOpen(false);
+    setChannelToEdit(null);
+
+    try {
+      await supabase.from("channels").delete().eq("id", channelId);
+    } catch {
+      // offline/fallback
+    }
+  };
+
   // Create Company (Workspace)
   const handleCreateCompany = async (company: { name: string; slug: string }) => {
     const inviteCode = `KAELIXO-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
@@ -3263,6 +3357,7 @@ export default function KaelixoApp() {
               setRightPanelMode("profile");
             }}
             onOpenAuthModal={() => setIsAuthModalOpen(true)}
+            onOpenEditChannel={handleOpenEditChannel}
             onLogout={handleLogout}
             onRemoveMember={handleRemoveMember}
           />
@@ -3295,6 +3390,7 @@ export default function KaelixoApp() {
             setRightPanelMode("profile");
           }}
           onSelectDirectMessage={handleSelectDirectMessage}
+          onOpenEditChannel={handleOpenEditChannel}
           onLogout={handleLogout}
           onRemoveMember={handleRemoveMember}
           isMobileOpen={isMobileSidebarOpen}
@@ -3373,21 +3469,35 @@ export default function KaelixoApp() {
                 </div>
               ) : (
                 <div className="flex items-center space-x-1.5 sm:space-x-2 min-w-0">
-                  {activeChannel.isPrivate ? (
-                    <Lock className="w-4 h-4 text-neutral-400 flex-shrink-0" />
-                  ) : (
-                    <Hash className="w-4 h-4 sm:w-5 sm:h-5 text-neutral-400 flex-shrink-0" />
-                  )}
-                  <h2 className="font-bold text-sm sm:text-base text-neutral-900 dark:text-white tracking-tight truncate flex-shrink-0 max-w-[130px] sm:max-w-none">
-                    {activeChannel.name}
-                  </h2>
-                  {activeChannel.departmentCode && activeChannel.departmentCode !== "all" && (
-                    <span className="hidden sm:inline-block text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/40 flex-shrink-0">
-                      {activeChannel.departmentCode}
+                  <div
+                    onClick={() => handleOpenEditChannel(activeChannel)}
+                    className="flex items-center space-x-1.5 sm:space-x-2 min-w-0 cursor-pointer group/chanheader p-1 -m-1 rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-800/60 transition"
+                    title={`Channel Settings & Edit (#${activeChannel.name})`}
+                  >
+                    {activeChannel.isPrivate ? (
+                      <Lock className="w-4 h-4 text-neutral-400 flex-shrink-0" />
+                    ) : (
+                      <Hash className="w-4 h-4 sm:w-5 sm:h-5 text-neutral-400 flex-shrink-0" />
+                    )}
+                    <h2 className="font-bold text-sm sm:text-base text-neutral-900 dark:text-white tracking-tight truncate flex-shrink-0 max-w-[130px] sm:max-w-none group-hover/chanheader:text-indigo-600 dark:group-hover/chanheader:text-indigo-400">
+                      {activeChannel.name}
+                    </h2>
+                    {activeChannel.departmentCode && activeChannel.departmentCode !== "all" && (
+                      <span className="hidden sm:inline-block text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/40 flex-shrink-0">
+                        {activeChannel.departmentCode}
+                      </span>
+                    )}
+                    <span className="opacity-0 group-hover/chanheader:opacity-100 text-neutral-400 hover:text-neutral-700 dark:hover:text-white p-0.5 transition">
+                      <Settings className="w-3.5 h-3.5" />
                     </span>
-                  )}
+                  </div>
+
                   {activeChannel.topic && (
-                    <span className="text-xs text-neutral-500 dark:text-neutral-400 border-l border-neutral-200 dark:border-neutral-800 pl-3 truncate max-w-[180px] md:max-w-xs lg:max-w-md hidden md:inline">
+                    <span
+                      onClick={() => handleOpenEditChannel(activeChannel)}
+                      className="text-xs text-neutral-500 dark:text-neutral-400 border-l border-neutral-200 dark:border-neutral-800 pl-3 truncate max-w-[180px] md:max-w-xs lg:max-w-md hidden md:inline cursor-pointer hover:underline"
+                      title="Click to edit topic"
+                    >
                       {activeChannel.topic}
                     </span>
                   )}
@@ -3406,6 +3516,18 @@ export default function KaelixoApp() {
               >
                 <Search className="w-4 h-4" />
               </button>
+
+              {/* Edit Channel Settings Trigger in Header */}
+              {!activeDmRecipient && activeChannel.name !== "music" && (
+                <button
+                  type="button"
+                  onClick={() => handleOpenEditChannel(activeChannel)}
+                  className="p-1.5 sm:p-2 rounded-lg text-neutral-500 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition cursor-pointer flex items-center space-x-1 text-xs"
+                  title={`Edit Channel #${activeChannel.name}`}
+                >
+                  <Settings className="w-4 h-4" />
+                </button>
+              )}
 
               {/* Huddle / Listen Together Music Jam */}
               <HeaderMusicButton />
@@ -3901,6 +4023,19 @@ export default function KaelixoApp() {
         onClose={() => setIsNewChannelModalOpen(false)}
         departments={departments}
         onCreateChannel={handleCreateChannel}
+      />
+
+      <EditChannelModal
+        isOpen={isEditChannelModalOpen}
+        onClose={() => {
+          setIsEditChannelModalOpen(false);
+          setChannelToEdit(null);
+        }}
+        channel={channelToEdit || activeChannel}
+        departments={departments}
+        currentUser={currentUser}
+        onUpdateChannel={handleUpdateChannel}
+        onDeleteChannel={handleDeleteChannel}
       />
 
       <NewCompanyModal

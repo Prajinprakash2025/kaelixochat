@@ -61,6 +61,7 @@ interface SidebarProps {
   onOpenPreferences?: () => void;
   onOpenUserProfile?: (member: WorkspaceMember) => void;
   onSelectDirectMessage: (member: WorkspaceMember) => void;
+  onOpenEditChannel?: (channel: Channel) => void;
   onLogout?: () => void;
   onRemoveMember?: (memberId: string) => void;
   isMobileOpen?: boolean;
@@ -91,6 +92,7 @@ export function Sidebar({
   onOpenPreferences,
   onOpenUserProfile,
   onSelectDirectMessage,
+  onOpenEditChannel,
   onLogout,
   onRemoveMember,
   isMobileOpen = false,
@@ -679,7 +681,7 @@ export function Sidebar({
                               color: "var(--theme-sidebar-text, #0f172a)",
                             }
                       }
-                      className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-sm font-medium transition cursor-pointer ${
+                      className={`w-full group flex items-center justify-between px-2.5 py-1.5 rounded-xl text-sm font-medium transition cursor-pointer relative ${
                         isDragOver
                           ? "ring-2 ring-emerald-400 bg-emerald-500/25 scale-[1.03] shadow-lg shadow-emerald-500/30 font-bold"
                           : isActive
@@ -687,7 +689,7 @@ export function Sidebar({
                           : "hover:bg-black/5 dark:hover:bg-white/10"
                       }`}
                     >
-                      <div className="flex items-center space-x-2 truncate">
+                      <div className="flex items-center space-x-2 truncate min-w-0 pr-1">
                         {ch.isPrivate ? (
                           <Lock className="w-3.5 h-3.5 opacity-60 flex-shrink-0" />
                         ) : (
@@ -696,11 +698,26 @@ export function Sidebar({
                         <span className="truncate">{ch.name}</span>
                       </div>
 
-                      {ch.unreadCount && ch.unreadCount > 0 ? (
-                        <span className="bg-rose-500 text-white text-[10px] font-bold px-1.5 py-0.2 rounded-full min-w-[18px] text-center">
-                          {ch.unreadCount}
-                        </span>
-                      ) : null}
+                      <div className="flex items-center space-x-1 flex-shrink-0">
+                        {ch.unreadCount && ch.unreadCount > 0 ? (
+                          <span className="bg-rose-500 text-white text-[10px] font-bold px-1.5 py-0.2 rounded-full min-w-[18px] text-center">
+                            {ch.unreadCount}
+                          </span>
+                        ) : null}
+
+                        {onOpenEditChannel && (
+                          <span
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onOpenEditChannel(ch);
+                            }}
+                            className="opacity-0 group-hover:opacity-100 p-1 rounded-md text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-black/10 dark:hover:bg-white/15 transition cursor-pointer"
+                            title={`Edit #${ch.name}`}
+                          >
+                            <Settings className="w-3.5 h-3.5" />
+                          </span>
+                        )}
+                      </div>
                     </button>
                   );
                 })}

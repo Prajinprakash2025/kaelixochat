@@ -66,6 +66,7 @@ interface MobileSlackViewProps {
   onOpenMusic?: () => void;
   onOpenUserProfile: (member: WorkspaceMember) => void;
   onOpenAuthModal?: () => void;
+  onOpenEditChannel?: (channel: Channel) => void;
   onLogout: () => void;
   onRemoveMember?: (memberId: string) => void;
 }
@@ -93,6 +94,7 @@ export function MobileSlackView({
   onOpenMusic,
   onOpenUserProfile,
   onOpenAuthModal,
+  onOpenEditChannel,
   onLogout,
   onRemoveMember,
 }: MobileSlackViewProps) {
@@ -348,6 +350,19 @@ export function MobileSlackView({
                         <span className="text-sm tracking-tight truncate flex-1">
                           {c.name}
                         </span>
+
+                        {onOpenEditChannel && (
+                          <span
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onOpenEditChannel(c);
+                            }}
+                            className="p-1 rounded-lg text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-200 dark:hover:bg-neutral-700 transition"
+                            title="Channel Settings"
+                          >
+                            <Settings className="w-3.5 h-3.5" />
+                          </span>
+                        )}
                       </div>
                     );
                   })}
