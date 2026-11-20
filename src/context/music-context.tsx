@@ -635,7 +635,7 @@ export function MusicProvider({ children, currentUser }: MusicProviderProps) {
 
     // 2. Otherwise play next song in the active category / playlist
     const activeList = playlistRef.current;
-    if (activeList.length > 0 && currentTrack) {
+    if (activeList.length > 1 && currentTrack) {
       const currentIndex = activeList.findIndex((t) => t.id === currentTrack.id);
       if (currentIndex !== -1 && currentIndex < activeList.length - 1) {
         playTrack(activeList[currentIndex + 1], 0);
@@ -648,6 +648,24 @@ export function MusicProvider({ children, currentUser }: MusicProviderProps) {
         playTrack(activeList[0], 0);
         return;
       }
+    }
+
+    // 3. Fallback: If playlist has no other songs, fetch fresh trending tracks so Change/Next ALWAYS works!
+    if (typeof window !== "undefined") {
+      fetch(`/api/music/search?category=trending&page=${Math.floor(Math.random() * 3) + 1}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success && data.tracks && data.tracks.length > 0) {
+            const nextTrack = data.tracks.find((t: MusicTrack) => t.id !== currentTrack?.id) || data.tracks[0];
+            playTrack(nextTrack, 0, data.tracks);
+          } else if (currentTrack) {
+            seekTo(0);
+          }
+        })
+        .catch(() => {
+          if (currentTrack) seekTo(0);
+        });
+      return;
     }
 
     if (currentTrack) {

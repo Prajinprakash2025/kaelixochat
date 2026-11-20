@@ -142,6 +142,11 @@ export function AiMusicAssistant({
 
         if (final) {
           setLiveTranscript(final);
+          // Push-to-talk: auto-stop listening on final command so room banter is ignored
+          try {
+            recognition.stop();
+          } catch {}
+          setIsListening(false);
           handleExecuteCommand(final);
         } else {
           setLiveTranscript(interim);
@@ -223,19 +228,24 @@ export function AiMusicAssistant({
     setMessages((prev) => [...prev, newMsg]);
   };
 
-  // Main Natural Language Command Execution Engine
+  // Main Natural Language Command Execution Engine (Strict Intent: No False Triggers)
   const handleExecuteCommand = async (rawCmd: string) => {
-    const cmd = rawCmd.trim();
-    if (!cmd) return;
+    let clean = rawCmd.trim();
+    if (!clean) return;
 
-    addUserMessage(cmd);
+    addUserMessage(clean);
     setIsProcessing(true);
     setLiveTranscript("");
 
-    const lower = cmd.toLowerCase();
+    // Strip wake prefixes like "Hey Kaelixo", "DJ", "Hey DJ", "Computer"
+    clean = clean.replace(/^(?:hey\s+kaelixo|kaelixo|hey\s+dj|dj|computer)\s*[,:]?\s*/i, "").trim();
+    const lower = clean.toLowerCase();
 
     // 1. VOLUME NUMERIC: "volume 80", "sound 50%", "set volume to 60", "vol 90"
-    const volNumMatch = lower.match(/(?:volume|sound|vol|shabdam)\s*(?:to\s*|level\s*|set to\s*)?(\d{1,3})(?:%|percent)?/i);
+    const volNumMatch =
+      lower.match(/(?:volume|sound|vol|shabdam)\s*(?:to\s*|level\s*|set to\s*|aakku\s*)?(\d{1,3})(?:%|percent)?/i) ||
+      lower.match(/^(\d{1,3})%\s*(?:volume|sound)?$/i);
+
     if (volNumMatch && volNumMatch[1]) {
       const targetVol = Math.min(100, Math.max(0, parseInt(volNumMatch[1], 10)));
       setVolume(targetVol);
@@ -246,7 +256,7 @@ export function AiMusicAssistant({
 
     // 2. VOLUME INCREASE: "volume kootu", "volume koottu", "louder", "sound kootu", "volume up"
     if (
-      /(?:volume|sound)\s*(?:koottu|kootu|up|increase|raise|high)|louder|sound kootu/i.test(lower)
+      /(?:volume|sound)\s*(?:koottu|kootu|up|increase|raise|high)|louder|sound\s*kootu|sound\s*koottu/i.test(lower)
     ) {
       const nextVol = Math.min(100, volume + 15);
       setVolume(nextVol);
@@ -257,7 +267,7 @@ export function AiMusicAssistant({
 
     // 3. VOLUME DECREASE: "volume kuraykku", "sound kuraykku", "volume down", "softer", "lower sound"
     if (
-      /(?:volume|sound)\s*(?:kuraykku|kurachu|korakku|down|decrease|lower|low)|softer|sound kuraykku/i.test(lower)
+      /(?:volume|sound)\s*(?:kuraykku|kurachu|korakku|down|decrease|lower|low)|softer|sound\s*kuraykku|sound\s*korakku/i.test(lower)
     ) {
       const nextVol = Math.max(0, volume - 15);
       setVolume(nextVol);
@@ -267,7 +277,7 @@ export function AiMusicAssistant({
     }
 
     // 4. MUTE: "mute", "sound off", "silent", "sound nirthu"
-    if (/\b(?:mute|sound off|silent|shhh|sound nirthu|volume zero)\b/i.test(lower)) {
+    if (/\b(?:mute\s+music|mute\s+sound|sound\s+off|music\s+mute|^mute$|^silent$)\b/i.test(lower)) {
       if (!isMuted) toggleMute();
       addAiMessage("🔇 Music muted.", "volume");
       setIsProcessing(false);
@@ -275,58 +285,77 @@ export function AiMusicAssistant({
     }
 
     // 5. UNMUTE: "unmute", "sound on", "volume on"
-    if (/\b(?:unmute|sound on|volume on)\b/i.test(lower)) {
+    if (/\b(?:unmute\s+music|unmute\s+sound|sound\s+on|music\s+unmute|^unmute$)\b/i.test(lower)) {
       if (isMuted) toggleMute();
       addAiMessage("🔊 Sound unmuted.", "volume");
       setIsProcessing(false);
       return;
     }
 
-    // 6. STOP / PAUSE: "stop", "pause", "stop music", "pause music", "nirthu", "paattu nirthu"
-    if (
-      /\b(?:stop|pause|nirthu|paattu nirthu|paatu nirthu|stop cheyy|stop aakku|break|freeze|hold)\b/i.test(lower) &&
-      !/\b(?:play|start|thudangu)\b/i.test(lower)
-    ) {
+    // 6. STOP / PAUSE: Must be an explicit command, NEVER triggered by casual banter
+    const isStopNegative = /\b(?:don'?t\s+stop|can'?t\s+stop|non-?stop|never\s+stop)\b/i.test(lower);
+    const isExplicitPause =
+      !isStopNegative &&
+      (/^(?:stop|pause|nirthu|freeze|hold)$/i.test(lower) ||
+        /\b(?:stop\s+music|pause\s+music|stop\s+the\s+music|pause\s+the\s+music|music\s+stop|music\s+pause|paattu\s+nirthu|paatu\s+nirthu|music\s+nirthu|stop\s+cheyyu|stop\s+cheyy|stop\s+aakku|pause\s+cheyyu)\b/i.test(
+          lower
+        ));
+
+    if (isExplicitPause && !/\b(?:play|start|thudangu)\b/i.test(lower)) {
       pause();
       addAiMessage("⏸️ Paused the music.", "pause");
       setIsProcessing(false);
       return;
     }
 
-    // 7. RESUME / PLAY: "play", "resume", "play music", "thudangu", "continue"
-    if (
-      lower === "play" ||
-      lower === "resume" ||
-      lower === "continue" ||
-      lower === "play music" ||
-      lower === "thudangu" ||
-      lower === "paadu" ||
-      /^(?:resume|continue|unpause|thudangu)$/i.test(lower)
-    ) {
+    // 7. RESUME / PLAY:
+    const isExplicitResume =
+      /^(?:resume|continue|unpause|thudangu)$/i.test(lower) ||
+      /^(?:play|play\s+music|start\s+music|continue\s+music|paattu\s+thudangu|music\s+thudangu|resume\s+cheyyu|resume\s+music)$/i.test(
+        lower
+      );
+
+    if (isExplicitResume) {
       resume();
       addAiMessage("▶️ Resumed music playback.", "play");
       setIsProcessing(false);
       return;
     }
 
-    // 8. NEXT / SKIP: "next", "next song", "skip", "adutha paattu", "adutha song", "change song"
-    if (/\b(?:next|skip|adutha|change song|change track|skip song|matte paattu)\b/i.test(lower)) {
+    // 8. CHANGE SONG / NEXT TRACK: Explicit user phrases (e.g. "change song", "music change", "next song", "skip")
+    const isChangeSong =
+      /^(?:next|skip|change)$/i.test(lower) ||
+      /\b(?:change\s+song|change\s+music|song\s+change|music\s+change|change\s+the\s+song|change\s+track|change\s+cheyyu|change\s+cheyy|change\s+aakku|change\s+aakko|next\s+song|next\s+track|skip\s+song|skip\s+track|adutha\s+paattu|adutha\s+song|matte\s+paattu)\b/i.test(
+        lower
+      );
+
+    if (isChangeSong) {
       playNext();
-      addAiMessage("⏭️ Playing next song.", "next");
+      addAiMessage("⏭️ Changing to next song.", "next");
       setIsProcessing(false);
       return;
     }
 
-    // 9. PREVIOUS / BACK: "previous", "previous song", "back", "munnathe paattu", "last song"
-    if (/\b(?:previous|prev|back|munnathe|munpathe|last song)\b/i.test(lower)) {
+    // 9. PREVIOUS / BACK:
+    const isPrevSong =
+      /^(?:previous|prev|back)$/i.test(lower) ||
+      /\b(?:previous\s+song|prev\s+song|last\s+song|back\s+song|munnathe\s+paattu|munpathe\s+paattu)\b/i.test(
+        lower
+      );
+
+    if (isPrevSong) {
       playPrevious();
       addAiMessage("⏮️ Playing previous song.", "prev");
       setIsProcessing(false);
       return;
     }
 
-    // 10. WHAT IS PLAYING?: "what is playing", "what song is this", "current song", "ethu paatta"
-    if (/\b(?:what is playing|what song|current song|ethu paatta|ethaa paattu|which song|song name)\b/i.test(lower)) {
+    // 10. WHAT IS PLAYING?:
+    if (
+      /\b(?:what\s+is\s+playing|what\s+song\s+is\s+this|current\s+song|ethu\s+paatta|ethaa\s+paattu|which\s+song|song\s+name)\b/i.test(
+        lower
+      )
+    ) {
       if (currentTrack) {
         addAiMessage(`🎵 Currently playing "${currentTrack.title}" by ${currentTrack.artist}.`);
       } else {
@@ -336,89 +365,212 @@ export function AiMusicAssistant({
       return;
     }
 
-    // 11. SHUFFLE: "shuffle", "shuffle play", "randomize", "kuzhachu paadu"
-    if (/\b(?:shuffle|random|kuzhachu)\b/i.test(lower)) {
+    // 11. SHUFFLE:
+    if (/\b(?:shuffle\s+music|shuffle\s+playlist|shuffle\s+play|^shuffle$|kuzhachu\s+paadu)\b/i.test(lower)) {
       if (playlist && playlist.length > 0) {
         const randomIndex = Math.floor(Math.random() * playlist.length);
         const randomTrack = playlist[randomIndex];
         playTrack(randomTrack, 0, playlist);
         addAiMessage(`🔀 Shuffled! Now playing "${randomTrack.title}".`, "shuffle", randomTrack);
       } else {
-        addAiMessage("Queue is empty. Let me find fresh songs for you!");
+        try {
+          const res = await fetch("/api/music/search?category=trending&page=1");
+          const data = await res.json();
+          if (data.success && data.tracks && data.tracks.length > 0) {
+            const randomIndex = Math.floor(Math.random() * data.tracks.length);
+            const randomTrack = data.tracks[randomIndex];
+            playTrack(randomTrack, 0, data.tracks);
+            addAiMessage(`🔀 Shuffled! Now playing "${randomTrack.title}".`, "shuffle", randomTrack);
+          }
+        } catch {}
       }
       setIsProcessing(false);
       return;
     }
 
-    // 12. MOOD / VIBE KEYWORDS
-    let searchTarget = "";
-    if (/\b(?:lofi|lo-fi|chill|study|sleep)\b/i.test(lower)) {
-      searchTarget = "lo-fi chill beats relax";
-    } else if (/\b(?:workout|gym|energy|power)\b/i.test(lower)) {
-      searchTarget = "gym workout energetic phonk hits";
-    } else if (/\b(?:party|dance|club|dj)\b/i.test(lower)) {
-      searchTarget = "party dance music hits viral";
-    } else if (/\b(?:romantic|love|melody|feeling)\b/i.test(lower)) {
-      searchTarget = "romantic melody songs hits";
-    } else if (/\b(?:sad|emotional|crying|pain)\b/i.test(lower)) {
-      searchTarget = "sad emotional acoustic songs";
-    } else if (/\b(?:malayalam)\b/i.test(lower)) {
-      searchTarget = "malayalam trending songs 2024 hits";
-    } else if (/\b(?:tamil)\b/i.test(lower)) {
-      searchTarget = "tamil trending songs hits viral";
+    // Helper to get liked tracks from localStorage
+    const getStoredLikedTracks = (): MusicTrack[] => {
+      if (typeof window === "undefined") return [];
+      try {
+        const raw = localStorage.getItem("kaelixo_liked_songs");
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) return parsed;
+        }
+      } catch {}
+      return [];
+    };
+
+    // Helper to get playlists and their tracks from localStorage
+    const getStoredPlaylists = () => {
+      if (typeof window === "undefined") return { playlists: [] as any[], tracksMap: {} as Record<string, MusicTrack[]> };
+      try {
+        const savedPl = localStorage.getItem("kaelixo_custom_playlists");
+        const savedMap = localStorage.getItem("kaelixo_playlist_tracks_map");
+        const playlists = savedPl ? JSON.parse(savedPl) : [];
+        const tracksMap = savedMap ? JSON.parse(savedMap) : {};
+        return { playlists: Array.isArray(playlists) ? playlists : [], tracksMap };
+      } catch {}
+      return { playlists: [], tracksMap: {} };
+    };
+
+    // 12. LIKED MUSIC / SONGS ("play liked music", "play liked songs", "liked songs", "liked music")
+    if (
+      /\b(?:liked\s+music|liked\s+songs|liked\s+tracks|my\s+liked|play\s+liked|favorite\s+songs|liked\s+paattu)\b/i.test(
+        lower
+      )
+    ) {
+      const likes = getStoredLikedTracks();
+      if (likes.length > 0) {
+        playTrack(likes[0], 0, likes);
+        addAiMessage(`❤️ Playing your Liked Songs collection (${likes.length} tracks)!`, "play", likes[0]);
+      } else {
+        addAiMessage("Your Liked Songs collection is currently empty! Click the heart ❤️ icon on any song to add it.");
+      }
+      setIsProcessing(false);
+      return;
     }
 
-    // 13. EXTRACT SONG / ARTIST SEARCH QUERY:
+    // 13. PLAYLIST HANDLER: "play my playlist", "my playlist", "play playlist <name>"
+    const playlistMatch = lower.match(
+      /(?:play\s+)?(?:my\s+playlist|playlist\s+(.+)|(.+?)\s+playlist|custom\s+playlist)/i
+    );
+
+    if (
+      playlistMatch ||
+      lower === "my playlist" ||
+      lower === "play my playlist" ||
+      lower.includes("my playlist")
+    ) {
+      const { playlists: customList, tracksMap } = getStoredPlaylists();
+      let targetPlaylistName = playlistMatch?.[1] || playlistMatch?.[2] || "";
+      targetPlaylistName = targetPlaylistName.trim().toLowerCase();
+
+      let matchedPl: any = null;
+      if (!targetPlaylistName || targetPlaylistName === "my" || targetPlaylistName === "custom") {
+        matchedPl =
+          customList.find((p: any) => p.name?.toLowerCase().includes("my playlist")) ||
+          customList[0];
+      } else {
+        matchedPl = customList.find((p: any) =>
+          p.name?.toLowerCase().includes(targetPlaylistName)
+        );
+      }
+
+      if (matchedPl) {
+        const tracks: MusicTrack[] = tracksMap[matchedPl.id] || [];
+        if (tracks.length > 0) {
+          playTrack(tracks[0], 0, tracks);
+          addAiMessage(`📁 Playing your playlist "${matchedPl.name}" (${tracks.length} tracks)!`, "play", tracks[0]);
+        } else {
+          addAiMessage(
+            `Your playlist "${matchedPl.name}" is currently empty. Open it and click '+ Add Songs' to add music!`
+          );
+        }
+        setIsProcessing(false);
+        return;
+      } else if (customList.length === 0) {
+        addAiMessage(
+          "You haven't created any custom playlists yet! Go to the Playlists tab to create one."
+        );
+        setIsProcessing(false);
+        return;
+      }
+    }
+
+    // 14. ROMANTIC SONGS: "play romantic songs", "romantic songs", "romantic melody"
+    if (
+      /\b(?:romantic|love\s+songs|romantic\s+songs|romantic\s+melody|romantic\s+hits|romantic\s+paattu)\b/i.test(
+        lower
+      )
+    ) {
+      try {
+        const res = await fetch("/api/music/search?q=" + encodeURIComponent("romantic melody songs hits"));
+        const data = await res.json();
+        if (data.success && data.tracks && data.tracks.length > 0) {
+          playTrack(data.tracks[0], 0, data.tracks);
+          addAiMessage(`💖 Playing romantic melody hits for you!`, "search", data.tracks[0]);
+          setIsProcessing(false);
+          return;
+        }
+      } catch {}
+    }
+
+    // 15. EXPLICIT SONG / ARTIST SEARCH:
+    // Requires clear search or play intent prefix/suffix so casual talk NEVER searches random things!
+    let searchTarget = "";
+
+    // A. Explicit Mood keywords with play/music context
+    if (/\b(?:lofi|lo-fi|chill\s+beats|study\s+music|sleep\s+music)\b/i.test(lower)) {
+      searchTarget = "lo-fi chill beats relax";
+    } else if (
+      /\b(?:workout|gym|energy|power)\s*(?:music|songs|hits)?\b/i.test(lower) &&
+      /\b(?:play|vekku|music|songs)\b/i.test(lower)
+    ) {
+      searchTarget = "gym workout energetic phonk hits";
+    } else if (
+      /\b(?:party|dance|club|dj)\s*(?:music|songs|hits)?\b/i.test(lower) &&
+      /\b(?:play|vekku|music|songs)\b/i.test(lower)
+    ) {
+      searchTarget = "party dance music hits viral";
+    } else if (
+      /\b(?:sad|emotional)\s*(?:music|songs|acoustic)?\b/i.test(lower) &&
+      /\b(?:play|vekku|music|songs)\b/i.test(lower)
+    ) {
+      searchTarget = "sad emotional acoustic songs";
+    }
+
+    // B. Prefix Patterns: "play <song>", "search <song>", "put on <song>", "listen to <song>"
     if (!searchTarget) {
-      // Patterns:
-      // "play <query>"
-      // "<query> paattu vekku / play aakku / play cheyyu"
-      const playMatch = lower.match(/(?:play|search|vekku|put|start)\s+(.+)/i);
-      const malMatch = lower.match(/(.+?)\s+(?:paattu vekku|paatu vekku|play aakku|play cheyyu|vekk|paadu)/i);
+      const playMatch = lower.match(/^(?:play|search|put\s+on|listen\s+to|start)\s+(.+)/i);
+      const malMatch = lower.match(
+        /(.+?)\s+(?:paattu\s+vekku|paatu\s+vekku|play\s+aakku|play\s+cheyyu|song\s+vekku|vekku|paadu)$/i
+      );
 
       if (playMatch && playMatch[1]) {
         searchTarget = playMatch[1];
       } else if (malMatch && malMatch[1]) {
         searchTarget = malMatch[1];
-      } else {
-        // Direct artist or song title mentioned (e.g. "Aavesham", "Illuminati", "Taylor Swift")
-        searchTarget = lower;
       }
+    }
 
-      // Strip redundant fluff
+    // If an explicit song search query was found:
+    if (searchTarget) {
       searchTarget = searchTarget
         .replace(/\b(?:song|songs|music|paattu|paatu|track|please|now|official)\b/gi, "")
         .trim();
-    }
 
-    if (!searchTarget || searchTarget.length < 2) {
-      addAiMessage("🤔 I didn't catch that. You can say 'Play Illuminati', 'Volume 80%', 'Next song', or 'Pause'.");
-      setIsProcessing(false);
-      return;
-    }
+      if (searchTarget.length >= 2) {
+        try {
+          const res = await fetch(`/api/music/search?q=${encodeURIComponent(searchTarget)}`);
+          const data = await res.json();
 
-    // Perform live search via `/api/music/search?q=...`
-    try {
-      const res = await fetch(`/api/music/search?q=${encodeURIComponent(searchTarget)}`);
-      const data = await res.json();
-
-      if (data.success && data.tracks && data.tracks.length > 0) {
-        const topTrack: MusicTrack = data.tracks[0];
-        playTrack(topTrack, 0, data.tracks);
-        addAiMessage(
-          `🎵 Found and playing "${topTrack.title}"!`,
-          "search",
-          topTrack
-        );
-      } else {
-        addAiMessage(`❌ Couldn't find songs for "${searchTarget}". Try another artist or title!`);
+          if (data.success && data.tracks && data.tracks.length > 0) {
+            const topTrack: MusicTrack = data.tracks[0];
+            playTrack(topTrack, 0, data.tracks);
+            addAiMessage(`🎵 Found and playing "${topTrack.title}"!`, "search", topTrack);
+            setIsProcessing(false);
+            return;
+          } else {
+            addAiMessage(`❌ Couldn't find songs for "${searchTarget}". Try another artist or title!`);
+            setIsProcessing(false);
+            return;
+          }
+        } catch (err) {
+          console.error("Assistant search error:", err);
+          addAiMessage(`⚠️ Could not search for "${searchTarget}". Please try again!`);
+          setIsProcessing(false);
+          return;
+        }
       }
-    } catch (err) {
-      console.error("Assistant search error:", err);
-      addAiMessage(`⚠️ Could not search for "${searchTarget}". Please try again!`);
-    } finally {
-      setIsProcessing(false);
     }
+
+    // 16. STRICT SAFEGUARD FOR CASUAL / CHUMMA TALK:
+    // If the spoken text did NOT match any music command, DO NOT INTERRUPT CURRENT MUSIC!
+    addAiMessage(
+      "🤔 I only respond to music commands like 'Play romantic songs', 'Play liked music', 'Play my playlist', 'Change song', 'Volume 80%', or 'Pause'. Your music was not interrupted."
+    );
+    setIsProcessing(false);
   };
 
   const handleSendText = (e?: React.FormEvent) => {
@@ -431,14 +583,15 @@ export function AiMusicAssistant({
 
   // Quick Action Chips
   const QUICK_CHIPS = [
+    { label: "💖 Romantic Songs", cmd: "play romantic songs" },
+    { label: "❤️ Liked Songs", cmd: "play liked music" },
+    { label: "📁 My Playlist", cmd: "play my playlist" },
+    { label: "⏭️ Next Song", cmd: "change song" },
     { label: "⏸️ Pause", cmd: "pause" },
     { label: "▶️ Resume", cmd: "resume" },
-    { label: "⏭️ Next", cmd: "next song" },
     { label: "🔊 Vol 80%", cmd: "volume 80" },
-    { label: "🔉 Vol 30%", cmd: "volume 30" },
     { label: "🔥 Illuminati", cmd: "play Illuminati" },
     { label: "🌙 Chill Lo-Fi", cmd: "play lofi beats" },
-    { label: "💪 Gym Workout", cmd: "play workout songs" },
     { label: "🔀 Shuffle", cmd: "shuffle" },
   ];
 
