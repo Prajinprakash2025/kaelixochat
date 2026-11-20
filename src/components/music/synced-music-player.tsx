@@ -343,7 +343,7 @@ export function SyncedMusicPlayer({
 
       {/* Bottom Controls Bar */}
       <div className="flex items-center justify-between px-5 py-3 border-t border-neutral-800/70 bg-neutral-950/60">
-        {/* Left: Queue Toggle */}
+        {/* Left: Queue Toggle & AI DJ */}
         <div className="flex items-center space-x-2">
           <button
             type="button"
@@ -362,6 +362,21 @@ export function SyncedMusicPlayer({
                 {queue.length}
               </span>
             )}
+          </button>
+
+          {/* AI Voice DJ Trigger */}
+          <button
+            type="button"
+            onClick={() => {
+              if (typeof window !== "undefined") {
+                window.dispatchEvent(new CustomEvent("kaelixo-open-ai-dj"));
+              }
+            }}
+            className="p-2 rounded-lg text-xs font-semibold flex items-center space-x-1.5 text-purple-300 hover:text-white bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 transition cursor-pointer"
+            title="Open AI Voice DJ Assistant [Ctrl+Shift+A]"
+          >
+            <Sparkles className="w-4 h-4 text-purple-400 animate-spin-slow" />
+            <span className="hidden sm:inline">AI DJ</span>
           </button>
         </div>
 

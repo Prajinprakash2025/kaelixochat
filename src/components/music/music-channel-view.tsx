@@ -46,6 +46,7 @@ import {
   Pencil,
   Camera,
   Image as ImageIcon,
+  Mic,
 } from "lucide-react";
 import { MusicTrack, WorkspaceMember, Message, Channel } from "@/types";
 import { SyncedMusicPlayer } from "./synced-music-player";
@@ -2989,6 +2990,33 @@ export function MusicChannelView({
                       <span>Shuffle Play</span>
                     </div>
                     <p className="text-[10px] text-neutral-500 dark:text-neutral-400 mt-1">Play random mix</p>
+                  </button>
+
+                  {/* 5. ✨ AI Voice DJ */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (typeof window !== "undefined") {
+                        window.dispatchEvent(new CustomEvent("kaelixo-open-ai-dj"));
+                      }
+                    }}
+                    className="col-span-2 p-3 bg-gradient-to-r from-purple-500/10 via-pink-500/10 to-emerald-500/10 hover:from-purple-500/20 hover:via-pink-500/20 hover:to-emerald-500/20 border border-purple-500/30 rounded-xl text-left transition cursor-pointer group shadow-xs flex items-center justify-between"
+                  >
+                    <div>
+                      <div className="flex items-center space-x-2 text-xs font-bold text-neutral-900 dark:text-white">
+                        <Sparkles className="w-4 h-4 text-purple-500 animate-spin-slow" />
+                        <span>AI Voice DJ</span>
+                        <span className="px-1.5 py-0.5 rounded-full bg-purple-500/20 text-purple-600 dark:text-purple-300 text-[9px] font-extrabold uppercase">
+                          Voice & Text
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-neutral-500 dark:text-neutral-400 mt-0.5">
+                        Say "Next", "Volume 80%", "Play Aavesham"
+                      </p>
+                    </div>
+                    <div className="w-7 h-7 rounded-full bg-purple-600 text-white flex items-center justify-center shadow-md group-hover:scale-110 transition">
+                      <Mic className="w-3.5 h-3.5" />
+                    </div>
                   </button>
                 </div>
               </div>

@@ -15,6 +15,7 @@ import {
   X,
   Radio,
   Users,
+  Sparkles,
 } from "lucide-react";
 import { useMusic } from "@/context/music-context";
 
@@ -388,6 +389,21 @@ export function FloatingMusicBar() {
           ) : (
             <Volume2 className="w-3.5 h-3.5" />
           )}
+        </button>
+
+        {/* AI Voice DJ Assistant Button */}
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            if (typeof window !== "undefined") {
+              window.dispatchEvent(new CustomEvent("kaelixo-open-ai-dj"));
+            }
+          }}
+          className="p-1 text-purple-400 hover:text-purple-300 hover:bg-purple-500/20 rounded-lg transition cursor-pointer"
+          title="Open AI Voice DJ [Ctrl+Shift+A]"
+        >
+          <Sparkles className="w-3.5 h-3.5 animate-spin-slow" />
         </button>
 
         {/* Minimize Button */}
