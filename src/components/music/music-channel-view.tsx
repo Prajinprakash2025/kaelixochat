@@ -1395,15 +1395,15 @@ export function YouTubeSongCard({
       onClick={onPlay}
       draggable={true}
       onDragStart={handleDragStart}
-      className={`group cursor-grab active:cursor-grabbing select-none flex flex-col transition-all duration-200 ${
+      className={`group cursor-pointer select-none flex flex-col space-y-2.5 transition-all duration-200 ${
         isThisPlaying ? "scale-[1.01]" : ""
       }`}
       title={`${cleanTitle} — ${cleanArtist} (Drag to chat to share)`}
     >
-      {/* 16:9 Thumbnail Container matching YouTube 1:1 */}
+      {/* 16:9 Thumbnail Container */}
       <div
-        className="relative aspect-video w-full rounded-2xl overflow-hidden bg-neutral-100 dark:bg-neutral-900 shadow-sm dark:shadow-md border border-neutral-200 dark:border-neutral-800/80 transition-all duration-300"
-        style={isThisPlaying ? { borderColor: `${accent}80` } : undefined}
+        className="relative aspect-video w-full rounded-2xl overflow-hidden bg-neutral-100 dark:bg-neutral-900 shadow-xs border border-neutral-200/80 dark:border-neutral-800 transition-all duration-300"
+        style={isThisPlaying ? { borderColor: `${accent}99`, boxShadow: `0 0 0 2px ${accent}40` } : undefined}
       >
         <img
           src={track.thumbnail}
@@ -1416,196 +1416,200 @@ export function YouTubeSongCard({
           }}
         />
 
-        {/* Gradient Shadow Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/30 pointer-events-none" />
-
-        {/* Center Play Button / Soundwave Overlay */}
+        {/* Hover Overlay matching Card 3 (Ole Melody) in Screenshot */}
         <div
-          className={`absolute inset-0 flex items-center justify-center transition-all duration-200 ${
-            isThisPlaying
-              ? "bg-black/50 opacity-100"
-              : "bg-black/30 opacity-0 group-hover:opacity-100"
+          className={`absolute inset-0 bg-black/60 backdrop-blur-[1.5px] transition-opacity duration-200 flex flex-col justify-between p-2.5 z-10 ${
+            isThisPlaying ? "opacity-100" : "opacity-0 group-hover:opacity-100"
           }`}
         >
-          {isThisPlaying ? (
-            <div
-              className="flex items-center space-x-1 bg-black/80 backdrop-blur-md px-3.5 py-1.5 rounded-full border shadow-xl"
-              style={{ borderColor: `${accent}80` }}
-            >
-              <span className="w-1.5 h-4 rounded-full animate-bounce" style={{ backgroundColor: accent }} />
-              <span className="w-1.5 h-6 rounded-full animate-[bounce_1s_infinite_200ms]" style={{ backgroundColor: accent }} />
-              <span className="w-1.5 h-3 rounded-full animate-[bounce_1s_infinite_400ms]" style={{ backgroundColor: accent }} />
-              <span className="w-1.5 h-5 rounded-full animate-[bounce_1s_infinite_100ms]" style={{ backgroundColor: accent }} />
-              <span className="text-xs font-bold ml-1.5" style={{ color: accent }}>Playing</span>
+          {/* Top Bar: Drag Hint on Left + Quick Actions on Right */}
+          <div className="flex items-center justify-between w-full">
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-black/75 backdrop-blur-md text-white/95 shadow-md border border-white/20 flex items-center space-x-1">
+              <span>⋮⋮ Drag to chat</span>
+            </span>
+
+            <div className="flex items-center space-x-1.5">
+              <button
+                type="button"
+                onClick={handleShareClick}
+                className="w-6 h-6 rounded-full bg-black/70 hover:bg-sky-600 text-white flex items-center justify-center transition shadow-md cursor-pointer"
+                title="Share to chat"
+              >
+                <Share2 className="w-3 h-3" />
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleLike(e);
+                }}
+                className={`w-6 h-6 rounded-full flex items-center justify-center transition shadow-md cursor-pointer ${
+                  isLiked ? "bg-rose-600 text-white" : "bg-black/70 hover:bg-rose-600 text-white"
+                }`}
+                title={isLiked ? "Unlike" : "Like Song"}
+              >
+                <Heart className={`w-3 h-3 ${isLiked ? "fill-white text-white" : ""}`} />
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onAddToPlaylist(e);
+                }}
+                className="w-6 h-6 rounded-full bg-black/70 hover:bg-emerald-600 text-white flex items-center justify-center transition shadow-md cursor-pointer"
+                title="Add to Playlist"
+              >
+                <FolderPlus className="w-3 h-3" />
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onAddToQueue(e);
+                }}
+                className="w-6 h-6 rounded-full bg-black/70 hover:bg-amber-600 text-white flex items-center justify-center transition shadow-md cursor-pointer"
+                title="Add to Queue"
+              >
+                <ListPlus className="w-3 h-3" />
+              </button>
+              {onHide && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onHide(e);
+                  }}
+                  className="w-6 h-6 rounded-full bg-black/70 hover:bg-rose-600 text-white flex items-center justify-center transition shadow-md cursor-pointer"
+                  title="Hide from recommendations"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
             </div>
-          ) : (
-            <div
-              className="w-12 h-12 rounded-full flex items-center justify-center shadow-2xl group-hover:scale-110 transition-transform cursor-pointer"
-              style={{ backgroundColor: accent, color: contrastText }}
-            >
-              <Play className="w-5 h-5 fill-current ml-0.5" />
-            </div>
-          )}
-        </div>
-
-        {/* Floating Quick Action Overlay on Thumbnail (Top Right) */}
-        <div className="absolute top-2.5 right-2.5 flex items-center space-x-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10">
-          <button
-            type="button"
-            onClick={handleShareClick}
-            className="w-7 h-7 rounded-full bg-black/70 hover:bg-sky-600 text-white/90 hover:text-white flex items-center justify-center backdrop-blur-md transition cursor-pointer shadow-md"
-            title="Share to Chat (or drag song card)"
-          >
-            <Share2 className="w-3.5 h-3.5" />
-          </button>
-          <button
-            type="button"
-            onClick={onToggleLike}
-            className={`w-7 h-7 rounded-full flex items-center justify-center backdrop-blur-md transition cursor-pointer shadow-md ${
-              isLiked
-                ? "bg-rose-600 text-white"
-                : "bg-black/70 hover:bg-black text-white/90 hover:text-white"
-            }`}
-            title={isLiked ? "Unlike" : "Like Song"}
-          >
-            <Heart className={`w-3.5 h-3.5 ${isLiked ? "fill-white text-white" : ""}`} />
-          </button>
-          <button
-            type="button"
-            onClick={onAddToPlaylist}
-            className="w-7 h-7 rounded-full bg-black/70 hover:brightness-125 text-white/90 hover:text-white flex items-center justify-center backdrop-blur-md transition cursor-pointer shadow-md"
-            title="Add to Playlist"
-          >
-            <FolderPlus className="w-3.5 h-3.5" />
-          </button>
-          <button
-            type="button"
-            onClick={onAddToQueue}
-            className="w-7 h-7 rounded-full bg-black/70 hover:brightness-125 text-white/90 hover:text-white flex items-center justify-center backdrop-blur-md transition cursor-pointer shadow-md"
-            title="Add to Queue"
-          >
-            <ListPlus className="w-3.5 h-3.5" />
-          </button>
-          {onHide && (
-            <button
-              type="button"
-              onClick={onHide}
-              className="w-7 h-7 rounded-full bg-black/70 hover:bg-rose-600 text-white/90 hover:text-white flex items-center justify-center backdrop-blur-md transition cursor-pointer shadow-md"
-              title="Hide"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          )}
-        </div>
-
-        {/* Drag Hint on Hover (Top Left) */}
-        <div className="absolute top-2.5 left-2.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10">
-          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-black/80 backdrop-blur-md text-white/95 shadow-md border border-white/15 flex items-center space-x-1">
-            <span>⋮⋮ Drag to chat</span>
-          </span>
-        </div>
-
-        {/* Always Visible Like indicator if song is liked */}
-        {isLiked && (
-          <div className="absolute top-2.5 left-2.5 w-6 h-6 rounded-full bg-rose-600/90 backdrop-blur-md flex items-center justify-center text-white shadow-md group-hover:hidden">
-            <Heart className="w-3 h-3 fill-white" />
           </div>
-        )}
 
-        {/* YouTube-style Duration Badge on Bottom Right */}
-        <div className="absolute bottom-2.5 right-2.5 bg-black/85 backdrop-blur-xs text-white text-[11px] font-mono font-semibold px-2 py-0.5 rounded-md shadow-md border border-white/10 flex items-center space-x-1">
+          {/* Center: Play Circle or Playing Soundwave */}
+          <div className="flex items-center justify-center">
+            {isThisPlaying ? (
+              <div
+                className="flex items-center space-x-1 bg-black/85 backdrop-blur-md px-3.5 py-1.5 rounded-full border shadow-2xl"
+                style={{ borderColor: `${accent}80` }}
+              >
+                <span className="w-1.5 h-3.5 rounded-full animate-bounce" style={{ backgroundColor: accent }} />
+                <span className="w-1.5 h-5.5 rounded-full animate-[bounce_1s_infinite_200ms]" style={{ backgroundColor: accent }} />
+                <span className="w-1.5 h-2.5 rounded-full animate-[bounce_1s_infinite_400ms]" style={{ backgroundColor: accent }} />
+                <span className="w-1.5 h-4.5 rounded-full animate-[bounce_1s_infinite_100ms]" style={{ backgroundColor: accent }} />
+                <span className="text-[11px] font-bold ml-1.5" style={{ color: accent }}>Playing</span>
+              </div>
+            ) : (
+              <div className="w-11 h-11 rounded-full bg-white/20 hover:bg-white/35 backdrop-blur-md border border-white/30 flex items-center justify-center text-white shadow-2xl transition-transform hover:scale-110 cursor-pointer">
+                <Play className="w-5 h-5 fill-white ml-0.5" />
+              </div>
+            )}
+          </div>
+
+          {/* Bottom spacer for layout balance */}
+          <div className="h-2" />
+        </div>
+
+        {/* YouTube Duration Badge on Bottom Right */}
+        <div className="absolute bottom-2.5 right-2.5 bg-black/80 backdrop-blur-xs text-white text-[11px] font-mono font-bold px-2 py-0.5 rounded-md shadow-md border border-white/10 z-20 pointer-events-none">
           <span>{track.durationFormatted || "3:30"}</span>
         </div>
       </div>
 
-      {/* Info Section below Thumbnail (YouTube 1:1 Parity) */}
-      <div className="flex items-start space-x-3 pt-3 px-0.5">
-        {/* Channel / Artist Avatar Circle */}
+      {/* Row 2: Avatar + Title & Artist Info matching Screenshot */}
+      <div className="flex items-center space-x-2.5 px-0.5 min-w-0">
+        {/* Artist Avatar Circle (e.g. S, D, V, T) */}
         <div
-          className="relative w-9 h-9 rounded-full flex items-center justify-center font-extrabold text-xs shadow-sm flex-shrink-0 mt-0.5 border transition"
-          style={{
-            background: `linear-gradient(135deg, ${accent}dd, ${accent}66)`,
-            color: contrastText,
-            borderColor: `${accent}40`,
-          }}
+          className="w-8 h-8 rounded-full bg-[#8e95a5] dark:bg-neutral-600 text-white font-bold text-xs flex items-center justify-center flex-shrink-0 shadow-2xs"
+          style={isThisPlaying ? { backgroundColor: accent, color: contrastText } : undefined}
         >
           {isThisPlaying ? (
-            <Disc3 className="w-5 h-5 animate-spin duration-3000" style={{ color: contrastText }} />
+            <Disc3 className="w-4 h-4 animate-spin duration-3000" />
           ) : (
             <span>{artistInitial}</span>
           )}
         </div>
 
-        {/* Title, Artist, and Meta */}
+        {/* Stacked Title & Artist */}
         <div className="min-w-0 flex-1">
           <h4
-            className="text-sm font-bold line-clamp-2 leading-snug transition-colors duration-150 text-neutral-900 dark:text-white"
-            style={isThisPlaying ? { color: accent, fontWeight: 800 } : undefined}
+            className="text-xs sm:text-sm font-bold text-neutral-900 dark:text-neutral-100 truncate leading-tight group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors"
+            style={isThisPlaying ? { color: accent } : undefined}
             title={track.title}
           >
             {cleanTitle}
           </h4>
-
-          {/* Artist Name with Verified Checkmark */}
-          <div className="flex items-center space-x-1.5 mt-1 text-xs text-neutral-600 dark:text-neutral-400 group-hover:text-neutral-900 dark:group-hover:text-neutral-300 transition">
-            <span className="truncate font-medium">{cleanArtist}</span>
+          <div className="flex items-center space-x-1 text-[11px] sm:text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+            <span className="truncate">{cleanArtist}</span>
             <span
-              className="w-3.5 h-3.5 rounded-full bg-neutral-200 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 text-[9px] flex items-center justify-center flex-shrink-0 font-bold"
+              className="w-3.5 h-3.5 rounded-full bg-neutral-200 dark:bg-neutral-700/80 text-neutral-500 dark:text-neutral-400 text-[8px] flex items-center justify-center flex-shrink-0 font-bold"
               title="Verified Artist"
             >
               ✓
             </span>
           </div>
+        </div>
+      </div>
 
-          {/* Metadata & Quick Action Pills */}
-          <div className="flex items-center justify-between mt-2 pt-1 border-t border-neutral-200 dark:border-neutral-800/40 text-[11px]">
-            <span className="text-neutral-500 font-mono">
-              {track.durationFormatted || "3:30"} • Live Jam
-            </span>
+      {/* Row 3: Bottom Action Bar (Live Jam Pill + 3 Icon Buttons) matching Screenshot */}
+      <div className="flex items-center justify-between pt-0.5 px-0.5">
+        {/* Left: ((•)) Live Jam button */}
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onPlay();
+          }}
+          className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-[#5c5f8a] hover:bg-[#4d5077] dark:bg-[#6366f1] dark:hover:bg-[#4f46e5] text-white font-bold text-xs shadow-xs transition active:scale-95 cursor-pointer flex-shrink-0"
+          title="Play Live in Jam"
+        >
+          <Radio className="w-3.5 h-3.5" />
+          <span>Live Jam</span>
+        </button>
 
-            <div className="flex items-center space-x-1.5 opacity-80 group-hover:opacity-100 transition">
-              <button
-                type="button"
-                onClick={handleShareClick}
-                className="text-[10px] text-neutral-600 dark:text-neutral-400 hover:text-sky-500 dark:hover:text-sky-400 font-bold px-1.5 py-0.5 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-800 transition cursor-pointer flex items-center space-x-1 border border-neutral-300 dark:border-neutral-700"
-                title="Share to Chat"
-              >
-                <Share2 className="w-3 h-3 text-sky-500" />
-                <span>Share</span>
-              </button>
-              <button
-                type="button"
-                onClick={onAddToPlaylist}
-                style={{
-                  color: accent,
-                  borderColor: `${accent}50`,
-                  backgroundColor: `${accent}18`,
-                }}
-                className="text-[10px] font-bold px-2 py-0.5 rounded-md hover:brightness-125 transition cursor-pointer flex items-center space-x-1 border"
-                title="Add to Playlist"
-              >
-                <FolderPlus className="w-3 h-3" />
-                <span>+ Playlist</span>
-              </button>
-              <button
-                type="button"
-                onClick={onAddToQueue}
-                className="text-[10px] text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white font-bold px-1.5 py-0.5 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-800 transition cursor-pointer flex items-center space-x-0.5 border border-neutral-300 dark:border-neutral-700"
-                title="Add to Queue"
-              >
-                <ListPlus className="w-3 h-3" />
-                <span>Queue</span>
-              </button>
-              <button
-                type="button"
-                onClick={onToggleLike}
-                className="p-1 text-neutral-400 hover:text-rose-500 transition"
-                title={isLiked ? "Unlike" : "Like Song"}
-              >
-                <Heart className={`w-3.5 h-3.5 ${isLiked ? "fill-rose-500 text-rose-500" : ""}`} />
-              </button>
-            </div>
-          </div>
+        {/* Right: 3 Icon Actions: Share, Queue, Like */}
+        <div className="flex items-center space-x-1.5 flex-shrink-0">
+          {/* Share */}
+          <button
+            type="button"
+            onClick={handleShareClick}
+            className="w-7 h-7 rounded-xl border border-neutral-200 dark:border-neutral-700/80 bg-white dark:bg-neutral-800/80 text-neutral-500 dark:text-neutral-400 hover:text-sky-500 dark:hover:text-sky-400 hover:border-sky-300 dark:hover:border-sky-700/60 flex items-center justify-center shadow-2xs transition active:scale-95 cursor-pointer"
+            title="Share song to chat or colleague"
+          >
+            <Share2 className="w-3.5 h-3.5" />
+          </button>
+
+          {/* Queue */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onAddToQueue(e);
+            }}
+            className="w-7 h-7 rounded-xl border border-neutral-200 dark:border-neutral-700/80 bg-white dark:bg-neutral-800/80 text-neutral-500 dark:text-neutral-400 hover:text-emerald-500 dark:hover:text-emerald-400 hover:border-emerald-300 dark:hover:border-emerald-700/60 flex items-center justify-center shadow-2xs transition active:scale-95 cursor-pointer"
+            title="Add to Queue"
+          >
+            <ListPlus className="w-3.5 h-3.5" />
+          </button>
+
+          {/* Like */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleLike(e);
+            }}
+            className={`w-7 h-7 rounded-xl border shadow-2xs flex items-center justify-center transition active:scale-95 cursor-pointer ${
+              isLiked
+                ? "border-rose-300 dark:border-rose-800/60 bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400"
+                : "border-neutral-200 dark:border-neutral-700/80 bg-white dark:bg-neutral-800/80 text-neutral-500 dark:text-neutral-400 hover:text-rose-500 hover:border-rose-300 dark:hover:border-rose-700"
+            }`}
+            title={isLiked ? "Unlike" : "Like Song"}
+          >
+            <Heart className={`w-3.5 h-3.5 ${isLiked ? "fill-rose-500 text-rose-500" : ""}`} />
+          </button>
         </div>
       </div>
     </div>
