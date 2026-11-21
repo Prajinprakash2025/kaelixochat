@@ -48,6 +48,9 @@ interface MusicContextType {
   unlockMobileAudio: () => void;
   resync: () => void;
   syncDriftSeconds: number;
+  hasJoinedJam: boolean;
+  joinJam: () => void;
+  leaveJam: () => void;
 }
 
 const MusicContext = createContext<MusicContextType | null>(null);
@@ -77,6 +80,36 @@ export function MusicProvider({ children, currentUser }: MusicProviderProps) {
   const [hiddenTrackIds, setHiddenTrackIds] = useState<string[]>([]);
   const [syncDriftSeconds, setSyncDriftSeconds] = useState<number>(0);
   const [origin, setOrigin] = useState<string>("");
+
+  const [hasJoinedJam, setHasJoinedJam] = useState<boolean>(false);
+  const hasJoinedJamRef = useRef<boolean>(false);
+  hasJoinedJamRef.current = hasJoinedJam;
+
+  const joinJam = () => {
+    setHasJoinedJam(true);
+    hasJoinedJamRef.current = true;
+    setIsPlaying(true);
+    isPlayingRef.current = true;
+    setNeedsUserInteraction(false);
+    unlockHardwareAudio();
+
+    if (currentTrackRef.current) {
+      setTimeout(() => {
+        postYtCommand("seekTo", [currentTimeRef.current || 0, true]);
+        postYtCommand("unMute");
+        postYtCommand("setVolume", [volume > 0 ? volume : 100]);
+        postYtCommand("playVideo");
+      }, 350);
+    }
+  };
+
+  const leaveJam = () => {
+    setHasJoinedJam(false);
+    hasJoinedJamRef.current = false;
+    setIsPlaying(false);
+    isPlayingRef.current = false;
+    postYtCommand("pauseVideo");
+  };
 
   const currentTrackRef = useRef<MusicTrack | null>(null);
   currentTrackRef.current = currentTrack;
@@ -204,19 +237,24 @@ export function MusicProvider({ children, currentUser }: MusicProviderProps) {
           setCurrentTrack(track);
           setCurrentTime(Math.floor(targetPos));
           setDuration(track.duration || 180);
-          setIsPlaying(true);
-          setNeedsUserInteraction(false);
 
-          // Execute immediate seek and play
-          postYtCommand("seekTo", [targetPos, true]);
-          postYtCommand("unMute");
-          postYtCommand("setVolume", [volume > 0 ? volume : 100]);
-          postYtCommand("playVideo");
+          if (hasJoinedJamRef.current) {
+            setIsPlaying(true);
+            setNeedsUserInteraction(false);
 
-          setTimeout(() => {
+            // Execute immediate seek and play
             postYtCommand("seekTo", [targetPos, true]);
+            postYtCommand("unMute");
+            postYtCommand("setVolume", [volume > 0 ? volume : 100]);
             postYtCommand("playVideo");
-          }, 350);
+
+            setTimeout(() => {
+              postYtCommand("seekTo", [targetPos, true]);
+              postYtCommand("playVideo");
+            }, 350);
+          } else {
+            setIsPlaying(false);
+          }
           break;
         }
 
@@ -238,7 +276,9 @@ export function MusicProvider({ children, currentUser }: MusicProviderProps) {
           if (elapsed < 0 || elapsed > 5) elapsed = 0.15;
           const targetPos = pos + elapsed;
           setCurrentTime(Math.floor(targetPos));
-          postYtCommand("seekTo", [targetPos, true]);
+          if (hasJoinedJamRef.current) {
+            postYtCommand("seekTo", [targetPos, true]);
+          }
           break;
         }
 
@@ -247,11 +287,20 @@ export function MusicProvider({ children, currentUser }: MusicProviderProps) {
           setActiveDj(action.sender as any);
           setCurrentTrack(track);
           setCurrentTime(0);
-          setIsPlaying(true);
+          if (hasJoinedJamRef.current) {
+            setIsPlaying(true);
+            postYtCommand("seekTo", [0, true]);
+            postYtCommand("unMute");
+            postYtCommand("setVolume", [volume > 0 ? volume : 100]);
+            postYtCommand("playVideo");
+          } else {
+            setIsPlaying(false);
+          }
           break;
         }
 
         case "HEARTBEAT": {
+          if (!hasJoinedJamRef.current) break;
           // Ignore own heartbeats
           if (action.sender.id === currentUser.id) break;
 
@@ -350,30 +399,37 @@ export function MusicProvider({ children, currentUser }: MusicProviderProps) {
             if (!currentTrackRef.current || currentTrackRef.current.id !== state.currentTrack.id) {
               setCurrentTrack(state.currentTrack);
               setCurrentTime(Math.floor(targetPos));
-              setIsPlaying(state.isPlaying);
 
-              setTimeout(() => {
-                postYtCommand("seekTo", [targetPos, true]);
-                postYtCommand("unMute");
-                postYtCommand("setVolume", [volume > 0 ? volume : 100]);
+              if (hasJoinedJamRef.current) {
+                setIsPlaying(state.isPlaying);
+
+                setTimeout(() => {
+                  postYtCommand("seekTo", [targetPos, true]);
+                  postYtCommand("unMute");
+                  postYtCommand("setVolume", [volume > 0 ? volume : 100]);
+                  if (state.isPlaying) {
+                    postYtCommand("playVideo");
+                  } else {
+                    postYtCommand("pauseVideo");
+                  }
+                }, 350);
+              } else {
+                setIsPlaying(false);
+              }
+            } else {
+              if (hasJoinedJamRef.current) {
+                // Same track: align playing state and position immediately!
+                setIsPlaying(state.isPlaying);
+                const drift = Math.abs(currentTimeRef.current - targetPos);
+                if (drift > 1.0) {
+                  setCurrentTime(Math.floor(targetPos));
+                  postYtCommand("seekTo", [targetPos, true]);
+                }
                 if (state.isPlaying) {
                   postYtCommand("playVideo");
                 } else {
                   postYtCommand("pauseVideo");
                 }
-              }, 350);
-            } else {
-              // Same track: align playing state and position immediately!
-              setIsPlaying(state.isPlaying);
-              const drift = Math.abs(currentTimeRef.current - targetPos);
-              if (drift > 1.0) {
-                setCurrentTime(Math.floor(targetPos));
-                postYtCommand("seekTo", [targetPos, true]);
-              }
-              if (state.isPlaying) {
-                postYtCommand("playVideo");
-              } else {
-                postYtCommand("pauseVideo");
               }
             }
           }
@@ -455,6 +511,7 @@ export function MusicProvider({ children, currentUser }: MusicProviderProps) {
   // and unmute YouTube so the phone speakers immediately play the music!
   useEffect(() => {
     const handleUserGesture = () => {
+      if (!hasJoinedJamRef.current) return;
       unlockHardwareAudio();
       postYtCommand("unMute");
       postYtCommand("setVolume", [volume > 0 ? volume : 100]);
@@ -476,6 +533,7 @@ export function MusicProvider({ children, currentUser }: MusicProviderProps) {
 
   // Tell iframe we are listening to events whenever iframe loads
   const onIframeLoad = () => {
+    if (!hasJoinedJamRef.current) return;
     if (iframeRef.current?.contentWindow) {
       try {
         iframeRef.current.contentWindow.postMessage(
@@ -516,6 +574,8 @@ export function MusicProvider({ children, currentUser }: MusicProviderProps) {
   const playTrack = (track: MusicTrack, position: number = 0, newPlaylist?: MusicTrack[]) => {
     hasUserInteractedRef.current = true;
     unlockHardwareAudio();
+    setHasJoinedJam(true);
+    hasJoinedJamRef.current = true;
     setCurrentTrack(track);
     setCurrentTime(position);
     setDuration(track.duration || 180);
@@ -548,6 +608,10 @@ export function MusicProvider({ children, currentUser }: MusicProviderProps) {
 
   // Toggle Play / Pause
   const togglePlay = () => {
+    if (!hasJoinedJam) {
+      joinJam();
+      return;
+    }
     hasUserInteractedRef.current = true;
     unlockHardwareAudio();
     const nextState = !isPlaying;
@@ -574,6 +638,10 @@ export function MusicProvider({ children, currentUser }: MusicProviderProps) {
   };
 
   const resume = () => {
+    if (!hasJoinedJam) {
+      joinJam();
+      return;
+    }
     hasUserInteractedRef.current = true;
     unlockHardwareAudio();
     setIsPlaying(true);
@@ -870,6 +938,9 @@ export function MusicProvider({ children, currentUser }: MusicProviderProps) {
         syncDriftSeconds,
         hiddenTrackIds,
         hideTrack,
+        hasJoinedJam,
+        joinJam,
+        leaveJam,
       }}
     >
       {/* 
@@ -878,6 +949,7 @@ export function MusicProvider({ children, currentUser }: MusicProviderProps) {
         Mounted ONCE at the root of the app. Never unmounts when changing chats!
         Uses an offscreen opacity-100 footprint so Chrome / Android / iOS
         never throttle or silence the audio hardware stream.
+        Gated by hasJoinedJam: Audio only plays for users who clicked Play or Join Jam!
         =======================================================================
       */}
       <div
@@ -887,7 +959,7 @@ export function MusicProvider({ children, currentUser }: MusicProviderProps) {
             : "fixed -bottom-10 -right-10 w-2 h-2 opacity-100 overflow-hidden pointer-events-none z-[-1]"
         }`}
       >
-        {currentTrack && (
+        {currentTrack && hasJoinedJam && (
           <iframe
             ref={iframeRef}
             key={currentTrack.id}

@@ -16,6 +16,8 @@ import {
   Radio,
   Users,
   Sparkles,
+  LogOut,
+  Headphones,
 } from "lucide-react";
 import { useMusic } from "@/context/music-context";
 
@@ -34,6 +36,9 @@ export function FloatingMusicBar() {
     setIsPlayerOpen,
     resync,
     syncDriftSeconds,
+    hasJoinedJam,
+    joinJam,
+    leaveJam,
   } = useMusic();
 
   const [position, setPosition] = useState<{ x: number; y: number } | null>(null);
@@ -278,44 +283,55 @@ export function FloatingMusicBar() {
         className="min-w-0 flex-1 px-2.5 cursor-pointer select-none"
       >
         <div className="flex items-center space-x-1.5 mb-0.5">
-          <span
-            className={`w-1.5 h-1.5 rounded-full ${
-              isPlaying
-                ? isMuted
-                  ? "bg-amber-400 animate-ping"
-                  : "bg-emerald-400 animate-pulse"
-                : "bg-neutral-500"
-            }`}
-          />
-          {isMuted && isPlaying ? (
-            <span
-              onClick={(e) => {
-                e.stopPropagation();
-                unlockMobileAudio();
-                toggleMute();
-              }}
-              className="text-[10px] font-bold text-amber-400 uppercase tracking-wider bg-amber-950/60 px-1.5 py-0.5 rounded border border-amber-500/40 animate-pulse"
-            >
-              🔊 Unmute
-            </span>
-          ) : (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                resync();
-              }}
-              className="text-[10px] font-bold text-emerald-400 hover:text-emerald-300 uppercase tracking-wider cursor-pointer flex items-center space-x-1"
-              title="Click to re-align playback with DJ"
-            >
-              <span>
-                {syncDriftSeconds > 1.2
-                  ? `⚡ Tap to Sync (${syncDriftSeconds.toFixed(1)}s)`
-                  : listeners.length > 1
-                  ? `⚡ Synced (${listeners.length})`
-                  : "⚡ Live Synced"}
+          {!hasJoinedJam ? (
+            <>
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+              <span className="text-[10px] font-bold text-amber-300 uppercase tracking-wider bg-amber-950/60 px-1.5 py-0.5 rounded border border-amber-500/40">
+                📻 Live Jam in progress
               </span>
-            </button>
+            </>
+          ) : (
+            <>
+              <span
+                className={`w-1.5 h-1.5 rounded-full ${
+                  isPlaying
+                    ? isMuted
+                      ? "bg-amber-400 animate-ping"
+                      : "bg-emerald-400 animate-pulse"
+                    : "bg-neutral-500"
+                }`}
+              />
+              {isMuted && isPlaying ? (
+                <span
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    unlockMobileAudio();
+                    toggleMute();
+                  }}
+                  className="text-[10px] font-bold text-amber-400 uppercase tracking-wider bg-amber-950/60 px-1.5 py-0.5 rounded border border-amber-500/40 animate-pulse"
+                >
+                  🔊 Unmute
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    resync();
+                  }}
+                  className="text-[10px] font-bold text-emerald-400 hover:text-emerald-300 uppercase tracking-wider cursor-pointer flex items-center space-x-1"
+                  title="Click to re-align playback with DJ"
+                >
+                  <span>
+                    {syncDriftSeconds > 1.2
+                      ? `⚡ Tap to Sync (${syncDriftSeconds.toFixed(1)}s)`
+                      : listeners.length > 1
+                      ? `⚡ Synced (${listeners.length})`
+                      : "⚡ Live Synced"}
+                  </span>
+                </button>
+              )}
+            </>
           )}
         </div>
         <p className="text-xs font-bold text-white truncate drop-shadow-sm">
@@ -327,108 +343,150 @@ export function FloatingMusicBar() {
       </div>
 
       {/* Action Controls */}
-      <div className="flex items-center space-x-0.5 flex-shrink-0">
-        <button
-          type="button"
-          onClick={() => {
-            unlockMobileAudio();
-            playPrevious();
-          }}
-          className="p-1 text-neutral-400 hover:text-white rounded-lg hover:bg-neutral-800 transition cursor-pointer"
-          title="Previous Track"
-        >
-          <SkipBack className="w-3.5 h-3.5" />
-        </button>
+      {!hasJoinedJam ? (
+        <div className="flex items-center space-x-1.5 flex-shrink-0">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              unlockMobileAudio();
+              joinJam();
+            }}
+            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-400 hover:to-green-500 text-neutral-950 font-extrabold text-xs shadow-md shadow-emerald-500/30 active:scale-95 transition cursor-pointer"
+            title="Click to join live team jam and listen to audio"
+          >
+            <Play className="w-3.5 h-3.5 fill-current" />
+            <span>Join Jam</span>
+          </button>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsDismissed(true);
+            }}
+            className="p-1 text-neutral-400 hover:text-white rounded-lg hover:bg-neutral-800 transition cursor-pointer"
+            title="Dismiss bar"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      ) : (
+        <div className="flex items-center space-x-0.5 flex-shrink-0">
+          <button
+            type="button"
+            onClick={() => {
+              unlockMobileAudio();
+              playPrevious();
+            }}
+            className="p-1 text-neutral-400 hover:text-white rounded-lg hover:bg-neutral-800 transition cursor-pointer"
+            title="Previous Track"
+          >
+            <SkipBack className="w-3.5 h-3.5" />
+          </button>
 
-        <button
-          type="button"
-          onClick={() => {
-            unlockMobileAudio();
-            togglePlay();
-          }}
-          className={`w-7 h-7 rounded-full flex items-center justify-center transition active:scale-95 cursor-pointer shadow-md ${
-            isPlaying
-              ? "bg-emerald-500 hover:bg-emerald-400 text-neutral-950"
-              : "bg-white hover:bg-neutral-200 text-neutral-950"
-          }`}
-          title={isPlaying ? "Pause for All Devices" : "Play for All Devices"}
-        >
-          {isPlaying ? (
-            <Pause className="w-3.5 h-3.5 fill-current" />
-          ) : (
-            <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
-          )}
-        </button>
+          <button
+            type="button"
+            onClick={() => {
+              unlockMobileAudio();
+              togglePlay();
+            }}
+            className={`w-7 h-7 rounded-full flex items-center justify-center transition active:scale-95 cursor-pointer shadow-md ${
+              isPlaying
+                ? "bg-emerald-500 hover:bg-emerald-400 text-neutral-950"
+                : "bg-white hover:bg-neutral-200 text-neutral-950"
+            }`}
+            title={isPlaying ? "Pause for All Devices" : "Play for All Devices"}
+          >
+            {isPlaying ? (
+              <Pause className="w-3.5 h-3.5 fill-current" />
+            ) : (
+              <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
+            )}
+          </button>
 
-        <button
-          type="button"
-          onClick={() => {
-            unlockMobileAudio();
-            playNext();
-          }}
-          className="p-1 text-neutral-400 hover:text-white rounded-lg hover:bg-neutral-800 transition cursor-pointer"
-          title="Next Track"
-        >
-          <SkipForward className="w-3.5 h-3.5" />
-        </button>
+          <button
+            type="button"
+            onClick={() => {
+              unlockMobileAudio();
+              playNext();
+            }}
+            className="p-1 text-neutral-400 hover:text-white rounded-lg hover:bg-neutral-800 transition cursor-pointer"
+            title="Next Track"
+          >
+            <SkipForward className="w-3.5 h-3.5" />
+          </button>
 
-        {/* Volume / Unmute button for Phone Speaker */}
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            unlockMobileAudio();
-            toggleMute();
-          }}
-          className={`p-1 rounded-lg transition cursor-pointer ${
-            isMuted
-              ? "text-amber-400 bg-amber-400/20 ring-1 ring-amber-400/50 animate-pulse"
-              : "text-neutral-400 hover:text-white hover:bg-neutral-800"
-          }`}
-          title={isMuted ? "Unmute Speaker" : "Mute Audio"}
-        >
-          {isMuted ? (
-            <VolumeX className="w-3.5 h-3.5 text-amber-400" />
-          ) : (
-            <Volume2 className="w-3.5 h-3.5" />
-          )}
-        </button>
+          {/* Volume / Unmute button for Phone Speaker */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              unlockMobileAudio();
+              toggleMute();
+            }}
+            className={`p-1 rounded-lg transition cursor-pointer ${
+              isMuted
+                ? "text-amber-400 bg-amber-400/20 ring-1 ring-amber-400/50 animate-pulse"
+                : "text-neutral-400 hover:text-white hover:bg-neutral-800"
+            }`}
+            title={isMuted ? "Unmute Speaker" : "Mute Audio"}
+          >
+            {isMuted ? (
+              <VolumeX className="w-3.5 h-3.5 text-amber-400" />
+            ) : (
+              <Volume2 className="w-3.5 h-3.5" />
+            )}
+          </button>
 
-        {/* AI Voice DJ Assistant Button */}
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            if (typeof window !== "undefined") {
-              window.dispatchEvent(new CustomEvent("kaelixo-open-ai-dj"));
-            }
-          }}
-          className="p-1 text-purple-400 hover:text-purple-300 hover:bg-purple-500/20 rounded-lg transition cursor-pointer"
-          title="Open AI Voice DJ [Ctrl+Shift+A]"
-        >
-          <Sparkles className="w-3.5 h-3.5 animate-spin-slow" />
-        </button>
+          {/* Leave Jam button */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              leaveJam();
+            }}
+            className="p-1 text-neutral-400 hover:text-rose-400 hover:bg-rose-500/20 rounded-lg transition cursor-pointer"
+            title="Leave Jam (Stop & Mute Local Audio)"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+          </button>
 
-        {/* Minimize Button */}
-        <button
-          type="button"
-          onClick={() => setIsMinimized(true)}
-          className="p-1 text-neutral-400 hover:text-white rounded-lg hover:bg-neutral-800 transition cursor-pointer"
-          title="Minimize player to small pill"
-        >
-          <Minus className="w-3.5 h-3.5" />
-        </button>
+          {/* AI Voice DJ Assistant Button */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (typeof window !== "undefined") {
+                window.dispatchEvent(new CustomEvent("kaelixo-open-ai-dj"));
+              }
+            }}
+            className="p-1 text-purple-400 hover:text-purple-300 hover:bg-purple-500/20 rounded-lg transition cursor-pointer"
+            title="Open AI Voice DJ [Ctrl+Shift+A]"
+          >
+            <Sparkles className="w-3.5 h-3.5 animate-spin-slow" />
+          </button>
 
-        {/* Close/Dismiss Button */}
-        <button
-          type="button"
-          onClick={() => setIsDismissed(true)}
-          className="p-1 text-neutral-400 hover:text-white rounded-lg hover:bg-neutral-800 transition cursor-pointer"
-          title="Hide player (access via headphones icon in top bar)"
-        >
-          <X className="w-3.5 h-3.5" />
-        </button>
-      </div>
+          {/* Minimize Button */}
+          <button
+            type="button"
+            onClick={() => setIsMinimized(true)}
+            className="p-1 text-neutral-400 hover:text-white rounded-lg hover:bg-neutral-800 transition cursor-pointer"
+            title="Minimize player to small pill"
+          >
+            <Minus className="w-3.5 h-3.5" />
+          </button>
+
+          {/* Close/Dismiss Button */}
+          <button
+            type="button"
+            onClick={() => setIsDismissed(true)}
+            className="p-1 text-neutral-400 hover:text-white rounded-lg hover:bg-neutral-800 transition cursor-pointer"
+            title="Hide player (access via headphones icon in top bar)"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
     </aside>
   );
 }

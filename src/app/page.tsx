@@ -97,6 +97,20 @@ const DEFAULT_ORGS: Organization[] = [
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+export const DUMMY_MEMBERS_BLACKLIST = new Set([
+  "anagha",
+  "anagha test",
+  "arjun dev",
+  "aparna sharma",
+  "rahul nair",
+  "sneha patel",
+  "user-anagha",
+  "user-arjun-dev",
+  "user-aparna-sharma",
+  "user-rahul-nair",
+  "user-sneha-patel",
+]);
+
 function getRemovedMembersSet(): Set<string> {
   if (typeof window === "undefined") return new Set();
   try {
@@ -118,7 +132,12 @@ function uniqueMembers(members: WorkspaceMember[], currentUserId?: string, curre
     if (!m || !m.name) continue;
     const key = m.name.trim().toLowerCase();
     const idLower = (m.id || "").toLowerCase().trim();
-    if (removedSet.has(key) || (idLower && removedSet.has(idLower))) {
+    if (
+      removedSet.has(key) ||
+      (idLower && removedSet.has(idLower)) ||
+      DUMMY_MEMBERS_BLACKLIST.has(key) ||
+      (idLower && DUMMY_MEMBERS_BLACKLIST.has(idLower))
+    ) {
       continue;
     }
     const existing = map.get(key);
@@ -285,7 +304,12 @@ export default function KaelixoApp() {
         const parsedTeam = JSON.parse(savedTeam);
         if (Array.isArray(parsedTeam) && parsedTeam.length > 0) {
           const userObj = savedUser ? JSON.parse(savedUser) : null;
-          setTeamMembers(uniqueMembers(parsedTeam, userObj?.id, userObj?.name));
+          const cleaned = uniqueMembers(parsedTeam, userObj?.id, userObj?.name);
+          const finalTeam = cleaned.length > 0 ? cleaned : TEAM_MEMBERS;
+          setTeamMembers(finalTeam);
+          try {
+            localStorage.setItem("kaelixo_team_members", JSON.stringify(finalTeam));
+          } catch {}
         }
       }
       const savedNotifs = localStorage.getItem("kaelixo_notifications");

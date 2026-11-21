@@ -516,6 +516,28 @@ export function ChatInput({
       handleFilesAdded(files);
       setClipboardNotice("Screenshot pasted! Ready to send.");
       setTimeout(() => setClipboardNotice(null), 3500);
+    } else if (typeof navigator !== "undefined" && navigator.clipboard?.read) {
+      // Async fallback if mobile browser doesn't pass image items synchronously
+      navigator.clipboard
+        .read()
+        .then(async (clipboardItems) => {
+          const asyncFiles: File[] = [];
+          for (const item of clipboardItems) {
+            for (const type of item.types) {
+              if (type.startsWith("image/")) {
+                const blob = await item.getType(type);
+                const ext = type.split("/")[1]?.replace("+xml", "") || "png";
+                asyncFiles.push(new File([blob], `screenshot_${Date.now()}.${ext}`, { type }));
+              }
+            }
+          }
+          if (asyncFiles.length > 0) {
+            handleFilesAdded(asyncFiles);
+            setClipboardNotice("Screenshot attached from clipboard!");
+            setTimeout(() => setClipboardNotice(null), 3500);
+          }
+        })
+        .catch(() => {});
     }
   };
 
@@ -592,16 +614,16 @@ export function ChatInput({
         }
       } catch (err: any) {
         console.warn("Clipboard access error:", err);
-        if (err.name === "NotAllowedError" || err.message?.includes("denied") || err.message?.includes("permission")) {
-          setClipboardNotice("Clipboard permission needed. Tap below to pick screenshot from your gallery:");
-          setShowScreenshotFallback(true);
-          return;
-        }
+        // If clipboard permission is not granted or restricted on mobile, automatically open native screenshot picker
+        setClipboardNotice("Opening photo & screenshot gallery...");
+        setShowScreenshotFallback(true);
+        screenshotInputRef.current?.click();
+        return;
       }
     }
 
     if (!pasted) {
-      setClipboardNotice("No screenshot in clipboard. Choose from your photos/screenshots:");
+      setClipboardNotice("Opening screenshots & photo gallery...");
       setShowScreenshotFallback(true);
       screenshotInputRef.current?.click();
     }
@@ -1113,6 +1135,28 @@ export function ChatInput({
             </button>
           </div>
         )}
+
+        {/* Mobile Quick Screenshot / Attachment Chips */}
+        <div className="flex items-center space-x-1.5 pb-1 px-1 overflow-x-auto scrollbar-none">
+          <button
+            type="button"
+            onClick={() => screenshotInputRef.current?.click()}
+            className="flex items-center space-x-1 px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700/60 text-[11px] font-semibold active:scale-95 transition cursor-pointer flex-shrink-0 shadow-2xs"
+            title="Attach screenshot directly from your device gallery"
+          >
+            <Camera className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+            <span>📸 Attach Screenshot</span>
+          </button>
+          <button
+            type="button"
+            onClick={handlePasteScreenshot}
+            className="flex items-center space-x-1 px-2.5 py-1 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 border border-neutral-300 dark:border-neutral-700 text-[11px] font-semibold active:scale-95 transition cursor-pointer flex-shrink-0"
+            title="Paste image copied to clipboard"
+          >
+            <Clipboard className="w-3.5 h-3.5 text-neutral-500" />
+            <span>📋 Paste Image</span>
+          </button>
+        </div>
 
         {/* Mobile Input Row matching Slack Mobile Screenshot */}
         <div className="relative flex items-center bg-neutral-100 dark:bg-[#1a1d21] border border-neutral-200 dark:border-neutral-800/90 rounded-2xl px-2 py-1 shadow-xs focus-within:border-indigo-500 dark:focus-within:border-neutral-700">

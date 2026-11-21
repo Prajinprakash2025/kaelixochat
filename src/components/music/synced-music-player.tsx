@@ -16,6 +16,7 @@ import {
   X,
   Users,
   Share2,
+  LogOut,
 } from "lucide-react";
 import { useMusic } from "@/context/music-context";
 import { createCompactDragGhost } from "./music-channel-view";
@@ -55,6 +56,9 @@ export function SyncedMusicPlayer({
     unlockMobileAudio,
     resync,
     syncDriftSeconds,
+    hasJoinedJam,
+    joinJam,
+    leaveJam,
   } = useMusic();
 
   const [showQueue, setShowQueue] = useState(false);
@@ -316,6 +320,25 @@ export function SyncedMusicPlayer({
               </button>
             )}
           </div>
+
+          {currentTrack && !hasJoinedJam && (
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  unlockMobileAudio();
+                  joinJam();
+                }}
+                className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-400 hover:to-green-500 text-neutral-950 font-bold text-xs shadow-md shadow-emerald-500/20 active:scale-95 transition flex items-center space-x-1.5 cursor-pointer"
+              >
+                <Play className="w-3.5 h-3.5 fill-current" />
+                <span>Join Team Jam (Start Audio)</span>
+              </button>
+              <span className="text-[11px] text-neutral-400">
+                Audio is muted until you join
+              </span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -428,8 +451,18 @@ export function SyncedMusicPlayer({
           </button>
         </div>
 
-        {/* Right: Volume Slider */}
+        {/* Right: Volume Slider & Leave Jam */}
         <div className="flex items-center space-x-2">
+          {hasJoinedJam && (
+            <button
+              type="button"
+              onClick={leaveJam}
+              className="p-1.5 rounded-lg text-neutral-400 hover:text-rose-400 hover:bg-rose-500/20 transition cursor-pointer"
+              title="Leave Jam (Stop & Mute Audio)"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          )}
           <button
             type="button"
             onClick={toggleMute}
