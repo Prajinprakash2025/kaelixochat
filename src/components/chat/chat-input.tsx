@@ -95,10 +95,14 @@ export function ChatInput({
   const [showHeadingMenu, setShowHeadingMenu] = useState(false);
   const [isRecordingVoice, setIsRecordingVoice] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const [clipboardNotice, setClipboardNotice] = useState<string | null>(null);
+  const [showScreenshotFallback, setShowScreenshotFallback] = useState(false);
+  const [pendingSendOnUpload, setPendingSendOnUpload] = useState(false);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const mobileTextareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const screenshotInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
   const dragCounterRef = useRef<number>(0);
   const stagedFilesRef = useRef<StagedFile[]>([]);
@@ -293,6 +297,41 @@ export function ChatInput({
           )
         );
       } catch (err: any) {
+        console.warn("Storage upload failed, attempting local data URL fallback for instant screenshot send:", err);
+        // Instant data URL fallback for images and screenshots so sending never fails
+        if (file.type.startsWith("image/") || file.size < 5 * 1024 * 1024) {
+          try {
+            const reader = new FileReader();
+            reader.onload = () => {
+              const dataUrl = reader.result as string;
+              const fallbackAttachment: Attachment = {
+                id: `att-fallback-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
+                name: file.name,
+                size: file.size,
+                type: file.type || "image/png",
+                url: dataUrl,
+                storagePath: `fallback/${file.name}`,
+              };
+              setStagedFiles((prev) =>
+                prev.map((item) =>
+                  item.id === stageId
+                    ? {
+                        ...item,
+                        status: "complete",
+                        progress: 100,
+                        attachment: fallbackAttachment,
+                      }
+                    : item
+                )
+              );
+            };
+            reader.readAsDataURL(file);
+            return;
+          } catch {
+            // continue to error below if reader fails
+          }
+        }
+
         setStagedFiles((prev) =>
           prev.map((item) =>
             item.id === stageId
@@ -405,11 +444,29 @@ export function ChatInput({
     }
   };
 
+  // Helper to convert data URL (base64) string to File object
+  const dataURLtoFile = (dataurl: string, filename: string): File | null => {
+    try {
+      const arr = dataurl.split(",");
+      const mimeMatch = arr[0].match(/:(.*?);/);
+      const mime = mimeMatch ? mimeMatch[1] : "image/png";
+      const bstr = atob(arr[1]);
+      let n = bstr.length;
+      const u8arr = new Uint8Array(n);
+      while (n--) {
+        u8arr[n] = bstr.charCodeAt(n);
+      }
+      return new File([u8arr], filename, { type: mime });
+    } catch {
+      return null;
+    }
+  };
+
   // Clipboard paste support (e.g. screenshot paste from mobile & desktop)
   const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
     const files: File[] = [];
 
-    // 1. Check clipboardData.files (desktop Chrome, Edge, Firefox)
+    // 1. Check clipboardData.files (desktop Chrome, Edge, Firefox, Android)
     if (e.clipboardData.files && e.clipboardData.files.length > 0) {
       for (let i = 0; i < e.clipboardData.files.length; i++) {
         const f = e.clipboardData.files[i];
@@ -423,16 +480,31 @@ export function ChatInput({
     if (e.clipboardData.items && e.clipboardData.items.length > 0) {
       for (let i = 0; i < e.clipboardData.items.length; i++) {
         const item = e.clipboardData.items[i];
-        if (item.type.startsWith("image/")) {
+        if (item.kind === "file") {
           const file = item.getAsFile();
           if (file) {
-            const ext = item.type.split("/")[1] || "png";
+            const ext = file.type?.split("/")[1] || "png";
             const namedFile =
               file.name && file.name !== "image.png"
                 ? file
-                : new File([file], `screenshot_${Date.now()}.${ext}`, { type: file.type });
+                : new File([file], `screenshot_${Date.now()}.${ext}`, { type: file.type || "image/png" });
             if (!files.some((f) => f.name === namedFile.name && f.size === namedFile.size)) {
               files.push(namedFile);
+            }
+          }
+        } else if (item.kind === "string") {
+          if (item.type === "text/html") {
+            const html = e.clipboardData.getData("text/html");
+            const match = html.match(/<img[^>]+src=["'](data:image\/[^"']+)["']/i);
+            if (match && match[1]) {
+              const file = dataURLtoFile(match[1], `screenshot_${Date.now()}.png`);
+              if (file && !files.some((f) => f.size === file.size)) files.push(file);
+            }
+          } else if (item.type === "text/plain") {
+            const text = e.clipboardData.getData("text/plain");
+            if (text && text.trim().startsWith("data:image/")) {
+              const file = dataURLtoFile(text.trim(), `screenshot_${Date.now()}.png`);
+              if (file && !files.some((f) => f.size === file.size)) files.push(file);
             }
           }
         }
@@ -442,35 +514,97 @@ export function ChatInput({
     if (files.length > 0) {
       e.preventDefault();
       handleFilesAdded(files);
+      setClipboardNotice("Screenshot pasted! Ready to send.");
+      setTimeout(() => setClipboardNotice(null), 3500);
+    }
+  };
+
+  // Keyboard rich content input (Gboard / Android keyboard screenshot chips)
+  const handleBeforeInput = (e: React.FormEvent<HTMLTextAreaElement>) => {
+    const nativeEvent = e.nativeEvent as any;
+    const dt = nativeEvent?.dataTransfer;
+    if (dt) {
+      const files: File[] = [];
+      if (dt.files && dt.files.length > 0) {
+        for (let i = 0; i < dt.files.length; i++) {
+          files.push(dt.files[i]);
+        }
+      } else if (dt.items && dt.items.length > 0) {
+        for (let i = 0; i < dt.items.length; i++) {
+          const item = dt.items[i];
+          if (item.kind === "file") {
+            const f = item.getAsFile();
+            if (f) files.push(f);
+          }
+        }
+      }
+      if (files.length > 0) {
+        e.preventDefault();
+        handleFilesAdded(files);
+        setClipboardNotice("Screenshot inserted from keyboard! Ready to send.");
+        setTimeout(() => setClipboardNotice(null), 3500);
+      }
     }
   };
 
   // Direct Mobile / Button Clipboard Paste (WhatsApp / Slack style "Paste Screenshot")
   const handlePasteScreenshot = async () => {
-    try {
-      if (typeof navigator !== "undefined" && navigator.clipboard && navigator.clipboard.read) {
-        const clipboardItems = await navigator.clipboard.read();
-        const files: File[] = [];
-        for (const item of clipboardItems) {
-          for (const type of item.types) {
-            if (type.startsWith("image/")) {
-              const blob = await item.getType(type);
-              const ext = type.split("/")[1] || "png";
-              const file = new File([blob], `screenshot_${Date.now()}.${ext}`, { type });
-              files.push(file);
+    setClipboardNotice(null);
+    let pasted = false;
+
+    // 1. Modern Async Clipboard API
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+      try {
+        if (navigator.clipboard.read) {
+          const clipboardItems = await navigator.clipboard.read();
+          const files: File[] = [];
+          for (const item of clipboardItems) {
+            for (const type of item.types) {
+              if (type.startsWith("image/")) {
+                const blob = await item.getType(type);
+                const ext = type.split("/")[1]?.replace("+xml", "") || "png";
+                const file = new File([blob], `screenshot_${Date.now()}.${ext}`, { type });
+                files.push(file);
+              }
+            }
+          }
+          if (files.length > 0) {
+            handleFilesAdded(files);
+            pasted = true;
+            setClipboardNotice("Screenshot pasted from clipboard!");
+            setTimeout(() => setClipboardNotice(null), 3500);
+            return;
+          }
+        }
+
+        if (navigator.clipboard.readText) {
+          const text = await navigator.clipboard.readText();
+          if (text && text.trim().startsWith("data:image/")) {
+            const file = dataURLtoFile(text.trim(), `screenshot_${Date.now()}.png`);
+            if (file) {
+              handleFilesAdded([file]);
+              pasted = true;
+              setClipboardNotice("Screenshot pasted from clipboard!");
+              setTimeout(() => setClipboardNotice(null), 3500);
+              return;
             }
           }
         }
-        if (files.length > 0) {
-          handleFilesAdded(files);
+      } catch (err: any) {
+        console.warn("Clipboard access error:", err);
+        if (err.name === "NotAllowedError" || err.message?.includes("denied") || err.message?.includes("permission")) {
+          setClipboardNotice("Clipboard permission needed. Tap below to pick screenshot from your gallery:");
+          setShowScreenshotFallback(true);
           return;
         }
       }
-    } catch (err) {
-      console.warn("Clipboard read permission or data unavailable:", err);
     }
-    // Fallback: trigger file input directly for instant selection of screenshot
-    fileInputRef.current?.click();
+
+    if (!pasted) {
+      setClipboardNotice("No screenshot in clipboard. Choose from your photos/screenshots:");
+      setShowScreenshotFallback(true);
+      screenshotInputRef.current?.click();
+    }
   };
 
   // Window-level paste listener for instant screenshot pasting
@@ -497,16 +631,31 @@ export function ChatInput({
       if (e.clipboardData?.items && e.clipboardData.items.length > 0) {
         for (let i = 0; i < e.clipboardData.items.length; i++) {
           const item = e.clipboardData.items[i];
-          if (item.type.startsWith("image/")) {
+          if (item.kind === "file") {
             const file = item.getAsFile();
             if (file) {
-              const ext = item.type.split("/")[1] || "png";
+              const ext = file.type?.split("/")[1] || "png";
               const namedFile =
                 file.name && file.name !== "image.png"
                   ? file
-                  : new File([file], `screenshot_${Date.now()}.${ext}`, { type: file.type });
+                  : new File([file], `screenshot_${Date.now()}.${ext}`, { type: file.type || "image/png" });
               if (!files.some((f) => f.name === namedFile.name && f.size === namedFile.size)) {
                 files.push(namedFile);
+              }
+            }
+          } else if (item.kind === "string") {
+            if (item.type === "text/html") {
+              const html = e.clipboardData.getData("text/html");
+              const match = html.match(/<img[^>]+src=["'](data:image\/[^"']+)["']/i);
+              if (match && match[1]) {
+                const file = dataURLtoFile(match[1], `screenshot_${Date.now()}.png`);
+                if (file && !files.some((f) => f.size === file.size)) files.push(file);
+              }
+            } else if (item.type === "text/plain") {
+              const text = e.clipboardData.getData("text/plain");
+              if (text && text.trim().startsWith("data:image/")) {
+                const file = dataURLtoFile(text.trim(), `screenshot_${Date.now()}.png`);
+                if (file && !files.some((f) => f.size === file.size)) files.push(file);
               }
             }
           }
@@ -515,6 +664,8 @@ export function ChatInput({
       if (files.length > 0) {
         e.preventDefault();
         handleFilesAdded(files);
+        setClipboardNotice("Screenshot pasted! Ready to send.");
+        setTimeout(() => setClipboardNotice(null), 3500);
       }
     };
 
@@ -530,10 +681,16 @@ export function ChatInput({
   const hasText = content.trim().length > 0;
   const hasAttachments = completedAttachments.length > 0;
   const hasTrack = Boolean(stagedTrack);
-  const canSend = !isAnyUploading && (hasText || hasAttachments || hasTrack) && !disabled;
+  const canSend = (hasText || hasAttachments || hasTrack || isAnyUploading) && !disabled;
 
   const handleSend = () => {
-    if (!canSend) return;
+    if (isAnyUploading) {
+      setPendingSendOnUpload(true);
+      setClipboardNotice("Uploading screenshot... will send automatically once ready.");
+      return;
+    }
+
+    if (!hasText && !hasAttachments && !hasTrack) return;
 
     let finalContent = content.trim();
     if (stagedTrack) {
@@ -557,6 +714,8 @@ export function ChatInput({
 
     setContent("");
     setStagedTrack(null);
+    setPendingSendOnUpload(false);
+    setClipboardNotice(null);
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
     }
@@ -567,6 +726,15 @@ export function ChatInput({
     setShowEmojiPicker(false);
     textareaRef.current?.focus();
   };
+
+  // Auto-send once upload completes if user clicked send while uploading
+  useEffect(() => {
+    if (pendingSendOnUpload && !isAnyUploading && (completedAttachments.length > 0 || hasText || hasTrack)) {
+      setPendingSendOnUpload(false);
+      setClipboardNotice(null);
+      handleSend();
+    }
+  }, [pendingSendOnUpload, isAnyUploading, completedAttachments.length, hasText, hasTrack]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -666,6 +834,14 @@ export function ChatInput({
         className="hidden"
         accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv,.json,.zip,.md,.py,.js,.ts"
         aria-label="Upload file attachments"
+      />
+      <input
+        type="file"
+        ref={screenshotInputRef}
+        onChange={handleFileInputChange}
+        className="hidden"
+        accept="image/*"
+        aria-label="Upload screenshot attachment"
       />
       <input
         type="file"
@@ -774,6 +950,41 @@ export function ChatInput({
           </div>
         )}
 
+        {/* Instant Clipboard / Screenshot Alert Banner */}
+        {clipboardNotice && (
+          <div className="flex items-center justify-between p-2 mx-1 rounded-xl bg-indigo-50 dark:bg-indigo-950/80 border border-indigo-200 dark:border-indigo-800 text-xs text-indigo-900 dark:text-indigo-200 animate-in fade-in shadow-xs">
+            <div className="flex items-center space-x-2 min-w-0">
+              <Camera className="w-4 h-4 text-indigo-600 dark:text-indigo-400 flex-shrink-0" />
+              <span className="truncate text-[11px] font-medium">{clipboardNotice}</span>
+            </div>
+            <div className="flex items-center space-x-1.5 flex-shrink-0 ml-1">
+              {showScreenshotFallback && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowScreenshotFallback(false);
+                    setClipboardNotice(null);
+                    screenshotInputRef.current?.click();
+                  }}
+                  className="px-2 py-0.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[10px] cursor-pointer shadow-xs active:scale-95 transition"
+                >
+                  Gallery / Photos
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => {
+                  setClipboardNotice(null);
+                  setShowScreenshotFallback(false);
+                }}
+                className="p-1 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 cursor-pointer"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Staged files on mobile */}
         {stagedFiles.length > 0 && (
           <div className="flex flex-wrap gap-1.5 py-1 px-1 max-h-24 overflow-y-auto no-scrollbar">
@@ -783,13 +994,36 @@ export function ChatInput({
                 className="flex items-center space-x-1.5 px-2 py-1 rounded-xl bg-neutral-100 dark:bg-[#1e2227] border border-neutral-200 dark:border-[#2d3239] text-xs text-neutral-800 dark:text-neutral-200 shadow-xs"
               >
                 {item.previewUrl && item.category === "image" ? (
-                  <img src={item.previewUrl} alt={item.name} className="w-5 h-5 rounded object-cover" />
+                  <img src={item.previewUrl} alt={item.name} className="w-6 h-6 rounded object-cover" />
                 ) : (
                   renderCategoryIcon(item.category)
                 )}
-                <span className="truncate max-w-[110px] text-[11px]">{item.name}</span>
-                {item.status === "uploading" && <Loader2 className="w-3 h-3 animate-spin text-emerald-400" />}
-                {item.status === "complete" && <Check className="w-3 h-3 text-emerald-400" />}
+                <span className="truncate max-w-[90px] text-[11px]">{item.name}</span>
+                {item.status === "uploading" && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPendingSendOnUpload(true);
+                      setClipboardNotice("Sending as soon as upload completes...");
+                    }}
+                    className="ml-1 px-1.5 py-0.5 rounded-md bg-indigo-600 text-white text-[10px] flex items-center space-x-1 cursor-pointer"
+                    title="Send automatically once uploaded"
+                  >
+                    <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                    <span>{pendingSendOnUpload ? "Sending..." : "Send"}</span>
+                  </button>
+                )}
+                {item.status === "complete" && (
+                  <button
+                    type="button"
+                    onClick={handleSend}
+                    className="ml-1 px-2 py-0.5 rounded-md bg-[#007a5a] hover:bg-[#00664b] text-white text-[10px] font-bold flex items-center space-x-1 shadow-xs cursor-pointer active:scale-95 transition"
+                    title="Send screenshot now"
+                  >
+                    <SendHorizontal className="w-2.5 h-2.5" />
+                    <span>Send</span>
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => handleRemoveStagedFile(item.id)}
@@ -954,6 +1188,16 @@ export function ChatInput({
             >
               <Clipboard className="w-4 h-4" />
             </button>
+
+            {/* 🖼️ Direct Photos & Screenshots Picker */}
+            <button
+              type="button"
+              onClick={() => screenshotInputRef.current?.click()}
+              className="w-7 h-7 rounded-lg flex items-center justify-center text-neutral-500 dark:text-neutral-400 hover:text-emerald-600 dark:hover:text-emerald-400 active:scale-95 transition cursor-pointer"
+              title="Select photo or screenshot"
+            >
+              <ImageIcon className="w-4 h-4" />
+            </button>
           </div>
 
           {/* Center: Message Textarea */}
@@ -971,6 +1215,7 @@ export function ChatInput({
               }}
               onKeyDown={handleKeyDown}
               onPaste={handlePaste}
+              onBeforeInput={handleBeforeInput}
               placeholder={placeholderText}
               rows={1}
               disabled={disabled}
@@ -1183,6 +1428,7 @@ export function ChatInput({
           }}
           onKeyDown={handleKeyDown}
           onPaste={handlePaste}
+          onBeforeInput={handleBeforeInput}
           placeholder={placeholderText}
           rows={1}
           disabled={disabled}
@@ -1337,6 +1583,16 @@ export function ChatInput({
               title="Paste screenshot from clipboard [Ctrl+V]"
             >
               <Clipboard className="w-4 h-4" />
+            </button>
+
+            {/* 🖼️ Direct Photos & Screenshots Picker */}
+            <button
+              type="button"
+              onClick={() => screenshotInputRef.current?.click()}
+              className="p-1.5 rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-500 hover:text-emerald-600 dark:hover:text-emerald-400 transition cursor-pointer"
+              title="Add photo or screenshot"
+            >
+              <ImageIcon className="w-4 h-4" />
             </button>
 
             {/* Aa Toggle Formatting Bar */}

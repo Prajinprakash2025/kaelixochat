@@ -108,6 +108,61 @@ export function ThreadSidePanel({
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
+  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const files: File[] = [];
+    if (e.clipboardData.files && e.clipboardData.files.length > 0) {
+      for (let i = 0; i < e.clipboardData.files.length; i++) {
+        const f = e.clipboardData.files[i];
+        if (f.type.startsWith("image/") || f.size > 0) files.push(f);
+      }
+    }
+    if (e.clipboardData.items && e.clipboardData.items.length > 0) {
+      for (let i = 0; i < e.clipboardData.items.length; i++) {
+        const item = e.clipboardData.items[i];
+        if (item.kind === "file") {
+          const file = item.getAsFile();
+          if (file) {
+            const ext = file.type?.split("/")[1] || "png";
+            const namedFile =
+              file.name && file.name !== "image.png"
+                ? file
+                : new File([file], `screenshot_${Date.now()}.${ext}`, { type: file.type || "image/png" });
+            files.push(namedFile);
+          }
+        }
+      }
+    }
+    if (files.length > 0) {
+      e.preventDefault();
+      setStagedFiles((prev) => [...prev, ...files]);
+      setUploadError(null);
+    }
+  };
+
+  const handleBeforeInput = (e: React.FormEvent<HTMLTextAreaElement>) => {
+    const nativeEvent = e.nativeEvent as any;
+    const dt = nativeEvent?.dataTransfer;
+    if (dt) {
+      const files: File[] = [];
+      if (dt.files && dt.files.length > 0) {
+        for (let i = 0; i < dt.files.length; i++) files.push(dt.files[i]);
+      } else if (dt.items && dt.items.length > 0) {
+        for (let i = 0; i < dt.items.length; i++) {
+          const item = dt.items[i];
+          if (item.kind === "file") {
+            const f = item.getAsFile();
+            if (f) files.push(f);
+          }
+        }
+      }
+      if (files.length > 0) {
+        e.preventDefault();
+        setStagedFiles((prev) => [...prev, ...files]);
+        setUploadError(null);
+      }
+    }
+  };
+
   const removeStagedFile = (index: number) => {
     setStagedFiles((prev) => prev.filter((_, i) => i !== index));
   };
@@ -556,6 +611,8 @@ export function ThreadSidePanel({
               value={replyText}
               onChange={(e) => setReplyText(e.target.value)}
               onKeyDown={handleKeyDown}
+              onPaste={handlePaste}
+              onBeforeInput={handleBeforeInput}
               placeholder="Reply in thread... (Enter to send, Shift+Enter for newline)"
               rows={2}
               className="w-full bg-transparent text-xs text-neutral-900 dark:text-white placeholder-neutral-400 focus:outline-none resize-none"
