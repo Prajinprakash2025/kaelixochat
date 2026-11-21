@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { MusicTrack } from "@/types";
+import { isMusicSongTrack } from "@/utils/music-recommendations";
 
 export interface CategoryData {
   id: string;
@@ -576,10 +577,14 @@ function extractVideoId(text: string): string | null {
   return match ? match[1] : null;
 }
 
-// Scrape YouTube search results
+// Scrape YouTube search results with pure music song filtering
 async function searchYouTube(query: string, limit: number = 15): Promise<MusicTrack[]> {
   try {
-    const searchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`;
+    // Bias query towards songs/music if not explicitly specified
+    const hasMusicHint = /\b(song|songs|music|track|audio|lyric|lyrics|jukebox|hits|bgm|theme|ost|soundtrack|melody)\b/i.test(query);
+    const enrichedQuery = hasMusicHint ? query : `${query} songs audio`;
+
+    const searchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(enrichedQuery)}`;
     const ytRes = await fetch(searchUrl, {
       headers: {
         "User-Agent":
@@ -618,6 +623,11 @@ async function searchYouTube(query: string, limit: number = 15): Promise<MusicTr
           if (parts.length === 3) sec = parts[0] * 3600 + parts[1] * 60 + parts[2];
           else if (parts.length === 2) sec = parts[0] * 60 + parts[1];
 
+          // FILTER OUT non-song videos (movie reviews, full movies, trailers, interviews, podcasts, trolls)
+          if (!isMusicSongTrack(title, artist, sec)) {
+            continue;
+          }
+
           const thumb =
             v.thumbnail?.thumbnails?.[v.thumbnail.thumbnails.length - 1]?.url ||
             `https://i.ytimg.com/vi/${v.videoId}/hqdefault.jpg`;
@@ -632,6 +642,10 @@ async function searchYouTube(query: string, limit: number = 15): Promise<MusicTr
             url: `https://www.youtube.com/watch?v=${v.videoId}`,
             source: "youtube",
           });
+
+          if (tracks.length >= limit) {
+            return tracks;
+          }
         }
       }
     }

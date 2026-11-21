@@ -10,7 +10,7 @@ import React, {
 } from "react";
 import { MusicTrack, MusicSyncState, WorkspaceMember, MusicReaction } from "@/types";
 import { musicSync } from "@/utils/music-realtime";
-import { getSmartRelatedRecommendation, cleanRawTitle } from "@/utils/music-recommendations";
+import { getSmartRelatedRecommendation, cleanRawTitle, isMusicSongTrack } from "@/utils/music-recommendations";
 
 interface MusicContextType {
   currentTrack: MusicTrack | null;
@@ -667,6 +667,7 @@ export function MusicProvider({ children, currentUser }: MusicProviderProps) {
         const handleAutoplayResult = (candidateTracks: MusicTrack[]): boolean => {
           const freshTracks = candidateTracks.filter(
             (t) =>
+              isMusicSongTrack(t.title, t.artist, t.duration || 0) &&
               t.id !== currentTrack.id &&
               !recentlyPlayedRef.current.includes(t.id) &&
               !hiddenTrackIds.includes(t.id)
@@ -674,7 +675,12 @@ export function MusicProvider({ children, currentUser }: MusicProviderProps) {
           const pool =
             freshTracks.length > 0
               ? freshTracks
-              : candidateTracks.filter((t) => t.id !== currentTrack.id && !hiddenTrackIds.includes(t.id));
+              : candidateTracks.filter(
+                  (t) =>
+                    isMusicSongTrack(t.title, t.artist, t.duration || 0) &&
+                    t.id !== currentTrack.id &&
+                    !hiddenTrackIds.includes(t.id)
+                );
 
           if (pool.length > 0) {
             const nextTrack = pool[0];

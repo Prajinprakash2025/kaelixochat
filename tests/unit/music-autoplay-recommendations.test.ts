@@ -4,6 +4,7 @@ import {
   cleanRawTitle,
   cleanRawArtist,
   extractTrackSegments,
+  isMusicSongTrack,
 } from "../../src/utils/music-recommendations";
 import { MusicTrack } from "../../src/types";
 
@@ -136,7 +137,53 @@ function runTests() {
   }
   console.log("✓ Test 8: cleanRawTitle correctly strips noise words: ", cleaned);
 
-  console.log("\nAll 8 YouTube Autoplay & Music Recommendation tests PASSED successfully!\n");
+  // Test 9: isMusicSongTrack - Non-Song and Review Protection (User Issue)
+  // 9a. User's exact screenshot case: Operation Mole Movie Malayalam Review by REELOAD MEDIA
+  const reviewResult = isMusicSongTrack("O.M: Operation Mole Movie Malayalam Review", "REELOAD MEDIA", 13);
+  if (reviewResult !== false) {
+    throw new Error("Failed to block Operation Mole Movie Review!");
+  }
+  console.log("✓ Test 9a: Correctly blocks movie reviews and review channels (REELOAD MEDIA)");
+
+  // 9b. Full movies
+  const fullMovieResult = isMusicSongTrack("Thattathin Marayathu Full Movie HD", "Harmony Cinemas", 8100);
+  if (fullMovieResult !== false) {
+    throw new Error("Failed to block Full Movie!");
+  }
+  console.log("✓ Test 9b: Correctly blocks full feature movies");
+
+  // 9c. Trailers & Teasers
+  const trailerResult = isMusicSongTrack("Aavesham Official Trailer", "Think Music India", 140);
+  if (trailerResult !== false) {
+    throw new Error("Failed to block movie trailer!");
+  }
+  console.log("✓ Test 9c: Correctly blocks movie trailers without musical score");
+
+  // 9d. Interviews & Press Meets
+  const interviewResult = isMusicSongTrack("Fahadh Faasil Exclusive Interview with Behindwoods", "Behindwoods", 1200);
+  if (interviewResult !== false) {
+    throw new Error("Failed to block interview video!");
+  }
+  console.log("✓ Test 9d: Correctly blocks interviews and press meets");
+
+  // 9e. Comedy / Climax scenes
+  const sceneResult = isMusicSongTrack("Mohanlal Comedy Scene from Chithram", "Satyam Videos", 300);
+  if (sceneResult !== false) {
+    throw new Error("Failed to block comedy scene clip!");
+  }
+  console.log("✓ Test 9e: Correctly blocks movie scene clips");
+
+  // 9f. Valid music tracks must be allowed!
+  const validSong1 = isMusicSongTrack("Muthuchippi Poloru Video Song | Thattathin Marayathu", "Sony Music South", 210);
+  const validSong2 = isMusicSongTrack("Kuthanthram - Video Song | Manjummel Boys", "Think Music India", 266);
+  const validSong3 = isMusicSongTrack("Illuminati | Aavesham | Fahadh Faasil | Sushin Shyam", "Think Music India", 149);
+  const validSong4 = isMusicSongTrack("Leo Trailer Theme Music BGM", "Anirudh Ravichander", 120);
+  if (!validSong1 || !validSong2 || !validSong3 || !validSong4) {
+    throw new Error("Legitimate songs were incorrectly blocked!");
+  }
+  console.log("✓ Test 9f: Correctly allows all legitimate songs and theme tracks");
+
+  console.log("\nAll 9 YouTube Autoplay, Recommendation & Non-Music Filter tests PASSED successfully!\n");
 }
 
 runTests();

@@ -473,3 +473,77 @@ export function getSmartRelatedRecommendation(track: MusicTrack): SmartRecommend
     }
   }
 }
+
+/**
+ * Strict music song validator:
+ * Discards movie reviews, trailers, teasers, interviews, full movies, talk shows, news, and reaction videos
+ * so only pure music tracks and songs play in Kaelixo Music.
+ */
+export function isMusicSongTrack(title: string, artist: string, durationSec: number = 0): boolean {
+  const t = (title || "").toLowerCase();
+  const a = (artist || "").toLowerCase();
+  const full = `${t} ${a}`;
+
+  // 1. Definite Non-Music Indicators (Always Reject)
+  const definiteNonMusicPatterns = [
+    // Reviews & Reactions
+    /\b(movie\s*review|theatre\s*review|public\s*review|film\s*review|audience\s*review|theatre\s*response|public\s*response|audience\s*response|reaction\s*video|reacts\s*to|breakdown\s*video|story\s*explained|ending\s*explained|scene\s*breakdown|easter\s*egg|hidden\s*details)\b/i,
+    // Explicit Reviewer / Reaction Channels
+    /\b(reeload\s*media|unni\s*vlogs|lensmen|filmi\s*craft|mallu\s*analyst|mrinal|secret\s*agent|hyderabad\s*irani\s*chai|cinemapayyans|shazzam)\b/i,
+    // Full Feature Films & Complete Movies
+    /\b(full\s*movie|full\s*length\s*movie|watch\s*full\s*movie|complete\s*movie|blockbuster\s*movie|full\s*film|hd\s*movie\s*20\d\d|malayalam\s*full\s*movie|tamil\s*full\s*movie|hindi\s*full\s*movie)\b/i,
+    // Interviews & Talks
+    /\b(exclusive\s*interview|interview\s*with|press\s*meet|press\s*conference|audio\s*launch\s*speech|success\s*meet|pre\s*release\s*event|behind\s*the\s*scenes|making\s*of|bloopers|daily\s*vlog|podcast\s*episode|talk\s*show)\b/i,
+    // Scenes & Miscellaneous Non-music
+    /\b(comedy\s*scene|fight\s*scene|climax\s*scene|mass\s*scene|entry\s*scene|whatsapp\s*status|status\s*video|box\s*office\s*collection|collection\s*report|troll\s*video|roast\s*video|news\s*bulletin|breaking\s*news)\b/i,
+  ];
+
+  for (const regex of definiteNonMusicPatterns) {
+    if (regex.test(full)) {
+      return false;
+    }
+  }
+
+  // Standalone 'review' or 'reaction' check
+  if (/\b(review|reviews|reaction|reactions)\b/i.test(t)) {
+    return false;
+  }
+
+  // Standalone 'trailer' or 'teaser' or 'glimpse'
+  if (/\b(official\s*trailer|trailer\s*[1234]?|official\s*teaser|teaser\s*[1234]?|first\s*look|motion\s*poster|glimpse)\b/i.test(t)) {
+    // If it doesn't mention theme, bgm, song, audio, track, soundtrack
+    const hasSongToken = /\b(theme|bgm|song|audio|track|soundtrack|score|music)\b/i.test(t);
+    if (!hasSongToken) {
+      return false;
+    }
+  }
+
+  // 'movie' check: If title has "movie" without any musical term
+  if (/\bmovie\b/i.test(t)) {
+    const hasMusicalToken = /\b(song|songs|audio|track|tracks|soundtrack|score|theme|bgm|music|lyric|lyrics|lyrical|singles|jukebox)\b/i.test(t);
+    if (!hasMusicalToken) {
+      return false;
+    }
+  }
+
+  // 'interview' check
+  if (/\binterview\b/i.test(full)) {
+    return false;
+  }
+
+  // 2. Duration Guards:
+  // Teaser clips / ultra-short snippets under 50 seconds
+  if (durationSec > 0 && durationSec < 50) {
+    return false;
+  }
+
+  // Massive feature films / podcasts over 30 mins (1800s)
+  if (durationSec > 1800) {
+    const isJukebox = /\b(jukebox|all\s*songs|playlist|non\s*stop|mashup|collection|album)\b/i.test(t);
+    if (!isJukebox) {
+      return false;
+    }
+  }
+
+  return true;
+}

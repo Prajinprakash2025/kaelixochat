@@ -55,6 +55,7 @@ import { ShareSongModal } from "./share-song-modal";
 import { EditPlaylistModal } from "./edit-playlist-modal";
 import { useMusic } from "@/context/music-context";
 import { usePreferences } from "@/context/preferences-context";
+import { isMusicSongTrack } from "@/utils/music-recommendations";
 
 // Helper to determine optimal text color (dark vs white) for high contrast on any theme accent color
 export function getContrastTextColor(hexColor?: string): string {
@@ -1168,16 +1169,17 @@ export function MusicChannelView({
         );
         const data = await res.json();
         if (data.tracks && data.tracks.length > 0) {
+          const validated = data.tracks.filter((t: MusicTrack) => isMusicSongTrack(t.title, t.artist, t.duration || 0));
           if (append) {
             setCatalogTracks((prev) => {
               const seen = new Set(prev.map((t) => t.id));
-              const fresh = data.tracks.filter((t: MusicTrack) => !seen.has(t.id));
+              const fresh = validated.filter((t: MusicTrack) => !seen.has(t.id));
               return [...prev, ...fresh];
             });
           } else {
-            setCatalogTracks(data.tracks);
+            setCatalogTracks(validated);
             if (cat === "trending") {
-              setTrendingTracks(data.tracks.slice(0, 5));
+              setTrendingTracks(validated.slice(0, 5));
             }
           }
           setHasMore(data.hasMore !== false);
@@ -1233,8 +1235,10 @@ export function MusicChannelView({
       fetch(`/api/music/search?q=${encodeURIComponent(searchQuery.trim())}`)
         .then((res) => res.json())
         .then((data) => {
-          if (data.tracks) {
-            setSearchResults(data.tracks);
+          if (data.tracks && Array.isArray(data.tracks)) {
+            setSearchResults(
+              data.tracks.filter((t: MusicTrack) => isMusicSongTrack(t.title, t.artist, t.duration || 0))
+            );
           }
         })
         .catch((err) => console.warn("Search error:", err))
