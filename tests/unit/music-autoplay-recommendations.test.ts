@@ -5,6 +5,7 @@ import {
   cleanRawArtist,
   extractTrackSegments,
   isMusicSongTrack,
+  isLongMixTrack,
 } from "../../src/utils/music-recommendations";
 import { MusicTrack } from "../../src/types";
 
@@ -183,7 +184,25 @@ function runTests() {
   }
   console.log("✓ Test 9f: Correctly allows all legitimate songs and theme tracks");
 
-  console.log("\nAll 9 YouTube Autoplay, Recommendation & Non-Music Filter tests PASSED successfully!\n");
+  // 9g. User Issue: 2-Hour long compilation playlists and non-stop mixes must NOT appear in normal feeds!
+  const twoHourPlaylist1 = isMusicSongTrack("Top Hits 2026 Playlist ~ Trending Music 2026 🎵", "Dynamic Deep House", 9177, false);
+  const twoHourPlaylist2 = isMusicSongTrack("Spotify VIRAL Music 2026 - Top Spotify Songs Mix 🎧", "Dynamic Deep House", 9362, false);
+  const thirtyMinCompilation = isMusicSongTrack("TRENDING SONGS 2026", "Elsie Music", 1938, false);
+  if (twoHourPlaylist1 !== false || twoHourPlaylist2 !== false || thirtyMinCompilation !== false) {
+    throw new Error("Failed to block 2-hour long compilation playlists from regular songs feed!");
+  }
+  console.log("✓ Test 9g: Correctly blocks 2-hour compilations and long playlist videos from normal songs feed");
+
+  // Test 10: Dedicated Long Mix View allows long mixes while still rejecting non-music
+  const allowedInLongMixView1 = isMusicSongTrack("Top Hits 2026 Playlist ~ Trending Music 2026 🎵", "Dynamic Deep House", 9177, true);
+  const allowedInLongMixView2 = isMusicSongTrack("Malayalam Evergreen Non-Stop 2 Hours Jukebox", "KJ Yesudas", 7200, true);
+  const reviewBlockedInLongMix = isMusicSongTrack("Operation Mole Movie Review", "REELOAD MEDIA", 7200, true);
+  if (!allowedInLongMixView1 || !allowedInLongMixView2 || reviewBlockedInLongMix !== false) {
+    throw new Error("Failed in dedicated Long Mix view validation!");
+  }
+  console.log("✓ Test 10: Dedicated Long Mix mode allows genuine 1-3 hr mixes while maintaining non-music rejection");
+
+  console.log("\nAll 10 YouTube Autoplay, Recommendation, Non-Music & 2-Hour Filter tests PASSED successfully!\n");
 }
 
 runTests();

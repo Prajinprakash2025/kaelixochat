@@ -475,11 +475,49 @@ export function getSmartRelatedRecommendation(track: MusicTrack): SmartRecommend
 }
 
 /**
- * Strict music song validator:
- * Discards movie reviews, trailers, teasers, interviews, full movies, talk shows, news, and reaction videos
- * so only pure music tracks and songs play in Kaelixo Music.
+ * Detects whether a track is a long compilation, 1-3 hour playlist, jukebox, or continuous DJ mix.
  */
-export function isMusicSongTrack(title: string, artist: string, durationSec: number = 0): boolean {
+export function isLongMixTrack(title: string, durationSec: number = 0): boolean {
+  // Any track over 11 minutes (660 seconds) is virtually always a jukebox, album compilation, or multi-hour mix
+  if (durationSec >= 660) {
+    return true;
+  }
+
+  const t = (title || "").toLowerCase();
+  const compilationPatterns = [
+    /\b(\d+\s*hours?|\d+\s*hrs?|2\s*hours?|3\s*hours?|1\s*hour|non[\s-]*stop)\b/i,
+    /\b(jukebox|mega[\s-]*mix|dj\s*mix|continuous\s*mix|deep\s*house\s*mix)\b/i,
+    /\b(top\s*hits\s*playlist|spotify\s*playlist|spotify\s*viral\s*music|top\s*spotify\s*songs\s*mix)\b/i,
+    /\b(trending\s*songs\s*20\d\d|best\s*songs\s*20\d\d|viral\s*songs\s*20\d\d|hit\s*songs\s*20\d\d)\b/i,
+    /\b(all\s*songs\s*collection|full\s*album\s*songs|audio\s*jukebox|video\s*jukebox)\b/i,
+  ];
+
+  for (const regex of compilationPatterns) {
+    if (regex.test(t)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Strict music song validator:
+ * Discards movie reviews, trailers, teasers, interviews, full movies, talk shows, news, and reaction videos.
+ *
+ * In regular mode (allowLongCompilations = false):
+ * Discards 2-hour, 30+ minute playlists, jukeboxes and multi-song compilations
+ * so the regular songs feed contains ONLY pure individual song tracks (2-10 mins).
+ *
+ * In long mix mode (allowLongCompilations = true):
+ * Only accepts genuine 1-3 hour mixes, jukeboxes and continuous playlists for the dedicated Long Mixes section!
+ */
+export function isMusicSongTrack(
+  title: string,
+  artist: string,
+  durationSec: number = 0,
+  allowLongCompilations: boolean = false
+): boolean {
   const t = (title || "").toLowerCase();
   const a = (artist || "").toLowerCase();
   const full = `${t} ${a}`;
@@ -531,16 +569,22 @@ export function isMusicSongTrack(title: string, artist: string, durationSec: num
     return false;
   }
 
-  // 2. Duration Guards:
-  // Teaser clips / ultra-short snippets under 50 seconds
+  // 2. Duration & Long Mix Segregation:
+  // Teaser clips / ultra-short snippets under 50 seconds are always blocked
   if (durationSec > 0 && durationSec < 50) {
     return false;
   }
 
-  // Massive feature films / podcasts over 30 mins (1800s)
-  if (durationSec > 1800) {
-    const isJukebox = /\b(jukebox|all\s*songs|playlist|non\s*stop|mashup|collection|album)\b/i.test(t);
-    if (!isJukebox) {
+  const isLong = isLongMixTrack(title, durationSec);
+
+  if (!allowLongCompilations) {
+    // REGULAR SONGS VIEW: 2-hour compilations, 30+ min playlists, and jukeboxes MUST NOT appear here
+    if (isLong || durationSec >= 660) {
+      return false;
+    }
+  } else {
+    // DEDICATED LONG MIX VIEW: Must be an extended compilation, jukebox, or >= 10 minutes
+    if (!isLong && durationSec > 0 && durationSec < 600) {
       return false;
     }
   }

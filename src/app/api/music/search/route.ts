@@ -416,16 +416,70 @@ const CATEGORY_CATALOG: Record<string, { name: string; icon: string; tracks: Mus
       },
     ],
   },
+  "long-mixes": {
+    name: "1-3 Hr Non-Stop Mixes",
+    icon: "📻",
+    tracks: [
+      {
+        id: "malayalam-2h-jukebox",
+        title: "Malayalam Evergreen Non-Stop Super Hits | 2 Hours Jukebox",
+        artist: "KJ Yesudas, Chithra, Sushin Shyam",
+        duration: 7200,
+        durationFormatted: "2:00:00",
+        thumbnail: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=800&q=80",
+        url: "https://www.youtube.com/watch?v=epAFDEJImrU",
+        source: "youtube",
+      },
+      {
+        id: "tamil-2h-jukebox",
+        title: "Tamil Golden Melody & Fast Beats | 2 Hours Non-Stop Hits",
+        artist: "Anirudh, AR Rahman, Yuvan",
+        duration: 7560,
+        durationFormatted: "2:06:00",
+        thumbnail: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?auto=format&fit=crop&w=800&q=80",
+        url: "https://www.youtube.com/watch?v=1F3hm6MfR1k",
+        source: "youtube",
+      },
+      {
+        id: "bollywood-2h-romantic",
+        title: "Bollywood Romantic & Soulful Hits | 2.5 Hours Non-Stop Jukebox",
+        artist: "Arijit Singh, Shreya Ghoshal, Atif Aslam",
+        duration: 9000,
+        durationFormatted: "2:30:00",
+        thumbnail: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=800&q=80",
+        url: "https://www.youtube.com/watch?v=BddP6PYo2gs",
+        source: "youtube",
+      },
+      {
+        id: "lofi-2h-study",
+        title: "Lo-Fi Deep Focus & Chill Beats | 2 Hours Continuous Study Session",
+        artist: "Lofi Girl Studio",
+        duration: 7200,
+        durationFormatted: "2:00:00",
+        thumbnail: "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=800&q=80",
+        url: "https://www.youtube.com/watch?v=4xDzrJKXOOY",
+        source: "youtube",
+      },
+    ],
+  },
 };
 
 // Dynamic queries when searching by category or pagination
 const CATEGORY_SEARCH_QUERIES: Record<string, string[]> = {
   trending: [
-    "latest viral hit songs 2024",
-    "billboard global trending music hits",
-    "top spotify viral hits today",
-    "worldwide trending songs official audio",
-    "trending music playlist hits",
+    "latest viral hit songs 2024 official audio",
+    "billboard global trending music singles",
+    "top spotify viral songs today",
+    "worldwide trending songs official music video",
+    "popular hit tracks official audio",
+  ],
+  "long-mixes": [
+    "malayalam hit songs 2 hours jukebox non stop",
+    "tamil hit songs 2 hours non stop jukebox",
+    "bollywood romantic songs 2 hours jukebox",
+    "lofi hip hop 2 hours chill beats study relax",
+    "top viral hits 2 hours non stop dj mix",
+    "punjabi hit songs 2 hours non stop dj mix",
   ],
   malayalam: [
     "latest malayalam hit songs 2024",
@@ -578,7 +632,11 @@ function extractVideoId(text: string): string | null {
 }
 
 // Scrape YouTube search results with pure music song filtering
-async function searchYouTube(query: string, limit: number = 15): Promise<MusicTrack[]> {
+async function searchYouTube(
+  query: string,
+  limit: number = 15,
+  isLongMixCategory: boolean = false
+): Promise<MusicTrack[]> {
   try {
     // Bias query towards songs/music if not explicitly specified
     const hasMusicHint = /\b(song|songs|music|track|audio|lyric|lyrics|jukebox|hits|bgm|theme|ost|soundtrack|melody)\b/i.test(query);
@@ -624,7 +682,8 @@ async function searchYouTube(query: string, limit: number = 15): Promise<MusicTr
           else if (parts.length === 2) sec = parts[0] * 60 + parts[1];
 
           // FILTER OUT non-song videos (movie reviews, full movies, trailers, interviews, podcasts, trolls)
-          if (!isMusicSongTrack(title, artist, sec)) {
+          // Also filters out 2-hour compilations from normal feeds unless isLongMixCategory = true
+          if (!isMusicSongTrack(title, artist, sec, isLongMixCategory)) {
             continue;
           }
 
@@ -701,7 +760,8 @@ export async function GET(request: Request) {
     }
 
     // Keyword Search
-    const searchTracks = await searchYouTube(q, 20);
+    const qHasLongMixIntent = /\b(\d+\s*hours?|\d+\s*hrs?|2\s*hours?|3\s*hours?|non[\s-]*stop|jukebox)\b/i.test(q);
+    const searchTracks = await searchYouTube(q, 20, qHasLongMixIntent);
     return NextResponse.json({
       success: true,
       query: q,
@@ -714,6 +774,7 @@ export async function GET(request: Request) {
   // Support both pre-defined catalog categories AND any custom user category/singer/place!
   const isKnownCatalog = category in CATEGORY_CATALOG;
   const isKnownQuery = category in CATEGORY_SEARCH_QUERIES;
+  const isLongMixCategory = category === "long-mixes" || category === "mixes";
 
   const queryList: string[] = isKnownQuery
     ? CATEGORY_SEARCH_QUERIES[category]
@@ -727,7 +788,7 @@ export async function GET(request: Request) {
     : [
         `${rawCategory} hit songs official audio`,
         `${rawCategory} popular music songs`,
-        `${rawCategory} viral playlist 2024`,
+        `${rawCategory} viral hit songs 2024`,
         `${rawCategory} songs best hits`,
       ];
 
@@ -741,7 +802,7 @@ export async function GET(request: Request) {
     // Pick a randomized query from queryList so EVERY reload brings fresh, varied songs like YouTube/Spotify!
     const randomQueryIdx = Math.floor(Math.random() * queryList.length);
     const chosenQuery = queryList[randomQueryIdx];
-    const dynamicHits = await searchYouTube(chosenQuery, 16);
+    const dynamicHits = await searchYouTube(chosenQuery, 16, isLongMixCategory);
 
     let tracksToReturn: MusicTrack[] = [];
 
@@ -777,7 +838,7 @@ export async function GET(request: Request) {
   // Page 2+: Query subsequent rotated queries so endless scroll never runs out
   const queryIndex = (page - 1) % queryList.length;
   const deeperQuery = `${queryList[queryIndex]} part ${page}`;
-  const deeperHits = await searchYouTube(deeperQuery, 15);
+  const deeperHits = await searchYouTube(deeperQuery, 15, isLongMixCategory);
 
   return NextResponse.json({
     success: true,

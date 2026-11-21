@@ -260,6 +260,90 @@ const INITIAL_TRENDING_TRACKS: MusicTrack[] = [
   },
 ];
 
+// Curated 1-3 Hour Long Mixes, Non-Stop DJ Sets & All-Songs Jukeboxes (Segregated from regular songs)
+export const INITIAL_LONG_MIXES: MusicTrack[] = [
+  {
+    id: "malayalam-2h-jukebox",
+    title: "Malayalam Evergreen Non-Stop Super Hits | 2 Hours Jukebox",
+    artist: "KJ Yesudas, Chithra, Sushin Shyam",
+    duration: 7200,
+    durationFormatted: "2:00:00",
+    thumbnail: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=800&q=80",
+    url: "https://www.youtube.com/watch?v=epAFDEJImrU",
+    source: "youtube",
+  },
+  {
+    id: "tamil-2h-jukebox",
+    title: "Tamil Golden Melody & Fast Beats | 2 Hours Non-Stop Hits",
+    artist: "Anirudh, AR Rahman, Yuvan",
+    duration: 7560,
+    durationFormatted: "2:06:00",
+    thumbnail: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?auto=format&fit=crop&w=800&q=80",
+    url: "https://www.youtube.com/watch?v=1F3hm6MfR1k",
+    source: "youtube",
+  },
+  {
+    id: "bollywood-2h-romantic",
+    title: "Bollywood Romantic & Soulful Hits | 2.5 Hours Non-Stop Jukebox",
+    artist: "Arijit Singh, Shreya Ghoshal, Atif Aslam",
+    duration: 9000,
+    durationFormatted: "2:30:00",
+    thumbnail: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=800&q=80",
+    url: "https://www.youtube.com/watch?v=BddP6PYo2gs",
+    source: "youtube",
+  },
+  {
+    id: "lofi-2h-study",
+    title: "Lo-Fi Deep Focus & Chill Beats | 2 Hours Continuous Study Session",
+    artist: "Lofi Girl Studio",
+    duration: 7200,
+    durationFormatted: "2:00:00",
+    thumbnail: "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=800&q=80",
+    url: "https://www.youtube.com/watch?v=4xDzrJKXOOY",
+    source: "youtube",
+  },
+  {
+    id: "global-top-hits-2026",
+    title: "Top Hits 2026 Playlist ~ Trending Music & Deep House 2.5 Hr Mix",
+    artist: "Dynamic Deep House",
+    duration: 9177,
+    durationFormatted: "2:32:57",
+    thumbnail: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=800&q=80",
+    url: "https://www.youtube.com/watch?v=4NRXx6U8ABQ",
+    source: "youtube",
+  },
+  {
+    id: "gym-high-bass-mix",
+    title: "Gym & High Bass Workout Motivation | 2 Hours Non-Stop EDM & Trap",
+    artist: "Bass Nation",
+    duration: 7320,
+    durationFormatted: "2:02:00",
+    thumbnail: "https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=800&q=80",
+    url: "https://www.youtube.com/watch?v=34Na4j8AVgA",
+    source: "youtube",
+  },
+  {
+    id: "punjabi-2h-dj-mix",
+    title: "Punjabi Super Hits & Bhangra DJ Mix | 2 Hours Non-Stop Party",
+    artist: "Diljit Dosanjh, Karan Aujla, AP Dhillon",
+    duration: 7200,
+    durationFormatted: "2:00:00",
+    thumbnail: "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?auto=format&fit=crop&w=800&q=80",
+    url: "https://www.youtube.com/watch?v=KUN5Uf9mObQ",
+    source: "youtube",
+  },
+  {
+    id: "ar-rahman-2h-classics",
+    title: "A.R. Rahman Pure Magical 90s & 2000s Hits | 2 Hours Jukebox",
+    artist: "A.R. Rahman",
+    duration: 7800,
+    durationFormatted: "2:10:00",
+    thumbnail: "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?auto=format&fit=crop&w=800&q=80",
+    url: "https://www.youtube.com/watch?v=epAFDEJImrU",
+    source: "youtube",
+  },
+];
+
 // Curated Playlists
 const INITIAL_PLAYLISTS: Playlist[] = [
   {
@@ -414,6 +498,7 @@ const PRESET_CATEGORIES: MusicCategory[] = [
   { id: "english", name: "English Pop", icon: "🌍", group: "language" },
   { id: "korean", name: "Korean (K-Pop)", icon: "🌸", group: "language" },
   { id: "punjabi", name: "Punjabi Hits", icon: "🔥", group: "language" },
+  { id: "long-mixes", name: "1-3 Hr Mixes", icon: "📻", group: "mood" },
   { id: "sushin shyam", name: "Sushin Shyam", icon: "🎧", group: "artist" },
   { id: "anirudh", name: "Anirudh", icon: "🎸", group: "artist" },
   { id: "ar rahman", name: "A.R. Rahman", icon: "🎹", group: "artist" },
@@ -423,43 +508,59 @@ const PRESET_CATEGORIES: MusicCategory[] = [
   { id: "nostalgia", name: "90s Evergreen", icon: "📻", group: "mood" },
 ];
 
-export const FEATURED_ARTISTS = [
+export interface FeaturedArtist {
+  id: string;
+  name: string;
+  tag: string;
+  category: "malayalam" | "tamil" | "hindi" | "punjabi" | "global" | "kpop" | "legends";
+  query: string;
+  image: string;
+  monthlyListeners: string;
+}
+
+export const FEATURED_ARTISTS: FeaturedArtist[] = [
+  // ================= 🌴 MALAYALAM =================
   {
     id: "sushin-shyam",
     name: "Sushin Shyam",
-    tag: "Aavesham • Manjummel Boys",
-    query: "Sushin Shyam songs",
+    tag: "Aavesham • Manjummel Boys • Kumbalangi",
+    category: "malayalam",
+    query: "Sushin Shyam hit songs",
     image: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=600&q=80",
     monthlyListeners: "4.8M listeners",
   },
   {
-    id: "anirudh",
-    name: "Anirudh Ravichander",
-    tag: "Leo • Jailer • Master",
-    query: "Anirudh Ravichander songs",
-    image: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?auto=format&fit=crop&w=600&q=80",
-    monthlyListeners: "14.2M listeners",
+    id: "vineeth-sreenivasan",
+    name: "Vineeth Sreenivasan",
+    tag: "Hridayam • Thattathin Marayathu",
+    category: "malayalam",
+    query: "Vineeth Sreenivasan hit songs",
+    image: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=600&q=80",
+    monthlyListeners: "5.2M listeners",
   },
   {
-    id: "ar-rahman",
-    name: "A.R. Rahman",
-    tag: "Rockstar • Dil Se • PS1",
-    query: "AR Rahman songs",
-    image: "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?auto=format&fit=crop&w=600&q=80",
-    monthlyListeners: "22.5M listeners",
+    id: "shaan-rahman",
+    name: "Shaan Rahman",
+    tag: "Jimikki Kammal • Om Shanti Oshana",
+    category: "malayalam",
+    query: "Shaan Rahman songs",
+    image: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=600&q=80",
+    monthlyListeners: "3.6M listeners",
   },
   {
-    id: "arijit-singh",
-    name: "Arijit Singh",
-    tag: "Kesariya • Tum Hi Ho",
-    query: "Arijit Singh songs",
+    id: "hesham-abdul-wahab",
+    name: "Hesham Abdul Wahab",
+    tag: "Hridayam • Kushi • Hi Nanna",
+    category: "malayalam",
+    query: "Hesham Abdul Wahab songs",
     image: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=600&q=80",
-    monthlyListeners: "38.1M listeners",
+    monthlyListeners: "4.1M listeners",
   },
   {
     id: "dabzee",
     name: "Dabzee",
-    tag: "Illuminati • Manavaalan Thug",
+    tag: "Illuminati • Manavaalan Thug • Vatteppam",
+    category: "malayalam",
     query: "Dabzee songs",
     image: "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?auto=format&fit=crop&w=600&q=80",
     monthlyListeners: "3.2M listeners",
@@ -467,58 +568,590 @@ export const FEATURED_ARTISTS = [
   {
     id: "vishnu-vijay",
     name: "Vishnu Vijay",
-    tag: "Premalu • Thallumaala",
+    tag: "Premalu • Thallumaala • Nayattu",
+    category: "malayalam",
     query: "Vishnu Vijay songs",
     image: "https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?auto=format&fit=crop&w=600&q=80",
     monthlyListeners: "2.9M listeners",
   },
   {
+    id: "gopi-sundar",
+    name: "Gopi Sundar",
+    tag: "Bangalore Days • Charlie • Pulimurugan",
+    category: "malayalam",
+    query: "Gopi Sundar hit songs",
+    image: "https://images.unsplash.com/photo-1520523839898-50712825e3a7?auto=format&fit=crop&w=600&q=80",
+    monthlyListeners: "4.5M listeners",
+  },
+  {
+    id: "jassie-gift",
+    name: "Jassie Gift",
+    tag: "Lajjavathiye • 4 The People • Rain Rain",
+    category: "malayalam",
+    query: "Jassie Gift Malayalam songs",
+    image: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=600&q=80",
+    monthlyListeners: "2.1M listeners",
+  },
+  {
+    id: "deepak-dev",
+    name: "Deepak Dev",
+    tag: "Urumi • Christian Brothers • Lucifer",
+    category: "malayalam",
+    query: "Deepak Dev songs",
+    image: "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?auto=format&fit=crop&w=600&q=80",
+    monthlyListeners: "2.7M listeners",
+  },
+  {
+    id: "bijibal",
+    name: "Bijibal",
+    tag: "Maheshinte Prathikaaram • Vellimoonga",
+    category: "malayalam",
+    query: "Bijibal songs",
+    image: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?auto=format&fit=crop&w=600&q=80",
+    monthlyListeners: "2.4M listeners",
+  },
+  {
+    id: "vedan",
+    name: "Vedan",
+    tag: "Kuthanthram • Voice of the Voiceless",
+    category: "malayalam",
+    query: "Vedan Malayalam songs",
+    image: "https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?auto=format&fit=crop&w=600&q=80",
+    monthlyListeners: "1.8M listeners",
+  },
+  {
+    id: "hanumankind",
+    name: "Hanumankind",
+    tag: "Big Dawgs • The Last Dance • Go To Sleep",
+    category: "malayalam",
+    query: "Hanumankind songs",
+    image: "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?auto=format&fit=crop&w=600&q=80",
+    monthlyListeners: "18.5M listeners",
+  },
+  {
+    id: "thaikkudam-bridge",
+    name: "Thaikkudam Bridge",
+    tag: "Navarasam • Fish Rock • Nostalgia",
+    category: "malayalam",
+    query: "Thaikkudam Bridge songs",
+    image: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=600&q=80",
+    monthlyListeners: "2.3M listeners",
+  },
+  {
+    id: "sithara-krishnakumar",
+    name: "Sithara Krishnakumar",
+    tag: "Cherathukal • Enundodi • Vaanavil",
+    category: "malayalam",
+    query: "Sithara Krishnakumar songs",
+    image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80",
+    monthlyListeners: "3.1M listeners",
+  },
+  {
+    id: "job-kurian",
+    name: "Job Kurian",
+    tag: "Enthavo • Parudeesa • Thaalam",
+    category: "malayalam",
+    query: "Job Kurian songs",
+    image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=600&q=80",
+    monthlyListeners: "1.4M listeners",
+  },
+  {
+    id: "sooraj-santhosh",
+    name: "Sooraj Santhosh",
+    tag: "Aalolam • Theerame • Maayanadhi",
+    category: "malayalam",
+    query: "Sooraj Santhosh songs",
+    image: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=600&q=80",
+    monthlyListeners: "1.9M listeners",
+  },
+  {
+    id: "rex-vijayan",
+    name: "Rex Vijayan",
+    tag: "Avial • Neelakasham • Mayanadhi",
+    category: "malayalam",
+    query: "Rex Vijayan songs",
+    image: "https://images.unsplash.com/photo-1465847899084-d164df4dedc6?auto=format&fit=crop&w=600&q=80",
+    monthlyListeners: "1.6M listeners",
+  },
+  {
+    id: "ks-harisankar",
+    name: "K.S. Harisankar",
+    tag: "Pavizha Mazha • Jeevamshamayi",
+    category: "malayalam",
+    query: "KS Harisankar songs",
+    image: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=600&q=80",
+    monthlyListeners: "3.8M listeners",
+  },
+  {
+    id: "vijay-yesudas",
+    name: "Vijay Yesudas",
+    tag: "Malare • Mazhaye • Ee Puzhayum",
+    category: "malayalam",
+    query: "Vijay Yesudas songs",
+    image: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=600&q=80",
+    monthlyListeners: "3.4M listeners",
+  },
+
+  // ================= ⚡ TAMIL =================
+  {
+    id: "anirudh",
+    name: "Anirudh Ravichander",
+    tag: "Leo • Jailer • Master • Vikram",
+    category: "tamil",
+    query: "Anirudh Ravichander songs",
+    image: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?auto=format&fit=crop&w=600&q=80",
+    monthlyListeners: "16.8M listeners",
+  },
+  {
+    id: "ar-rahman",
+    name: "A.R. Rahman",
+    tag: "Rockstar • Dil Se • Ponniyin Selvan",
+    category: "tamil",
+    query: "AR Rahman songs",
+    image: "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?auto=format&fit=crop&w=600&q=80",
+    monthlyListeners: "24.5M listeners",
+  },
+  {
+    id: "yuvan-shankar-raja",
+    name: "Yuvan Shankar Raja",
+    tag: "Mankatha • Pudhupettai • GOAT",
+    category: "tamil",
+    query: "Yuvan Shankar Raja songs",
+    image: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=600&q=80",
+    monthlyListeners: "9.8M listeners",
+  },
+  {
+    id: "harris-jayaraj",
+    name: "Harris Jayaraj",
+    tag: "Vaaranam Aayiram • Minnale • Ghajini",
+    category: "tamil",
+    query: "Harris Jayaraj hit songs",
+    image: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=600&q=80",
+    monthlyListeners: "8.2M listeners",
+  },
+  {
     id: "sid-sriram",
     name: "Sid Sriram",
-    tag: "Ennodu Nee Irundhaal",
+    tag: "Ennodu Nee Irundhaal • Inkem Inkem",
+    category: "tamil",
     query: "Sid Sriram songs",
     image: "https://images.unsplash.com/photo-1465847899084-d164df4dedc6?auto=format&fit=crop&w=600&q=80",
     monthlyListeners: "9.5M listeners",
   },
   {
-    id: "taylor-swift",
-    name: "Taylor Swift",
-    tag: "1989 • Midnights • Pop",
-    query: "Taylor Swift hits",
-    image: "https://images.unsplash.com/photo-1520523839898-50712825e3a7?auto=format&fit=crop&w=600&q=80",
-    monthlyListeners: "105M listeners",
-  },
-  {
-    id: "bts",
-    name: "BTS",
-    tag: "Dynamite • Butter • K-Pop",
-    query: "BTS songs",
-    image: "https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?auto=format&fit=crop&w=600&q=80",
-    monthlyListeners: "28M listeners",
-  },
-  {
-    id: "the-weeknd",
-    name: "The Weeknd",
-    tag: "Blinding Lights • Starboy",
-    query: "The Weeknd hits",
+    id: "santhosh-narayanan",
+    name: "Santhosh Narayanan",
+    tag: "Kabali • Kaala • Sarpatta • Jigarthanda",
+    category: "tamil",
+    query: "Santhosh Narayanan songs",
     image: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=600&q=80",
-    monthlyListeners: "112M listeners",
+    monthlyListeners: "5.4M listeners",
   },
   {
-    id: "coldplay",
-    name: "Coldplay",
-    tag: "Yellow • Viva La Vida",
-    query: "Coldplay hits",
-    image: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=600&q=80",
-    monthlyListeners: "84M listeners",
+    id: "sai-abhyankkar",
+    name: "Sai Abhyankkar",
+    tag: "Katchi Sera • Aasa Kooda",
+    category: "tamil",
+    query: "Sai Abhyankkar songs",
+    image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=600&q=80",
+    monthlyListeners: "4.2M listeners",
+  },
+  {
+    id: "gv-prakash",
+    name: "G.V. Prakash Kumar",
+    tag: "Aadukalam • Asuran • Soorarai Pottru",
+    category: "tamil",
+    query: "GV Prakash Kumar songs",
+    image: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=600&q=80",
+    monthlyListeners: "6.1M listeners",
+  },
+  {
+    id: "sean-roldan",
+    name: "Sean Roldan",
+    tag: "Mehandi Circus • Joker • VIP 2",
+    category: "tamil",
+    query: "Sean Roldan songs",
+    image: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=600&q=80",
+    monthlyListeners: "2.3M listeners",
+  },
+  {
+    id: "d-imman",
+    name: "D. Imman",
+    tag: "Viswasam • Kumki • Kadaikutty Singam",
+    category: "tamil",
+    query: "D Imman songs",
+    image: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=600&q=80",
+    monthlyListeners: "4.9M listeners",
+  },
+  {
+    id: "hiphop-tamizha",
+    name: "Hiphop Tamizha",
+    tag: "Aambala • Thani Oruvan • Meesaya Murukku",
+    category: "tamil",
+    query: "Hiphop Tamizha songs",
+    image: "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?auto=format&fit=crop&w=600&q=80",
+    monthlyListeners: "5.6M listeners",
+  },
+
+  // ================= 🎬 BOLLYWOOD / HINDI =================
+  {
+    id: "arijit-singh",
+    name: "Arijit Singh",
+    tag: "Kesariya • Tum Hi Ho • Channa Mereya",
+    category: "hindi",
+    query: "Arijit Singh songs",
+    image: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=600&q=80",
+    monthlyListeners: "42.1M listeners",
   },
   {
     id: "shreya-ghoshal",
     name: "Shreya Ghoshal",
-    tag: "Melody Queen • Evergreen",
+    tag: "Melody Queen • Deewani Mastani",
+    category: "hindi",
     query: "Shreya Ghoshal songs",
     image: "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=600&q=80",
-    monthlyListeners: "26M listeners",
+    monthlyListeners: "28.3M listeners",
+  },
+  {
+    id: "atif-aslam",
+    name: "Atif Aslam",
+    tag: "Jeene Laga Hoon • Tere Sang Yaara",
+    category: "hindi",
+    query: "Atif Aslam romantic songs",
+    image: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=600&q=80",
+    monthlyListeners: "21.4M listeners",
+  },
+  {
+    id: "pritam",
+    name: "Pritam",
+    tag: "YJHD • Brahmastra • Ae Dil Hai Mushkil",
+    category: "hindi",
+    query: "Pritam Bollywood songs",
+    image: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=600&q=80",
+    monthlyListeners: "32.0M listeners",
+  },
+  {
+    id: "badshah",
+    name: "Badshah",
+    tag: "Genda Phool • Jugnu • Kala Chashma",
+    category: "hindi",
+    query: "Badshah songs",
+    image: "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?auto=format&fit=crop&w=600&q=80",
+    monthlyListeners: "19.2M listeners",
+  },
+  {
+    id: "neha-kakkar",
+    name: "Neha Kakkar",
+    tag: "Dilbar • O Saki Saki • Mile Ho Tum",
+    category: "hindi",
+    query: "Neha Kakkar songs",
+    image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80",
+    monthlyListeners: "23.5M listeners",
+  },
+  {
+    id: "jubin-nautiyal",
+    name: "Jubin Nautiyal",
+    tag: "Raataan Lambiyan • Lut Gaye • Humnava",
+    category: "hindi",
+    query: "Jubin Nautiyal songs",
+    image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=600&q=80",
+    monthlyListeners: "17.8M listeners",
+  },
+  {
+    id: "vishal-shekhar",
+    name: "Vishal-Shekhar",
+    tag: "Pathaan • War • Om Shanti Om",
+    category: "hindi",
+    query: "Vishal-Shekhar songs",
+    image: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?auto=format&fit=crop&w=600&q=80",
+    monthlyListeners: "18.1M listeners",
+  },
+
+  // ================= 🔥 PUNJABI =================
+  {
+    id: "diljit-dosanjh",
+    name: "Diljit Dosanjh",
+    tag: "GOAT • Lover • Born to Shine • Lemonade",
+    category: "punjabi",
+    query: "Diljit Dosanjh songs",
+    image: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=600&q=80",
+    monthlyListeners: "20.4M listeners",
+  },
+  {
+    id: "karan-aujla",
+    name: "Karan Aujla",
+    tag: "Tauba Tauba • Softly • Winning Speech",
+    category: "punjabi",
+    query: "Karan Aujla songs",
+    image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=600&q=80",
+    monthlyListeners: "17.9M listeners",
+  },
+  {
+    id: "ap-dhillon",
+    name: "AP Dhillon",
+    tag: "Brown Munde • Excuses • With You",
+    category: "punjabi",
+    query: "AP Dhillon songs",
+    image: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=600&q=80",
+    monthlyListeners: "12.6M listeners",
+  },
+  {
+    id: "shubh",
+    name: "Shubh",
+    tag: "Cheques • Baller • No Love • Elevated",
+    category: "punjabi",
+    query: "Shubh songs",
+    image: "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?auto=format&fit=crop&w=600&q=80",
+    monthlyListeners: "14.1M listeners",
+  },
+  {
+    id: "sidhu-moose-wala",
+    name: "Sidhu Moose Wala",
+    tag: "295 • The Last Ride • So High • Legend",
+    category: "punjabi",
+    query: "Sidhu Moose Wala songs",
+    image: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=600&q=80",
+    monthlyListeners: "16.5M listeners",
+  },
+  {
+    id: "yo-yo-honey-singh",
+    name: "Yo Yo Honey Singh",
+    tag: "Brown Rang • Blue Eyes • Dope Shope",
+    category: "punjabi",
+    query: "Yo Yo Honey Singh songs",
+    image: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=600&q=80",
+    monthlyListeners: "13.8M listeners",
+  },
+
+  // ================= 🌍 POP & GLOBAL =================
+  {
+    id: "the-weeknd",
+    name: "The Weeknd",
+    tag: "Blinding Lights • Starboy • After Hours",
+    category: "global",
+    query: "The Weeknd hits",
+    image: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=600&q=80",
+    monthlyListeners: "114M listeners",
+  },
+  {
+    id: "taylor-swift",
+    name: "Taylor Swift",
+    tag: "Cruel Summer • 1989 • Midnights • Anti-Hero",
+    category: "global",
+    query: "Taylor Swift hits",
+    image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80",
+    monthlyListeners: "108M listeners",
+  },
+  {
+    id: "drake",
+    name: "Drake",
+    tag: "God's Plan • One Dance • Hotline Bling",
+    category: "global",
+    query: "Drake hits",
+    image: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=600&q=80",
+    monthlyListeners: "82M listeners",
+  },
+  {
+    id: "ed-sheeran",
+    name: "Ed Sheeran",
+    tag: "Shape of You • Perfect • Bad Habits",
+    category: "global",
+    query: "Ed Sheeran hits",
+    image: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=600&q=80",
+    monthlyListeners: "78M listeners",
+  },
+  {
+    id: "billie-eilish",
+    name: "Billie Eilish",
+    tag: "Birds of a Feather • Bad Guy • Ocean Eyes",
+    category: "global",
+    query: "Billie Eilish songs",
+    image: "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=600&q=80",
+    monthlyListeners: "96M listeners",
+  },
+  {
+    id: "bruno-mars",
+    name: "Bruno Mars",
+    tag: "Die With A Smile • Uptown Funk • 24K Magic",
+    category: "global",
+    query: "Bruno Mars songs",
+    image: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=600&q=80",
+    monthlyListeners: "102M listeners",
+  },
+  {
+    id: "coldplay",
+    name: "Coldplay",
+    tag: "Yellow • Viva La Vida • Hymn for the Weekend",
+    category: "global",
+    query: "Coldplay hits",
+    image: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=600&q=80",
+    monthlyListeners: "86M listeners",
+  },
+  {
+    id: "justin-bieber",
+    name: "Justin Bieber",
+    tag: "Peaches • Stay • Ghost • Baby",
+    category: "global",
+    query: "Justin Bieber hits",
+    image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=600&q=80",
+    monthlyListeners: "74M listeners",
+  },
+  {
+    id: "dua-lipa",
+    name: "Dua Lipa",
+    tag: "Levitating • Don't Start Now • Houdini",
+    category: "global",
+    query: "Dua Lipa songs",
+    image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80",
+    monthlyListeners: "68M listeners",
+  },
+  {
+    id: "eminem",
+    name: "Eminem",
+    tag: "Lose Yourself • Without Me • The Real Slim Shady",
+    category: "global",
+    query: "Eminem hits",
+    image: "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?auto=format&fit=crop&w=600&q=80",
+    monthlyListeners: "71M listeners",
+  },
+  {
+    id: "post-malone",
+    name: "Post Malone",
+    tag: "Sunflower • Circles • I Had Some Help",
+    category: "global",
+    query: "Post Malone hits",
+    image: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=600&q=80",
+    monthlyListeners: "79M listeners",
+  },
+  {
+    id: "alan-walker",
+    name: "Alan Walker",
+    tag: "Faded • Alone • The Spectre • Darkside",
+    category: "global",
+    query: "Alan Walker songs",
+    image: "https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?auto=format&fit=crop&w=600&q=80",
+    monthlyListeners: "36M listeners",
+  },
+
+  // ================= 🌸 K-POP =================
+  {
+    id: "bts",
+    name: "BTS",
+    tag: "Dynamite • Butter • Boy With Luv",
+    category: "kpop",
+    query: "BTS songs",
+    image: "https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?auto=format&fit=crop&w=600&q=80",
+    monthlyListeners: "31M listeners",
+  },
+  {
+    id: "blackpink",
+    name: "BLACKPINK",
+    tag: "How You Like That • Pink Venom • Kill This Love",
+    category: "kpop",
+    query: "BLACKPINK songs",
+    image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80",
+    monthlyListeners: "24M listeners",
+  },
+  {
+    id: "newjeans",
+    name: "NewJeans",
+    tag: "Super Shy • OMG • Hype Boy • Ditto",
+    category: "kpop",
+    query: "NewJeans songs",
+    image: "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=600&q=80",
+    monthlyListeners: "16M listeners",
+  },
+
+  // ================= 📻 LEGENDS =================
+  {
+    id: "kj-yesudas",
+    name: "K.J. Yesudas",
+    tag: "Gaanagandharvan • Evergreen 50+ Years Classics",
+    category: "legends",
+    query: "KJ Yesudas Malayalam evergreen hits",
+    image: "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?auto=format&fit=crop&w=600&q=80",
+    monthlyListeners: "6.2M listeners",
+  },
+  {
+    id: "ks-chithra",
+    name: "K.S. Chithra",
+    tag: "Vanambadi of Kerala • Padakali • Karmukil",
+    category: "legends",
+    query: "KS Chithra Malayalam hit songs",
+    image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80",
+    monthlyListeners: "7.1M listeners",
+  },
+  {
+    id: "mg-sreekumar",
+    name: "M.G. Sreekumar",
+    tag: "Kilukkam • Spadikam • Devasuram",
+    category: "legends",
+    query: "MG Sreekumar hit songs",
+    image: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=600&q=80",
+    monthlyListeners: "3.9M listeners",
+  },
+  {
+    id: "vidyasagar",
+    name: "Vidyasagar",
+    tag: "Mele Vaanil • Chandranudikkunna Dikkil",
+    category: "legends",
+    query: "Vidyasagar Malayalam super hits",
+    image: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=600&q=80",
+    monthlyListeners: "4.6M listeners",
+  },
+  {
+    id: "raveendran-master",
+    name: "Raveendran Master",
+    tag: "Devaasuram • His Highness Abdullah • Bharatham",
+    category: "legends",
+    query: "Raveendran Master Malayalam songs",
+    image: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=600&q=80",
+    monthlyListeners: "2.8M listeners",
+  },
+  {
+    id: "johnson-master",
+    name: "Johnson Master",
+    tag: "Namukku Parkkan • Thoovanathumbikal • Kireedam",
+    category: "legends",
+    query: "Johnson Master Malayalam hits",
+    image: "https://images.unsplash.com/photo-1465847899084-d164df4dedc6?auto=format&fit=crop&w=600&q=80",
+    monthlyListeners: "2.5M listeners",
+  },
+  {
+    id: "ilaiyaraaja",
+    name: "Ilaiyaraaja",
+    tag: "Isaignani • 1000+ Film Classics",
+    category: "legends",
+    query: "Ilaiyaraaja evergreen Tamil hits",
+    image: "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?auto=format&fit=crop&w=600&q=80",
+    monthlyListeners: "8.7M listeners",
+  },
+  {
+    id: "sonu-nigam",
+    name: "Sonu Nigam",
+    tag: "Kal Ho Naa Ho • Abhi Mujh Mein Kahin",
+    category: "legends",
+    query: "Sonu Nigam hit songs",
+    image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=600&q=80",
+    monthlyListeners: "15.6M listeners",
+  },
+  {
+    id: "kishore-kumar",
+    name: "Kishore Kumar",
+    tag: "Roop Tera Mastana • Mere Sapno Ki Rani",
+    category: "legends",
+    query: "Kishore Kumar evergreen hits",
+    image: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?auto=format&fit=crop&w=600&q=80",
+    monthlyListeners: "14.2M listeners",
+  },
+  {
+    id: "mohammed-rafi",
+    name: "Mohammed Rafi",
+    tag: "Gulabi Aankhen • Likhe Jo Khat Tujhe",
+    category: "legends",
+    query: "Mohammed Rafi evergreen hits",
+    image: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=600&q=80",
+    monthlyListeners: "11.7M listeners",
   },
 ];
 
@@ -697,6 +1330,7 @@ const NAV_TABS = [
   { id: "artists", label: "Artists", icon: Mic2 },
   { id: "albums", label: "Albums", icon: Disc3 },
   { id: "genres", label: "Genres", icon: Tag },
+  { id: "mixes", label: "1-3 Hr Mixes", icon: Radio },
   { id: "liked", label: "Liked", icon: Heart },
   { id: "recent", label: "Recently Played", icon: Clock },
 ];
@@ -1082,6 +1716,14 @@ export function MusicChannelView({
   const [isSearching, setIsSearching] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
+  // Artist View State (Search & Filters)
+  const [artistSearchQuery, setArtistSearchQuery] = useState<string>("");
+  const [artistCategoryFilter, setArtistCategoryFilter] = useState<string>("all");
+
+  // Long Mixes View State (Search & Filters)
+  const [mixSearchQuery, setMixSearchQuery] = useState<string>("");
+  const [mixCategoryFilter, setMixCategoryFilter] = useState<string>("all");
+
   const progressBarRef = useRef<HTMLDivElement | null>(null);
   const observerTargetRef = useRef<HTMLDivElement | null>(null);
   const loadingMoreRef = useRef<boolean>(false);
@@ -1169,7 +1811,10 @@ export function MusicChannelView({
         );
         const data = await res.json();
         if (data.tracks && data.tracks.length > 0) {
-          const validated = data.tracks.filter((t: MusicTrack) => isMusicSongTrack(t.title, t.artist, t.duration || 0));
+          const isMixCat = cat === "long-mixes" || cat === "mixes";
+          const validated = data.tracks.filter((t: MusicTrack) =>
+            isMusicSongTrack(t.title, t.artist, t.duration || 0, isMixCat)
+          );
           if (append) {
             setCatalogTracks((prev) => {
               const seen = new Set(prev.map((t) => t.id));
@@ -1832,98 +2477,437 @@ export function MusicChannelView({
     </div>
   );
 
-  const renderArtistsView = () => (
-    <div className="px-4 sm:px-6 py-4 space-y-6 animate-in fade-in duration-200">
-      {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-neutral-900/60 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4 sm:p-5 backdrop-blur-md shadow-xs dark:shadow-md">
-        <div>
-          <div className="flex items-center space-x-2">
+  const renderArtistsView = () => {
+    const ARTIST_CATEGORIES = [
+      { id: "all", label: `All (${FEATURED_ARTISTS.length})` },
+      { id: "malayalam", label: "🌴 Malayalam" },
+      { id: "tamil", label: "⚡ Tamil" },
+      { id: "hindi", label: "🎬 Bollywood" },
+      { id: "punjabi", label: "🔥 Punjabi" },
+      { id: "global", label: "🌍 Pop & Global" },
+      { id: "kpop", label: "🌸 K-Pop" },
+      { id: "legends", label: "📻 Legends" },
+    ];
+
+    const filteredArtists = FEATURED_ARTISTS.filter((artist) => {
+      const matchesCategory =
+        artistCategoryFilter === "all" || artist.category === artistCategoryFilter;
+      if (!matchesCategory) return false;
+      if (!artistSearchQuery.trim()) return true;
+      const q = artistSearchQuery.toLowerCase().trim();
+      return (
+        artist.name.toLowerCase().includes(q) ||
+        artist.tag.toLowerCase().includes(q) ||
+        artist.query.toLowerCase().includes(q)
+      );
+    });
+
+    return (
+      <div className="px-4 sm:px-6 py-4 space-y-6 animate-in fade-in duration-200">
+        {/* Top Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-neutral-900/60 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4 sm:p-5 backdrop-blur-md shadow-xs dark:shadow-md">
+          <div>
+            <div className="flex items-center space-x-2">
+              <button
+                type="button"
+                onClick={() => setActiveTab("home")}
+                className="text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white p-1 -ml-1 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition"
+                title="Back to Home"
+              >
+                <ArrowLeft className="w-4 h-4" />
+              </button>
+              <div
+                className="w-8 h-8 rounded-xl flex items-center justify-center"
+                style={{ backgroundColor: `${themeAccent}20`, color: themeAccent }}
+              >
+                <Mic2 className="w-4 h-4" />
+              </div>
+              <h2 className="text-xl sm:text-2xl font-black text-neutral-900 dark:text-white">Top Artists & Composers</h2>
+              <span
+                className="text-xs font-bold px-2.5 py-0.5 rounded-full border"
+                style={{ color: themeAccent, backgroundColor: `${themeAccent}15`, borderColor: `${themeAccent}30` }}
+              >
+                {filteredArtists.length} of {FEATURED_ARTISTS.length} Artists
+              </span>
+            </div>
+            <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-1">
+              Tap any artist to start streaming their top tracks or view full discography
+            </p>
+          </div>
+        </div>
+
+        {/* Search Bar for Artists */}
+        <div className="relative">
+          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none" />
+          <input
+            type="text"
+            value={artistSearchQuery}
+            onChange={(e) => setArtistSearchQuery(e.target.value)}
+            placeholder="Search artists by name, movie, language (e.g. Sushin, Rahman, Taylor, Yesudas)..."
+            className="w-full pl-10 pr-10 py-2.5 text-xs sm:text-sm bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-neutral-900 dark:text-white placeholder-neutral-400 focus:outline-hidden focus:ring-2 transition shadow-xs"
+            style={{ "--tw-ring-color": themeAccent } as React.CSSProperties}
+          />
+          {artistSearchQuery && (
             <button
               type="button"
-              onClick={() => setActiveTab("home")}
-              className="text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white p-1 -ml-1 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition"
-              title="Back to Home"
+              onClick={() => setArtistSearchQuery("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 p-1"
+              title="Clear search"
             >
-              <ArrowLeft className="w-4 h-4" />
+              <X className="w-3.5 h-3.5" />
             </button>
-            <div
-              className="w-8 h-8 rounded-xl flex items-center justify-center"
-              style={{ backgroundColor: `${themeAccent}20`, color: themeAccent }}
-            >
-              <Mic2 className="w-4 h-4" />
-            </div>
-            <h2 className="text-xl sm:text-2xl font-black text-neutral-900 dark:text-white">Top Artists & Composers</h2>
-            <span
-              className="text-xs font-bold px-2.5 py-0.5 rounded-full border"
-              style={{ color: themeAccent, backgroundColor: `${themeAccent}15`, borderColor: `${themeAccent}30` }}
-            >
-              {FEATURED_ARTISTS.length} Featured
-            </span>
-          </div>
-          <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-1">
-            Tap any artist to start streaming their top tracks or view full discography
-          </p>
+          )}
         </div>
-      </div>
 
-      {/* Grid of Artists */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
-        {FEATURED_ARTISTS.map((artist) => (
-          <div
-            key={artist.id}
-            onClick={() => handlePlayArtist(artist)}
-            className="group p-3.5 rounded-2xl bg-white dark:bg-neutral-900/60 hover:bg-neutral-50 dark:hover:bg-neutral-800/80 border border-neutral-200 dark:border-neutral-800/80 transition duration-200 cursor-pointer flex flex-col items-center text-center shadow-xs dark:shadow-lg"
-          >
-            <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden bg-neutral-100 dark:bg-neutral-950 mb-3 shadow-xl ring-2 ring-transparent group-hover:ring-neutral-400 dark:group-hover:ring-neutral-700 transition">
-              <img
-                src={artist.image}
-                alt={artist.name}
-                className="w-full h-full object-cover group-hover:scale-110 transition duration-500"
-              />
-              <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
-                <div
-                  className="w-9 h-9 rounded-full flex items-center justify-center shadow-lg"
-                  style={{ backgroundColor: themeAccent, color: themeTextColor }}
+        {/* Category Filter Pills */}
+        <div className="flex items-center space-x-2 overflow-x-auto pb-1 scrollbar-none">
+          {ARTIST_CATEGORIES.map((cat) => {
+            const isSelected = artistCategoryFilter === cat.id;
+            return (
+              <button
+                key={cat.id}
+                type="button"
+                onClick={() => setArtistCategoryFilter(cat.id)}
+                style={
+                  isSelected
+                    ? {
+                        backgroundColor: themeAccent,
+                        color: themeTextColor,
+                        borderColor: themeAccent,
+                      }
+                    : undefined
+                }
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex-shrink-0 cursor-pointer border ${
+                  isSelected
+                    ? "shadow-sm scale-102"
+                    : "bg-white hover:bg-neutral-100 text-neutral-700 border-neutral-200 dark:bg-neutral-900 dark:hover:bg-neutral-800 dark:text-neutral-300 dark:border-neutral-800"
+                }`}
+              >
+                {cat.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Grid of Artists */}
+        {filteredArtists.length > 0 ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
+            {filteredArtists.map((artist) => (
+              <div
+                key={artist.id}
+                onClick={() => handlePlayArtist(artist)}
+                className="group p-3.5 rounded-2xl bg-white dark:bg-neutral-900/60 hover:bg-neutral-50 dark:hover:bg-neutral-800/80 border border-neutral-200 dark:border-neutral-800/80 transition duration-200 cursor-pointer flex flex-col items-center text-center shadow-xs dark:shadow-lg"
+              >
+                {/* Resilient Avatar with Gradient & Initials Fallback */}
+                <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden bg-gradient-to-br from-neutral-700 to-neutral-900 mb-3 shadow-xl ring-2 ring-transparent group-hover:ring-neutral-400 dark:group-hover:ring-neutral-700 transition flex items-center justify-center">
+                  <span className="absolute text-lg font-black tracking-widest text-white/50 select-none">
+                    {artist.name
+                      .split(" ")
+                      .map((w) => w[0])
+                      .slice(0, 2)
+                      .join("")
+                      .toUpperCase()}
+                  </span>
+                  <img
+                    src={artist.image}
+                    alt={artist.name}
+                    loading="lazy"
+                    onError={(e) => {
+                      (e.currentTarget as HTMLElement).style.opacity = "0";
+                    }}
+                    className="relative z-10 w-full h-full object-cover group-hover:scale-110 transition duration-500"
+                  />
+                  <div className="absolute inset-0 z-20 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
+                    <div
+                      className="w-9 h-9 rounded-full flex items-center justify-center shadow-lg"
+                      style={{ backgroundColor: themeAccent, color: themeTextColor }}
+                    >
+                      <Play className="w-4 h-4 fill-current ml-0.5" />
+                    </div>
+                  </div>
+                </div>
+
+                <p className="text-xs sm:text-sm font-bold text-neutral-900 dark:text-white truncate max-w-full transition">
+                  {artist.name}
+                </p>
+                <p className="text-[10px] text-neutral-500 dark:text-neutral-400 mt-0.5 line-clamp-1">
+                  {artist.tag}
+                </p>
+                <span
+                  className="text-[9px] font-mono mt-1 font-semibold"
+                  style={{ color: themeAccent }}
                 >
-                  <Play className="w-4 h-4 fill-current ml-0.5" />
+                  {artist.monthlyListeners}
+                </span>
+
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handlePlayArtist(artist);
+                  }}
+                  style={{
+                    backgroundColor: `${themeAccent}15`,
+                    color: themeAccent,
+                    borderColor: `${themeAccent}30`,
+                  }}
+                  className="mt-3 w-full py-1.5 rounded-xl border text-[11px] font-bold transition flex items-center justify-center space-x-1 hover:brightness-110"
+                >
+                  <Play className="w-3 h-3 fill-current" />
+                  <span>Play Hits</span>
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="py-16 text-center space-y-3 bg-white dark:bg-neutral-900/40 rounded-2xl border border-neutral-200 dark:border-neutral-800">
+            <Mic2 className="w-8 h-8 mx-auto text-neutral-400" />
+            <p className="text-sm font-bold text-neutral-700 dark:text-neutral-300">
+              No artists found matching &quot;{artistSearchQuery}&quot;
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                setArtistSearchQuery("");
+                setArtistCategoryFilter("all");
+              }}
+              style={{ color: themeAccent }}
+              className="text-xs font-semibold hover:underline"
+            >
+              Reset Search & Filters
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // Dedicated Long Mixes & Non-Stop Jukebox View (Segregated from regular songs)
+  const renderLongMixesView = () => {
+    const MIX_CATEGORY_PILLS = [
+      { id: "all", label: "All Non-Stop Mixes" },
+      { id: "malayalam", label: "🌴 Malayalam (2 Hr)", query: "malayalam hit songs 2 hours jukebox non stop" },
+      { id: "tamil", label: "⚡ Tamil (2 Hr)", query: "tamil hit songs 2 hours non stop jukebox" },
+      { id: "hindi", label: "🎬 Bollywood (2.5 Hr)", query: "bollywood romantic songs 2 hours jukebox" },
+      { id: "lofi", label: "☕ Study Lo-Fi (2 Hr)", query: "lofi hip hop 2 hours chill beats study relax" },
+      { id: "gym", label: "⚡ Gym High Bass (2 Hr)", query: "gym workout music 2 hours mix non stop" },
+      { id: "punjabi", label: "🔥 Punjabi DJ Mix (2 Hr)", query: "punjabi hit songs 2 hours non stop dj mix" },
+      { id: "global", label: "🌍 Global Top Hits (2.5 Hr)", query: "top viral hits 2 hours non stop dj mix" },
+    ];
+
+    const currentPool = activeCategory === "long-mixes" && catalogTracks.length > 0
+      ? catalogTracks
+      : INITIAL_LONG_MIXES;
+
+    const filteredMixes = currentPool.filter((track) => {
+      if (!mixSearchQuery.trim()) return true;
+      const q = mixSearchQuery.toLowerCase().trim();
+      return (
+        track.title.toLowerCase().includes(q) ||
+        track.artist.toLowerCase().includes(q)
+      );
+    });
+
+    return (
+      <div className="px-4 sm:px-6 py-4 space-y-6 animate-in fade-in duration-200">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-neutral-900/60 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4 sm:p-5 backdrop-blur-md shadow-xs dark:shadow-md">
+          <div>
+            <div className="flex items-center space-x-2">
+              <button
+                type="button"
+                onClick={() => setActiveTab("home")}
+                className="text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white p-1 -ml-1 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition"
+                title="Back to Home"
+              >
+                <ArrowLeft className="w-4 h-4" />
+              </button>
+              <div
+                className="w-8 h-8 rounded-xl flex items-center justify-center"
+                style={{ backgroundColor: `${themeAccent}20`, color: themeAccent }}
+              >
+                <Radio className="w-4 h-4" />
+              </div>
+              <h2 className="text-xl sm:text-2xl font-black text-neutral-900 dark:text-white">
+                1-3 Hour Mixes & Non-Stop Jukebox
+              </h2>
+              <span
+                className="text-xs font-bold px-2.5 py-0.5 rounded-full border"
+                style={{ color: themeAccent, backgroundColor: `${themeAccent}15`, borderColor: `${themeAccent}30` }}
+              >
+                Dedicated Section
+              </span>
+            </div>
+            <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-1">
+              Continuous 1 to 3 hour playlists, full album jukeboxes and DJ sets — segregated so they don&apos;t clutter single songs
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              fetchCategoryTracks("long-mixes", 1, false);
+              showToast("Refreshing long mixes from YouTube...");
+            }}
+            style={{
+              backgroundColor: `${themeAccent}15`,
+              color: themeAccent,
+              borderColor: `${themeAccent}30`,
+            }}
+            className="px-3.5 py-2 rounded-xl border text-xs font-bold transition flex items-center space-x-1.5 self-start sm:self-auto hover:brightness-110"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Load More 2-Hour Mixes</span>
+          </button>
+        </div>
+
+        {/* Search Bar for Long Mixes */}
+        <div className="relative">
+          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none" />
+          <input
+            type="text"
+            value={mixSearchQuery}
+            onChange={(e) => setMixSearchQuery(e.target.value)}
+            placeholder="Search 1-3 hour mixes (e.g. Malayalam Jukebox, Lo-Fi 2 Hours, Bollywood Romantic, Gym EDM)..."
+            className="w-full pl-10 pr-10 py-2.5 text-xs sm:text-sm bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-neutral-900 dark:text-white placeholder-neutral-400 focus:outline-hidden focus:ring-2 transition shadow-xs"
+            style={{ "--tw-ring-color": themeAccent } as React.CSSProperties}
+          />
+          {mixSearchQuery && (
+            <button
+              type="button"
+              onClick={() => setMixSearchQuery("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 p-1"
+              title="Clear search"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+
+        {/* Mix Category Quick Chips */}
+        <div className="flex items-center space-x-2 overflow-x-auto pb-1 scrollbar-none">
+          {MIX_CATEGORY_PILLS.map((pill) => {
+            const isSelected = mixCategoryFilter === pill.id;
+            return (
+              <button
+                key={pill.id}
+                type="button"
+                onClick={() => {
+                  setMixCategoryFilter(pill.id);
+                  if (pill.query) {
+                    setIsSearching(true);
+                    fetch(`/api/music/search?q=${encodeURIComponent(pill.query)}`)
+                      .then((res) => res.json())
+                      .then((data) => {
+                        if (data.tracks && data.tracks.length > 0) {
+                          setCatalogTracks(data.tracks);
+                          showToast(`Loaded ${pill.label}`);
+                        }
+                      })
+                      .catch(() => showToast(`Failed to load ${pill.label}`))
+                      .finally(() => setIsSearching(false));
+                  } else {
+                    setCatalogTracks(INITIAL_LONG_MIXES);
+                  }
+                }}
+                style={
+                  isSelected
+                    ? {
+                        backgroundColor: themeAccent,
+                        color: themeTextColor,
+                        borderColor: themeAccent,
+                      }
+                    : undefined
+                }
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex-shrink-0 cursor-pointer border ${
+                  isSelected
+                    ? "shadow-sm scale-102"
+                    : "bg-white hover:bg-neutral-100 text-neutral-700 border-neutral-200 dark:bg-neutral-900 dark:hover:bg-neutral-800 dark:text-neutral-300 dark:border-neutral-800"
+                }`}
+              >
+                {pill.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* 16:9 Card Grid for Long Mixes */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {filteredMixes.map((mix, idx) => {
+            const isThisPlaying = currentTrack?.id === mix.id && isPlaying;
+            return (
+              <div
+                key={`${mix.id}-${idx}`}
+                onClick={() => handlePlaySong(mix, filteredMixes)}
+                className="group rounded-2xl bg-white dark:bg-neutral-900/60 hover:bg-neutral-50 dark:hover:bg-neutral-800/80 border border-neutral-200 dark:border-neutral-800/80 p-3 transition duration-200 cursor-pointer flex flex-col justify-between shadow-xs dark:shadow-md hover:shadow-lg"
+              >
+                <div className="space-y-2.5">
+                  <div className="relative aspect-video rounded-xl overflow-hidden bg-neutral-950 shadow-md">
+                    <img
+                      src={mix.thumbnail}
+                      alt={mix.title}
+                      loading="lazy"
+                      className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+                    />
+                    <div className="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-black/75 backdrop-blur-md text-[10px] font-bold text-amber-400 flex items-center space-x-1 border border-amber-500/30">
+                      <Radio className="w-3 h-3" />
+                      <span>Non-Stop Set</span>
+                    </div>
+                    <div className="absolute bottom-2 right-2 px-2 py-0.5 rounded-md bg-black/80 backdrop-blur-md text-[10px] font-mono font-bold text-white flex items-center space-x-1">
+                      <Clock className="w-3 h-3 text-neutral-400" />
+                      <span>{mix.durationFormatted}</span>
+                    </div>
+                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
+                      <div
+                        className="w-10 h-10 rounded-full flex items-center justify-center shadow-xl"
+                        style={{ backgroundColor: themeAccent, color: themeTextColor }}
+                      >
+                        {isThisPlaying ? (
+                          <Pause className="w-5 h-5 fill-current" />
+                        ) : (
+                          <Play className="w-5 h-5 fill-current ml-0.5" />
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 className="text-xs sm:text-sm font-bold text-neutral-900 dark:text-white line-clamp-2 group-hover:underline">
+                      {mix.title}
+                    </h4>
+                    <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-0.5 truncate">
+                      {mix.artist}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-3 pt-2.5 border-t border-neutral-100 dark:border-neutral-800/60 flex items-center justify-between">
+                  <span className="text-[10px] font-semibold text-neutral-400 flex items-center space-x-1">
+                    <span>⏱️ Multi-hour mix</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handlePlaySong(mix, filteredMixes);
+                    }}
+                    style={{
+                      backgroundColor: `${themeAccent}15`,
+                      color: themeAccent,
+                      borderColor: `${themeAccent}30`,
+                    }}
+                    className="px-3 py-1 rounded-xl border text-[11px] font-bold transition flex items-center space-x-1 hover:brightness-110"
+                  >
+                    <Play className="w-3 h-3 fill-current" />
+                    <span>Play Mix</span>
+                  </button>
                 </div>
               </div>
-            </div>
-
-            <p className="text-xs sm:text-sm font-bold text-neutral-900 dark:text-white truncate max-w-full transition">
-              {artist.name}
-            </p>
-            <p className="text-[10px] text-neutral-500 dark:text-neutral-400 mt-0.5 line-clamp-1">
-              {artist.tag}
-            </p>
-            <span
-              className="text-[9px] font-mono mt-1 font-semibold"
-              style={{ color: themeAccent }}
-            >
-              {artist.monthlyListeners}
-            </span>
-
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                handlePlayArtist(artist);
-              }}
-              style={{
-                backgroundColor: `${themeAccent}15`,
-                color: themeAccent,
-                borderColor: `${themeAccent}30`,
-              }}
-              className="mt-3 w-full py-1.5 rounded-xl border text-[11px] font-bold transition flex items-center justify-center space-x-1 hover:brightness-110"
-            >
-              <Play className="w-3 h-3 fill-current" />
-              <span>Play Hits</span>
-            </button>
-          </div>
-        ))}
+            );
+          })}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderAlbumsView = () => (
     <div className="px-4 sm:px-6 py-4 space-y-6 animate-in fade-in duration-200">
@@ -2480,6 +3464,8 @@ export function MusicChannelView({
                   setCatalogTracks(recentTracks);
                 } else if (tab.id === "home") {
                   fetchCategoryTracks("trending", 1, false);
+                } else if (tab.id === "mixes") {
+                  fetchCategoryTracks("long-mixes", 1, false);
                 }
               }}
               style={
@@ -2756,6 +3742,8 @@ export function MusicChannelView({
         renderAlbumsView()
       ) : activeTab === "genres" ? (
         renderGenresView()
+      ) : activeTab === "mixes" ? (
+        renderLongMixesView()
       ) : activeTab === "liked" ? (
         renderLikedView()
       ) : activeTab === "recent" ? (
@@ -3374,6 +4362,119 @@ export function MusicChannelView({
                   New Playlist
                 </span>
               </div>
+            </div>
+          </div>
+
+          {/* ================= SECTION 2.5: 📻 1-3 HOUR LONG MIXES & NON-STOP JUKEBOX (Dedicated Section) ================= */}
+          <div className="pt-4 border-t border-neutral-200 dark:border-neutral-800/80 space-y-3.5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="flex items-center space-x-2">
+                <div
+                  className="w-7 h-7 rounded-lg flex items-center justify-center font-bold"
+                  style={{ backgroundColor: `${themeAccent}20`, color: themeAccent }}
+                >
+                  <Radio className="w-3.5 h-3.5" />
+                </div>
+                <div>
+                  <div className="flex items-center space-x-2">
+                    <h3 className="text-sm font-extrabold text-neutral-900 dark:text-white uppercase tracking-wider">
+                      Non-Stop Jukebox & 1-3 Hr Mixes
+                    </h3>
+                    <span
+                      className="text-[10px] font-bold px-2 py-0.5 rounded-full border"
+                      style={{ color: themeAccent, backgroundColor: `${themeAccent}15`, borderColor: `${themeAccent}30` }}
+                    >
+                      Separated Section
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
+                    Continuous 1 to 3 hour sets & all-song jukeboxes — separated so single tracks stay clean
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab("mixes");
+                  fetchCategoryTracks("long-mixes", 1, false);
+                }}
+                className="text-xs font-bold text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white flex items-center space-x-1 transition self-start sm:self-auto cursor-pointer"
+              >
+                <span>View All Mixes ({INITIAL_LONG_MIXES.length}+)</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            {/* Curated Preview Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3.5">
+              {INITIAL_LONG_MIXES.slice(0, 4).map((mix) => {
+                const isThisPlaying = currentTrack?.id === mix.id && isPlaying;
+                return (
+                  <div
+                    key={mix.id}
+                    onClick={() => handlePlaySong(mix, INITIAL_LONG_MIXES)}
+                    className="group rounded-2xl bg-white dark:bg-neutral-900/60 hover:bg-neutral-50 dark:hover:bg-neutral-800/80 border border-neutral-200 dark:border-neutral-800/80 p-3 transition duration-200 cursor-pointer flex flex-col justify-between shadow-xs dark:shadow-md hover:shadow-lg"
+                  >
+                    <div className="space-y-2">
+                      <div className="relative aspect-video rounded-xl overflow-hidden bg-neutral-950 shadow-md">
+                        <img
+                          src={mix.thumbnail}
+                          alt={mix.title}
+                          loading="lazy"
+                          className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+                        />
+                        <div className="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-black/75 backdrop-blur-md text-[9px] font-bold text-amber-400 flex items-center space-x-1 border border-amber-500/30">
+                          <Radio className="w-2.5 h-2.5" />
+                          <span>Non-Stop Set</span>
+                        </div>
+                        <div className="absolute bottom-2 right-2 px-2 py-0.5 rounded-md bg-black/85 backdrop-blur-md text-[10px] font-mono font-bold text-white flex items-center space-x-1">
+                          <Clock className="w-2.5 h-2.5 text-neutral-400" />
+                          <span>{mix.durationFormatted}</span>
+                        </div>
+                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
+                          <div
+                            className="w-9 h-9 rounded-full flex items-center justify-center shadow-xl"
+                            style={{ backgroundColor: themeAccent, color: themeTextColor }}
+                          >
+                            {isThisPlaying ? (
+                              <Pause className="w-4 h-4 fill-current" />
+                            ) : (
+                              <Play className="w-4 h-4 fill-current ml-0.5" />
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div>
+                        <h4 className="text-xs font-bold text-neutral-900 dark:text-white line-clamp-1 group-hover:underline">
+                          {mix.title}
+                        </h4>
+                        <p className="text-[10px] text-neutral-500 dark:text-neutral-400 truncate">
+                          {mix.artist}
+                        </p>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handlePlaySong(mix, INITIAL_LONG_MIXES);
+                      }}
+                      style={{
+                        backgroundColor: `${themeAccent}15`,
+                        color: themeAccent,
+                        borderColor: `${themeAccent}30`,
+                      }}
+                      className="mt-2.5 w-full py-1.5 rounded-xl border text-[11px] font-bold transition flex items-center justify-center space-x-1 hover:brightness-110"
+                    >
+                      <Play className="w-3 h-3 fill-current" />
+                      <span>Play Non-Stop</span>
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
