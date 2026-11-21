@@ -450,8 +450,9 @@ export function SlackAuthModal({
 
     const addIfValid = (m: WorkspaceMember) => {
       if (!m || !m.name) return;
-      const key = m.name.trim().toLowerCase();
+      const key = (m.name || "").trim().toLowerCase();
       const idKey = (m.id || "").trim().toLowerCase();
+      if (!key) return;
       if (DUMMY_MEMBERS_BLACKLIST.has(key) || DUMMY_MEMBERS_BLACKLIST.has(idKey)) return;
       if (seen.has(key)) return;
       seen.add(key);
@@ -460,7 +461,7 @@ export function SlackAuthModal({
 
     // 1. Prajin Prakash (Always first)
     const prajinFound = teamMembers.find(
-      (m) => m.name.trim().toLowerCase() === "prajin prakash" || m.id === "user-prajin-prakash"
+      (m) => (m?.name ? m.name.trim().toLowerCase() === "prajin prakash" : false) || m?.id === "user-prajin-prakash"
     );
     addIfValid(
       prajinFound || {
@@ -478,7 +479,7 @@ export function SlackAuthModal({
 
     // 2. Hari (Always second)
     const hariFound = teamMembers.find(
-      (m) => m.name.trim().toLowerCase() === "hari" || m.id === "user-hari"
+      (m) => (m?.name ? m.name.trim().toLowerCase() === "hari" : false) || m?.id === "user-hari"
     );
     addIfValid(
       hariFound || {
@@ -518,20 +519,20 @@ export function SlackAuthModal({
 
   // Quick Demo Login switch for testing (preserves real profile photos)
   const handleQuickDemo = (memberName: string, dept?: DepartmentCode, roleVal?: any) => {
-    const cleanName = memberName.trim();
+    const cleanName = (memberName || "").trim();
     const cleanLower = cleanName.toLowerCase();
 
     // 1. Check quickSwitchList or teamMembers
     const matched =
       quickSwitchList.find(
         (m) =>
-          m.name.trim().toLowerCase() === cleanLower ||
-          m.id.toLowerCase() === `user-${cleanLower.replace(/\s+/g, "-")}`
+          (m?.name ? m.name.trim().toLowerCase() === cleanLower : false) ||
+          (m?.id ? m.id.toLowerCase() === `user-${cleanLower.replace(/\s+/g, "-")}` : false)
       ) ||
       teamMembers.find(
         (m) =>
-          m.name.trim().toLowerCase() === cleanLower ||
-          m.id.toLowerCase() === `user-${cleanLower.replace(/\s+/g, "-")}`
+          (m?.name ? m.name.trim().toLowerCase() === cleanLower : false) ||
+          (m?.id ? m.id.toLowerCase() === `user-${cleanLower.replace(/\s+/g, "-")}` : false)
       );
 
     if (matched) {
@@ -759,17 +760,17 @@ export function SlackAuthModal({
                       <img
                         src={
                           member.avatar ||
-                          `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(member.name)}`
+                          `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(member.name || "user")}`
                         }
-                        alt={member.name}
+                        alt={member.name || "Member"}
                         onError={(e) => {
-                          (e.target as HTMLImageElement).src = `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(member.name)}`;
+                          (e.target as HTMLImageElement).src = `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(member.name || "user")}`;
                         }}
                         className="w-8 h-8 rounded-lg object-cover flex-shrink-0 border border-neutral-200 dark:border-neutral-700 group-hover:scale-105 transition-transform"
                       />
                       <div className="min-w-0 flex-1">
                         <p className="text-xs font-bold text-neutral-800 dark:text-neutral-200 truncate">
-                          {member.name.split(" ")[0]} ({member.role === "owner" ? "Owner" : member.role === "manager" ? "Lead" : "Member"})
+                          {(member.name || "Member").split(" ")[0]} ({member.role === "owner" ? "Owner" : member.role === "manager" ? "Lead" : "Member"})
                         </p>
                         <p className="text-[10px] text-neutral-500 capitalize truncate">
                           {member.department || "Dev"}

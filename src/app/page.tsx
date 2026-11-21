@@ -170,20 +170,20 @@ function findMemberIndex(members: WorkspaceMember[], id: string, name: string) {
   const targetName = name ? name.trim().toLowerCase() : "";
   // 1. First priority: match by both id AND name
   const exactBothIndex = members.findIndex(
-    (member) => member.id === id && member.name.trim().toLowerCase() === targetName
+    (member) => member.id === id && (member.name || "").trim().toLowerCase() === targetName
   );
   if (exactBothIndex >= 0) return exactBothIndex;
 
   // 2. Match by exact ID only if the existing member has the same name or is unset
   const exactIndex = members.findIndex((member) => member.id === id);
   if (exactIndex >= 0) {
-    if (!targetName || members[exactIndex].name.trim().toLowerCase() === targetName) {
+    if (!targetName || (members[exactIndex]?.name || "").trim().toLowerCase() === targetName) {
       return exactIndex;
     }
   }
 
   // 3. Fallback: match by name
-  return targetName ? members.findIndex((member) => member.name.trim().toLowerCase() === targetName) : -1;
+  return targetName ? members.findIndex((member) => (member?.name || "").trim().toLowerCase() === targetName) : -1;
 }
 
 function mergeMessageIntoList(currentList: Message[], incoming: Message): Message[] {
@@ -603,12 +603,17 @@ export default function KaelixoApp() {
 
   const handleLogout = async () => {
     try {
-      await supabase.auth.signOut();
+      await supabase.auth.signOut({ scope: "local" });
     } catch {}
     try {
       localStorage.removeItem("kaelixo_user");
       localStorage.removeItem("kaelixo_org");
       localStorage.removeItem("kaelixo_active_dm_recipient");
+    } catch {}
+    try {
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("kaelixo:leave-music-jam"));
+      }
     } catch {}
     setActiveDmRecipient(null);
     setActiveProfileMember(null);
@@ -1248,8 +1253,8 @@ export default function KaelixoApp() {
 
   // Synchronize currentUser avatar whenever teamMembers or user presence updates
   useEffect(() => {
-    if (!currentUser || !currentUser.name) return;
-    const cleanName = currentUser.name.trim().toLowerCase();
+    if (!currentUser || !currentUser.name || !isAuthenticated) return;
+    const cleanName = (currentUser.name || "").trim().toLowerCase();
 
     if (cleanName === "prajin prakash" && (!currentUser.avatar || currentUser.avatar.includes("seed="))) {
       const realAvatar =
@@ -1300,7 +1305,7 @@ export default function KaelixoApp() {
         return next;
       });
     }
-  }, [currentUser.id, currentUser.name, teamMembers]);
+  }, [currentUser.id, currentUser.name, teamMembers, isAuthenticated]);
 
   const applyReactionChange = (
     messageId: string,

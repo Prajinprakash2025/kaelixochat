@@ -133,6 +133,14 @@ export function MusicProvider({ children, currentUser }: MusicProviderProps) {
           setHiddenTrackIds(JSON.parse(saved));
         }
       } catch {}
+
+      const handleLeave = () => {
+        leaveJam();
+      };
+      window.addEventListener("kaelixo:leave-music-jam", handleLeave);
+      return () => {
+        window.removeEventListener("kaelixo:leave-music-jam", handleLeave);
+      };
     }
   }, []);
 
