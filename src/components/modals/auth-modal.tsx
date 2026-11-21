@@ -24,10 +24,10 @@ export function AuthModal({
   currentUser,
   onSaveProfile,
 }: AuthModalProps) {
-  const [name, setName] = useState(currentUser.name);
-  const [department, setDepartment] = useState<DepartmentCode>(currentUser.department);
-  const [role, setRole] = useState<WorkspaceMember["role"]>(currentUser.role);
-  const [statusText, setStatusText] = useState(currentUser.statusText || "");
+  const [name, setName] = useState(currentUser?.name || "");
+  const [department, setDepartment] = useState<DepartmentCode>(currentUser?.department || "dev");
+  const [role, setRole] = useState<WorkspaceMember["role"]>(currentUser?.role || "member");
+  const [statusText, setStatusText] = useState(currentUser?.statusText || "");
 
   if (!isOpen) return null;
 

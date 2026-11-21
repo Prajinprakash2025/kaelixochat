@@ -772,14 +772,14 @@ export function Sidebar({
                   return teamMembers
                     .filter((m) => {
                       if (!m || !m.name) return false;
-                      const norm = m.name.trim().toLowerCase();
-                      if (m.id === currentUser.id || norm === currentUser.name.trim().toLowerCase()) return false;
+                      const norm = (m.name || "").trim().toLowerCase();
+                      if (m.id === currentUser?.id || norm === (currentUser?.name || "").trim().toLowerCase()) return false;
                       if (seenNames.has(norm)) return false;
                       seenNames.add(norm);
                       return true;
                     })
                     .map((member) => {
-                      const dmChannelId = `dm-${[currentUser.id, member.id].sort().join("-")}`;
+                      const dmChannelId = `dm-${[currentUser?.id || "user", member.id].sort().join("-")}`;
                       const isDmActive = activeChannelId === dmChannelId;
                       const isOnline = Boolean(member.online || member.status === "online");
                       const isDragOver = dragOverMemberId === member.id;
@@ -943,14 +943,14 @@ export function Sidebar({
                   style={{ color: "var(--theme-sidebar-text, #0f172a)" }}
                   className="text-xs font-semibold group-hover:underline transition truncate"
                 >
-                  {currentUser.name}
+                  {currentUser?.name || "Guest User"}
                 </p>
                 <p
                   style={{ color: "var(--theme-sidebar-muted, #64748b)" }}
                   className="text-[11px] truncate flex items-center space-x-1"
                 >
                   <span className="text-emerald-500">●</span>
-                  <span>{currentUser.statusText || currentUser.department.toUpperCase()}</span>
+                  <span>{currentUser?.statusText || (currentUser?.department ? currentUser.department.toUpperCase() : "MEMBER")}</span>
                 </p>
               </div>
             </div>

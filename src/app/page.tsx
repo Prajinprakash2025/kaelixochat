@@ -479,13 +479,14 @@ export default function KaelixoApp() {
 
   // Dynamic presence overlay onto teamMembers
   const membersWithPresence = useMemo(() => {
-    return teamMembers.map((m) => {
-      if (m.id === currentUser.id) {
+    return (teamMembers || []).filter(Boolean).map((m) => {
+      if (!m) return null as any;
+      if (m.id === currentUser?.id) {
         return {
           ...m,
           ...currentUser,
-          status: currentUser.status || "online",
-          online: currentUser.status !== "offline",
+          status: currentUser?.status || "online",
+          online: currentUser?.status !== "offline",
         };
       }
       const presence = presenceMap[m.id];
@@ -501,7 +502,7 @@ export default function KaelixoApp() {
         ...m,
         online: m.status === "online",
       };
-    });
+    }).filter(Boolean);
   }, [teamMembers, currentUser, presenceMap]);
 
   const unreadNotificationCount = useMemo(() => {
@@ -4206,7 +4207,7 @@ export default function KaelixoApp() {
         onClose={() => setIsAddMemberModalOpen(false)}
         currentUser={currentUser}
         departments={departments}
-        existingEmails={teamMembers.map((m) => m.email)}
+        existingEmails={(teamMembers || []).filter(Boolean).map((m) => m?.email).filter(Boolean)}
         onAddMember={handleAddMember}
       />
 

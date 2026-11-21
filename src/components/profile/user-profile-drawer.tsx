@@ -67,8 +67,8 @@ export function UserProfileDrawer({
   const [localTime, setLocalTime] = useState("");
   const [isConfirmRemoveOpen, setIsConfirmRemoveOpen] = useState(false);
   const isSelf =
-    currentUser.id === member.id ||
-    currentUser.name.trim().toLowerCase() === member.name.trim().toLowerCase();
+    (currentUser?.id && currentUser.id === member?.id) ||
+    ((currentUser?.name || "").trim().toLowerCase() === (member?.name || "").trim().toLowerCase());
   const removeCheck = canRemoveMember(currentUser, member);
 
   useEffect(() => {

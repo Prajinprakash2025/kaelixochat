@@ -44,9 +44,9 @@ export function InviteTeamModal({
   const inviteUrl = `${origin}/?invite=${inviteCode}`;
 
   const isPrivileged =
-    currentUser.role === "owner" ||
-    currentUser.role === "admin" ||
-    currentUser.role === "manager";
+    currentUser?.role === "owner" ||
+    currentUser?.role === "admin" ||
+    currentUser?.role === "manager";
 
   const handleCopyCode = async () => {
     try {
@@ -260,7 +260,7 @@ export function InviteTeamModal({
             <span>
               {isPrivileged ? (
                 <>
-                  You are signed in as an <strong>{currentUser.role.toUpperCase()}</strong> with full permissions to manage invites and invite team members.
+                  You are signed in as an <strong>{currentUser?.role ? currentUser.role.toUpperCase() : "MEMBER"}</strong> with full permissions to manage invites and invite team members.
                 </>
               ) : (
                 <>

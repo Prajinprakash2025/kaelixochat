@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useEffect } from "react";
-import { AlertCircle, RefreshCw, LogIn } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { AlertCircle, RefreshCw, LogIn, ChevronDown } from "lucide-react";
 
 export default function Error({
   error,
@@ -10,18 +10,22 @@ export default function Error({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const [showDetails, setShowDetails] = useState(false);
+
   useEffect(() => {
     console.error("Kaelixo Application Error Boundary caught:", error);
   }, [error]);
 
   const handleHardReset = () => {
     try {
-      localStorage.removeItem("kaelixo_user");
-      localStorage.removeItem("kaelixo_org");
-      localStorage.removeItem("kaelixo_active_dm_recipient");
+      localStorage.clear();
+      sessionStorage.clear();
     } catch {}
     if (typeof window !== "undefined") {
-      window.location.href = "/";
+      window.location.replace("/");
+      setTimeout(() => {
+        window.location.reload();
+      }, 50);
     }
   };
 
@@ -41,10 +45,35 @@ export default function Error({
           </p>
         </div>
 
+        {error?.message && (
+          <div className="text-left">
+            <button
+              type="button"
+              onClick={() => setShowDetails(!showDetails)}
+              className="text-[11px] text-neutral-500 hover:text-neutral-300 flex items-center space-x-1 transition cursor-pointer"
+            >
+              <span>{showDetails ? "Hide technical details" : "Show technical details"}</span>
+              <ChevronDown className={`w-3 h-3 transition-transform ${showDetails ? "rotate-180" : ""}`} />
+            </button>
+            {showDetails && (
+              <div className="mt-2 p-3 rounded-xl bg-neutral-950 border border-neutral-800 text-[11px] font-mono text-rose-400 break-words max-h-36 overflow-y-auto">
+                <p className="font-bold mb-1">{error.name || "Error"}: {error.message}</p>
+                {error.digest && <p className="text-[10px] text-neutral-500">Digest: {error.digest}</p>}
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
           <button
             type="button"
-            onClick={() => reset()}
+            onClick={() => {
+              try {
+                localStorage.removeItem("kaelixo_user");
+                localStorage.removeItem("kaelixo_active_dm_recipient");
+              } catch {}
+              reset();
+            }}
             className="w-full sm:w-auto flex items-center justify-center space-x-2 px-5 py-2.5 rounded-xl bg-white hover:bg-neutral-200 text-neutral-950 font-bold text-xs shadow-md transition active:scale-95 cursor-pointer"
           >
             <RefreshCw className="w-4 h-4" />

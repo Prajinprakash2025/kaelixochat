@@ -47,15 +47,15 @@ export function EditProfileModal({
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [name, setName] = useState(currentUser.name || "");
-  const [displayName, setDisplayName] = useState(currentUser.displayName || currentUser.name?.toLowerCase().replace(/\s+/g, "") || "");
-  const [title, setTitle] = useState(currentUser.title || "");
-  const [pronunciation, setPronunciation] = useState(currentUser.displayName || currentUser.name || "");
+  const [name, setName] = useState(currentUser?.name || "");
+  const [displayName, setDisplayName] = useState(currentUser?.displayName || currentUser?.name?.toLowerCase().replace(/\s+/g, "") || "");
+  const [title, setTitle] = useState(currentUser?.title || "");
+  const [pronunciation, setPronunciation] = useState(currentUser?.displayName || currentUser?.name || "");
   const [timezone, setTimezone] = useState("Asia/Kolkata");
-  const [phone, setPhone] = useState(currentUser.phone || "");
-  const [statusText, setStatusText] = useState(currentUser.statusText || "");
-  const [bio, setBio] = useState(currentUser.bio || "");
-  const [avatar, setAvatar] = useState(currentUser.avatar || "");
+  const [phone, setPhone] = useState(currentUser?.phone || "");
+  const [statusText, setStatusText] = useState(currentUser?.statusText || "");
+  const [bio, setBio] = useState(currentUser?.bio || "");
+  const [avatar, setAvatar] = useState(currentUser?.avatar || "");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [hasRecording, setHasRecording] = useState(false);

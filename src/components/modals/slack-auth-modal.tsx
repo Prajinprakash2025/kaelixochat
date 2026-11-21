@@ -75,7 +75,7 @@ export function SlackAuthModal({
   isDismissible = true,
 }: SlackAuthModalProps) {
   const [step, setStep] = useState<"email" | "otp" | "company" | "profile">("email");
-  const [email, setEmail] = useState(currentUser.email || "");
+  const [email, setEmail] = useState(currentUser?.email || "");
   const [otp, setOtp] = useState("");
   const [authUid, setAuthUid] = useState<string | null>(null);
   const [resendCountdown, setResendCountdown] = useState(0);
@@ -89,9 +89,9 @@ export function SlackAuthModal({
   const [newCompanySlug, setNewCompanySlug] = useState("");
 
   // Profile state
-  const [name, setName] = useState(currentUser.name);
-  const [department, setDepartment] = useState<DepartmentCode>(currentUser.department || "dev");
-  const [role, setRole] = useState<WorkspaceMember["role"]>(currentUser.role || "member");
+  const [name, setName] = useState(currentUser?.name || "");
+  const [department, setDepartment] = useState<DepartmentCode>(currentUser?.department || "dev");
+  const [role, setRole] = useState<WorkspaceMember["role"]>(currentUser?.role || "member");
 
   const [loading, setLoading] = useState(false);
   const [oauthLoading, setOauthLoading] = useState<"google" | "github" | null>(null);
