@@ -63,6 +63,20 @@ function GitHubIcon() {
   );
 }
 
+const DUMMY_MEMBERS_BLACKLIST = new Set([
+  "anagha",
+  "anagha test",
+  "arjun dev",
+  "aparna sharma",
+  "rahul nair",
+  "sneha patel",
+  "user-anagha",
+  "user-arjun-dev",
+  "user-aparna-sharma",
+  "user-rahul-nair",
+  "user-sneha-patel",
+]);
+
 export function SlackAuthModal({
   isOpen,
   onClose,
@@ -114,8 +128,6 @@ export function SlackAuthModal({
       return () => clearTimeout(timer);
     }
   }, [resendCountdown]);
-
-  if (!isOpen) return null;
 
   const verifyCode = async (codeToVerify: string) => {
     const code = codeToVerify.trim();
@@ -424,25 +436,6 @@ export function SlackAuthModal({
     onClose();
   };
 
-  // Blacklist of obsolete dummy mock accounts (only Prajin, Hari, and genuinely created users allowed)
-  const DUMMY_MEMBERS_BLACKLIST = useMemo(
-    () =>
-      new Set([
-        "anagha",
-        "anagha test",
-        "arjun dev",
-        "aparna sharma",
-        "rahul nair",
-        "sneha patel",
-        "user-anagha",
-        "user-arjun-dev",
-        "user-aparna-sharma",
-        "user-rahul-nair",
-        "user-sneha-patel",
-      ]),
-    []
-  );
-
   // Dynamic quick-switch accounts: Prajin + Hari + any user created during testing
   const quickSwitchList: WorkspaceMember[] = useMemo(() => {
     const list: WorkspaceMember[] = [];
@@ -515,7 +508,7 @@ export function SlackAuthModal({
     }
 
     return list;
-  }, [teamMembers, DUMMY_MEMBERS_BLACKLIST]);
+  }, [teamMembers]);
 
   // Quick Demo Login switch for testing (preserves real profile photos)
   const handleQuickDemo = (memberName: string, dept?: DepartmentCode, roleVal?: any) => {
@@ -605,6 +598,8 @@ export function SlackAuthModal({
     onLoginSuccess(demoUser, organizations[0]);
     onClose();
   };
+
+  if (!isOpen) return null;
 
   return (
     <div
