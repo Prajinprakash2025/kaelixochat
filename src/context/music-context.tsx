@@ -10,6 +10,7 @@ import React, {
 } from "react";
 import { MusicTrack, MusicSyncState, WorkspaceMember, MusicReaction } from "@/types";
 import { musicSync } from "@/utils/music-realtime";
+import { getSmartRelatedRecommendation, cleanRawTitle } from "@/utils/music-recommendations";
 
 interface MusicContextType {
   currentTrack: MusicTrack | null;
@@ -87,6 +88,8 @@ export function MusicProvider({ children, currentUser }: MusicProviderProps) {
   activeDjRef.current = activeDj;
   const queueRef = useRef<MusicTrack[]>([]);
   queueRef.current = queue;
+  const isAutoplayingRef = useRef<boolean>(false);
+  const recentlyPlayedRef = useRef<string[]>([]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -525,6 +528,13 @@ export function MusicProvider({ children, currentUser }: MusicProviderProps) {
       playlistRef.current = newPlaylist;
     }
 
+    if (track?.id) {
+      recentlyPlayedRef.current = [
+        track.id,
+        ...recentlyPlayedRef.current.filter((id) => id !== track.id),
+      ].slice(0, 50);
+    }
+
     // Broadcast PLAY to all devices
     musicSync.play(track, position, currentUser);
 
@@ -633,37 +643,117 @@ export function MusicProvider({ children, currentUser }: MusicProviderProps) {
       return;
     }
 
-    // 2. Otherwise play next song in the active category / playlist
+    // 2. Otherwise play next song in the active category / playlist / search pool
     const activeList = playlistRef.current;
     if (activeList.length > 1 && currentTrack) {
       const currentIndex = activeList.findIndex((t) => t.id === currentTrack.id);
       if (currentIndex !== -1 && currentIndex < activeList.length - 1) {
         playTrack(activeList[currentIndex + 1], 0);
         return;
-      } else if (currentIndex === activeList.length - 1) {
-        // Loop back to first song in category
-        playTrack(activeList[0], 0);
-        return;
-      } else if (currentIndex === -1) {
-        playTrack(activeList[0], 0);
-        return;
       }
     }
 
-    // 3. Fallback: If playlist has no other songs, fetch fresh trending tracks so Change/Next ALWAYS works!
+    // 3. YouTube-Style Related Songs Autoplay (Up Next)
+    // When queue is empty AND we reached the end of search results/playlist (or played a standalone song),
+    // intelligently recommend and auto-play related songs in the same language and genre!
     if (typeof window !== "undefined") {
-      fetch(`/api/music/search?category=trending&page=${Math.floor(Math.random() * 3) + 1}`)
+      if (isAutoplayingRef.current) return;
+      isAutoplayingRef.current = true;
+
+      if (currentTrack) {
+        const recommendation = getSmartRelatedRecommendation(currentTrack);
+        const queryParam = encodeURIComponent(recommendation.query);
+
+        const handleAutoplayResult = (candidateTracks: MusicTrack[]): boolean => {
+          const freshTracks = candidateTracks.filter(
+            (t) =>
+              t.id !== currentTrack.id &&
+              !recentlyPlayedRef.current.includes(t.id) &&
+              !hiddenTrackIds.includes(t.id)
+          );
+          const pool =
+            freshTracks.length > 0
+              ? freshTracks
+              : candidateTracks.filter((t) => t.id !== currentTrack.id && !hiddenTrackIds.includes(t.id));
+
+          if (pool.length > 0) {
+            const nextTrack = pool[0];
+            // Set the rest of the related songs as the new active playlist for seamless continuous playback!
+            playTrack(nextTrack, 0, pool);
+            try {
+              window.dispatchEvent(
+                new CustomEvent("kaelixo:music-toast", {
+                  detail: `Up Next: "${cleanRawTitle(nextTrack.title)}" (${recommendation.descriptor})`,
+                })
+              );
+            } catch {}
+            return true;
+          }
+          return false;
+        };
+
+        fetch(`/api/music/search?q=${queryParam}`)
+          .then((res) => res.json())
+          .then((data) => {
+            if (data.success && Array.isArray(data.tracks) && data.tracks.length > 0) {
+              const played = handleAutoplayResult(data.tracks);
+              if (played) return;
+            }
+            // Fallback to language category if query had no fresh matches
+            return fetch(
+              `/api/music/search?category=${encodeURIComponent(
+                recommendation.fallbackCategory
+              )}&page=${Math.floor(Math.random() * 2) + 1}`
+            )
+              .then((res) => res.json())
+              .then((catData) => {
+                if (catData.success && Array.isArray(catData.tracks) && catData.tracks.length > 0) {
+                  const played = handleAutoplayResult(catData.tracks);
+                  if (!played && currentTrack) seekTo(0);
+                } else if (currentTrack) {
+                  seekTo(0);
+                }
+              });
+          })
+          .catch((err) => {
+            console.warn("Autoplay related search failed, trying category fallback:", err);
+            fetch(
+              `/api/music/search?category=${encodeURIComponent(
+                recommendation.fallbackCategory
+              )}&page=1`
+            )
+              .then((res) => res.json())
+              .then((catData) => {
+                if (catData.success && Array.isArray(catData.tracks) && catData.tracks.length > 0) {
+                  const played = handleAutoplayResult(catData.tracks);
+                  if (!played && currentTrack) seekTo(0);
+                } else if (currentTrack) {
+                  seekTo(0);
+                }
+              })
+              .catch(() => {
+                if (currentTrack) seekTo(0);
+              });
+          })
+          .finally(() => {
+            setTimeout(() => {
+              isAutoplayingRef.current = false;
+            }, 800);
+          });
+        return;
+      }
+
+      // Initial starter if no current track exists yet
+      fetch(`/api/music/search?category=trending&page=1`)
         .then((res) => res.json())
         .then((data) => {
-          if (data.success && data.tracks && data.tracks.length > 0) {
-            const nextTrack = data.tracks.find((t: MusicTrack) => t.id !== currentTrack?.id) || data.tracks[0];
-            playTrack(nextTrack, 0, data.tracks);
-          } else if (currentTrack) {
-            seekTo(0);
+          if (data.success && Array.isArray(data.tracks) && data.tracks.length > 0) {
+            playTrack(data.tracks[0], 0, data.tracks);
           }
         })
-        .catch(() => {
-          if (currentTrack) seekTo(0);
+        .catch(() => {})
+        .finally(() => {
+          isAutoplayingRef.current = false;
         });
       return;
     }

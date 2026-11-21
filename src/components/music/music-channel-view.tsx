@@ -1248,6 +1248,17 @@ export function MusicChannelView({
     setTimeout(() => setToastMessage(null), 2500);
   };
 
+  // Listen to Autoplay and Up Next notifications
+  useEffect(() => {
+    const handleMusicToast = (e: any) => {
+      if (e.detail) {
+        showToast(e.detail);
+      }
+    };
+    window.addEventListener("kaelixo:music-toast", handleMusicToast);
+    return () => window.removeEventListener("kaelixo:music-toast", handleMusicToast);
+  }, []);
+
   // Play Track Handler
   const handlePlaySong = (track: MusicTrack, playlistPool?: MusicTrack[]) => {
     unlockMobileAudio();
@@ -1643,7 +1654,7 @@ export function MusicChannelView({
               track={t}
               isThisPlaying={isThisPlaying}
               isLiked={!!likedMap[t.id]}
-              onPlay={() => handlePlaySong(t)}
+              onPlay={() => handlePlaySong(t, catalogTracks)}
               onToggleLike={(e) => {
                 e.stopPropagation();
                 toggleLike(t);
@@ -2131,7 +2142,7 @@ export function MusicChannelView({
                 track={t}
                 isThisPlaying={isThisPlaying}
                 isLiked={true}
-                onPlay={() => handlePlaySong(t)}
+                onPlay={() => handlePlaySong(t, likedTracks)}
                 onToggleLike={(e) => {
                   e.stopPropagation();
                   toggleLike(t);
@@ -2242,7 +2253,7 @@ export function MusicChannelView({
                 track={t}
                 isThisPlaying={isThisPlaying}
                 isLiked={!!likedMap[t.id]}
-                onPlay={() => handlePlaySong(t)}
+                onPlay={() => handlePlaySong(t, recentTracks)}
                 onToggleLike={(e) => {
                   e.stopPropagation();
                   toggleLike(t);
@@ -3288,7 +3299,7 @@ export function MusicChannelView({
                 {searchResults.map((t) => (
                   <div
                     key={t.id}
-                    onClick={() => handlePlaySong(t)}
+                    onClick={() => handlePlaySong(t, searchResults)}
                     className="p-2 flex items-center justify-between hover:bg-neutral-100 dark:hover:bg-neutral-800/60 rounded-lg transition cursor-pointer group"
                   >
                     <div className="flex items-center space-x-3 min-w-0 flex-1">
@@ -3331,7 +3342,7 @@ export function MusicChannelView({
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
-                          handlePlaySong(t);
+                          handlePlaySong(t, searchResults);
                         }}
                         style={{ backgroundColor: themeAccent, color: themeTextColor }}
                         className="px-2.5 py-1 rounded-lg text-xs font-bold transition hover:brightness-110 shadow-xs"
@@ -3522,7 +3533,7 @@ export function MusicChannelView({
                         track={t}
                         isThisPlaying={isThisPlaying}
                         isLiked={!!likedMap[t.id]}
-                        onPlay={() => handlePlaySong(t)}
+                        onPlay={() => handlePlaySong(t, catalogTracks)}
                         onToggleLike={(e) => {
                           e.stopPropagation();
                           toggleLike(t);
